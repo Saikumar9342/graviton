@@ -80,139 +80,146 @@ export function ChatInput({
   const hasContent = input.trim().length > 0
 
   return (
-    <div
-      className={cn(
-        'relative rounded-2xl border bg-card transition-all duration-300',
-        isFocused
-          ? 'border-primary/50 shadow-xl shadow-primary/10 ring-2 ring-primary/20'
-          : 'border-border shadow-lg hover:border-primary/30 hover:shadow-xl',
-        isLoading && 'border-primary/30'
-      )}
-    >
-      {/* Glow effect when focused */}
-      {isFocused && (
-        <div className="absolute -inset-px rounded-2xl bg-gradient-to-r from-primary/20 via-transparent to-primary/20 opacity-50 blur-sm" />
-      )}
+    <div className="relative w-full max-w-5xl mx-auto px-4 pb-4 sm:pb-6">
+      <div
+        className={cn(
+          'relative rounded-2xl border transition-all duration-500 ease-in-out',
+          'bg-background/40 backdrop-blur-3xl shadow-2xl',
+          isFocused
+            ? 'border-primary/40 ring-4 ring-primary/5 shadow-primary/10 -translate-y-0.5'
+            : 'border-border/40 shadow-black/5 hover:border-border/60',
+          isLoading && 'border-primary/20 animate-pulse-subtle'
+        )}
+      >
+        {/* Progress bar for loading state */}
+        {isLoading && (
+          <div className="absolute top-0 left-0 right-0 h-[2px] overflow-hidden rounded-t-2xl">
+            <div className="h-full bg-gradient-to-r from-transparent via-primary to-transparent animate-shimmer" />
+          </div>
+        )}
 
-      {/* Model selector row */}
-      <div className="flex items-center gap-2 px-3 pt-2 pb-1 border-b border-border/30">
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-7 gap-1.5 px-2 text-muted-foreground hover:text-foreground rounded-lg"
-            >
-              <Zap className="h-3.5 w-3.5 text-primary" />
-              <span className="text-xs font-medium">{currentModel?.name || 'Select Model'}</span>
-              <ChevronDown className="h-3 w-3 opacity-50" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="start" className="w-64">
-            {AVAILABLE_MODELS.map((model) => (
-              <DropdownMenuItem
-                key={model.id}
-                onClick={() => onSettingsChange({ ...settings, model: model.id })}
-                className="flex items-center justify-between py-2.5"
+        {/* Model selector row */}
+        <div className="flex items-center gap-2 px-4 py-2 border-b border-border/10">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 gap-2 px-2.5 text-muted-foreground hover:text-foreground hover:bg-primary/5 rounded-xl transition-colors"
               >
-                <div className="flex flex-col gap-0.5">
-                  <span className="font-medium">{model.name}</span>
-                  <span className="text-xs text-muted-foreground">
-                    {model.provider}
-                  </span>
+                <div className="p-1 rounded-md bg-primary/10">
+                  <Zap className="h-3 w-3 text-primary" />
                 </div>
-                {model.badge && (
-                  <Badge variant="secondary" className="text-[10px] px-1.5">
-                    {model.badge}
-                  </Badge>
-                )}
-              </DropdownMenuItem>
-            ))}
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </div>
-
-      <div className="relative flex items-end gap-2 p-2">
-        {/* Attachment button */}
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon"
-          className="h-10 w-10 shrink-0 rounded-xl text-muted-foreground hover:text-foreground hover:bg-accent"
-          aria-label="Attach file"
-        >
-          <Paperclip className="h-5 w-5" />
-        </Button>
-
-        {/* Textarea */}
-        <div className="relative flex-1">
-          <textarea
-            ref={textareaRef}
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={handleKeyDown}
-            onFocus={() => setIsFocused(true)}
-            onBlur={() => setIsFocused(false)}
-            placeholder="Ask Graviton anything..."
-            disabled={disabled}
-            rows={1}
-            className={cn(
-              'max-h-[200px] min-h-[44px] w-full resize-none bg-transparent px-2 py-3 text-foreground placeholder:text-muted-foreground focus:outline-none',
-              'scrollbar-thin'
-            )}
-            aria-label="Chat message input"
-          />
+                <span className="text-[11px] font-bold uppercase tracking-wider">{currentModel?.name || 'Select Model'}</span>
+                <ChevronDown className="h-3 w-3 opacity-30" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="w-64 p-2 rounded-2xl backdrop-blur-3xl border-border/40 shadow-2xl">
+              {AVAILABLE_MODELS.map((model) => (
+                <DropdownMenuItem
+                  key={model.id}
+                  onClick={() => onSettingsChange({ ...settings, model: model.id })}
+                  className="flex items-center justify-between py-3 px-3 rounded-xl cursor-pointer hover:bg-primary/5 focus:bg-primary/5 transition-colors"
+                >
+                  <div className="flex flex-col gap-0.5">
+                    <span className="font-semibold text-sm">{model.name}</span>
+                    <span className="text-[10px] text-muted-foreground uppercase tracking-widest">
+                      {model.provider}
+                    </span>
+                  </div>
+                  {model.badge && (
+                    <Badge variant="secondary" className="text-[9px] px-1.5 py-0 font-bold uppercase tracking-tighter bg-primary/10 text-primary border-none">
+                      {model.badge}
+                    </Badge>
+                  )}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
 
-        {/* Action buttons */}
-        <div className="flex items-center gap-1">
-          {/* Voice input button */}
+        <div className="relative flex items-end gap-2 p-3">
+          {/* Attachment button */}
           <Button
             type="button"
             variant="ghost"
             size="icon"
-            className="h-10 w-10 shrink-0 rounded-xl text-muted-foreground hover:text-foreground hover:bg-accent"
-            aria-label="Voice input"
+            className="h-11 w-11 shrink-0 rounded-xl text-muted-foreground hover:text-primary hover:bg-primary/5 transition-all duration-300 hover:scale-105 active:scale-95"
+            aria-label="Attach file"
           >
-            <Mic className="h-5 w-5" />
+            <Paperclip className="h-5 w-5" />
           </Button>
 
-          {/* Send / Stop button */}
-          {isLoading ? (
-            <Button
-              size="icon"
-              onClick={onStop}
-              className="h-10 w-10 shrink-0 rounded-xl bg-destructive hover:bg-destructive/90 transition-all duration-200 hover:scale-105"
-              aria-label="Stop generating"
-            >
-              <Square className="h-4 w-4 fill-current" />
-            </Button>
-          ) : (
-            <Button
-              size="icon"
-              onClick={handleSubmit}
-              disabled={!hasContent || disabled}
+          {/* Textarea */}
+          <div className="relative flex-1">
+            <textarea
+              ref={textareaRef}
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={handleKeyDown}
+              onFocus={() => setIsFocused(true)}
+              onBlur={() => setIsFocused(false)}
+              placeholder="Message Graviton..."
+              disabled={disabled}
+              rows={1}
               className={cn(
-                'h-10 w-10 shrink-0 rounded-xl transition-all duration-300',
-                hasContent
-                  ? 'bg-primary hover:bg-primary/90 glow-sm hover:scale-105'
-                  : 'bg-muted text-muted-foreground'
+                'max-h-[200px] min-h-[44px] w-full resize-none bg-transparent px-1 py-3 text-[15px] leading-relaxed text-foreground placeholder:text-muted-foreground/50 focus:outline-none',
+                'scrollbar-none'
               )}
-              aria-label="Send message"
+              aria-label="Chat message input"
+            />
+          </div>
+
+          {/* Action buttons */}
+          <div className="flex items-center gap-1.5">
+            {/* Voice input button - hidden on very small screens to save space */}
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="hidden sm:flex h-11 w-11 shrink-0 rounded-xl text-muted-foreground hover:text-primary hover:bg-primary/5 transition-all duration-300 hover:scale-105 active:scale-95"
+              aria-label="Voice input"
             >
-              {hasContent ? (
-                <ArrowUp className="h-5 w-5" />
-              ) : (
-                <Sparkles className="h-5 w-5" />
-              )}
+              <Mic className="h-5 w-5" />
             </Button>
-          )}
+
+            {/* Send / Stop button */}
+            {isLoading ? (
+              <Button
+                size="icon"
+                onClick={onStop}
+                className="h-11 w-11 shrink-0 rounded-xl bg-destructive/10 text-destructive hover:bg-destructive hover:text-white transition-all duration-300 hover:scale-105 active:scale-95 shadow-lg shadow-destructive/20"
+                aria-label="Stop generating"
+              >
+                <Square className="h-4 w-4 fill-current" />
+              </Button>
+            ) : (
+              <Button
+                size="icon"
+                onClick={handleSubmit}
+                disabled={!hasContent || disabled}
+                className={cn(
+                  'h-11 w-11 shrink-0 rounded-xl transition-all duration-500 shadow-xl',
+                  hasContent
+                    ? 'bg-primary text-white hover:bg-primary/90 hover:scale-105 active:scale-95 glow-sm'
+                    : 'bg-muted/50 text-muted-foreground cursor-not-allowed'
+                )}
+                aria-label="Send message"
+              >
+                {hasContent ? (
+                  <ArrowUp className="h-5 w-5 stroke-[2.5px]" />
+                ) : (
+                  <Sparkles className="h-5 w-5" />
+                )}
+              </Button>
+            )}
+          </div>
         </div>
       </div>
 
       {/* Character count indicator */}
       {input.length > 500 && (
-        <div className="absolute -bottom-5 right-2 text-xs text-muted-foreground">
+        <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 text-[10px] font-bold uppercase tracking-widest text-muted-foreground/40 bg-background/50 px-2 rounded-full border border-border/10">
           {input.length} / 4000
         </div>
       )}

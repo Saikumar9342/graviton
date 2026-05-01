@@ -95,13 +95,15 @@ export function ChatInterface() {
   // For now, we still keep the UI updated.
   useEffect(() => {
     if (currentChatId && messages.length > 0) {
-      setChats((prev) =>
-        prev.map((c) => 
+      setChats((prev) => {
+        const chatExists = prev.some((c) => c.id === currentChatId)
+        if (!chatExists) return prev // Wait for fetchChats to finish if it's a race
+        return prev.map((c) => 
           c.id === currentChatId 
             ? { ...c, updatedAt: new Date() } 
             : c
         )
-      )
+      })
     }
   }, [messages, currentChatId])
 
@@ -205,6 +207,7 @@ export function ChatInterface() {
     [messages, setMessages, handleSend]
   )
 
+
   const handleSaveSettings = useCallback((newSettings: Settings) => {
     saveSettings(newSettings)
     setSettings(newSettings)
@@ -249,14 +252,17 @@ export function ChatInterface() {
             <div className="h-12 w-12 rounded-xl bg-primary/20 animate-pulse" />
             <Sparkles className="absolute inset-0 m-auto h-6 w-6 text-primary animate-pulse" />
           </div>
-          <p className="text-sm text-muted-foreground">Loading Graviton AI...</p>
+          <p className="text-sm text-muted-foreground font-medium animate-pulse">Initializing Graviton AI...</p>
         </div>
       </div>
     )
   }
 
   return (
-    <div className={cn('flex h-screen overflow-hidden', getBackgroundClass())}>
+    <div className={cn('relative flex h-screen h-[100svh] overflow-hidden', getBackgroundClass())}>
+      {/* Noise Texture Overlay */}
+      <div className="absolute inset-0 bg-noise pointer-events-none z-[1]" />
+
       {/* Sidebar */}
       <ChatSidebar
         chats={chats}
@@ -271,10 +277,11 @@ export function ChatInterface() {
       />
 
       {/* Main content */}
-      <div className="flex flex-1 flex-col overflow-hidden">
+      <main className="relative flex flex-1 flex-col overflow-hidden z-[2]">
         {/* Header */}
         <ChatHeader
           onToggleSidebar={toggleSidebar}
+          isSidebarCollapsed={isSidebarCollapsed}
           settings={settings}
           onSaveSettings={handleSaveSettings}
         />
@@ -283,12 +290,12 @@ export function ChatInterface() {
         <div
           ref={scrollRef}
           onScroll={handleScroll}
-          className="flex-1 overflow-y-auto scrollbar-thin"
+          className="flex-1 overflow-y-auto scrollbar-thin scroll-smooth px-2"
         >
           {messages.length === 0 ? (
             <EmptyState onSuggestionClick={handleSend} />
           ) : (
-            <div className="pb-32">
+            <div className="pb-40 pt-8 max-w-5xl mx-auto w-full">
               {messages.map((message, index) => (
                 <ChatMessage
                   key={message.id}
@@ -311,13 +318,17 @@ export function ChatInterface() {
 
         {/* Error display */}
         {error && (
-          <div className="border-t border-border bg-card/80 backdrop-blur-sm p-4">
-            <Alert variant="destructive" className="mx-auto max-w-3xl glass">
-              <AlertCircle className="h-4 w-4" />
-              <AlertDescription className="flex items-center justify-between">
-                <span>
-                  {error.message || 'Something went wrong. Please try again.'}
-                </span>
+          <div className="absolute bottom-40 left-0 right-0 z-50 px-4 animate-in slide-in-from-bottom-8 duration-700">
+            <Alert variant="destructive" className="mx-auto max-w-2xl glass-strong shadow-2xl border-destructive/20 rounded-2xl p-4 overflow-hidden">
+              <div className="absolute top-0 left-0 w-1 h-full bg-destructive" />
+              <AlertCircle className="h-5 w-5 text-destructive" />
+              <AlertDescription className="flex items-center justify-between gap-6">
+                <div className="flex flex-col gap-1">
+                  <span className="font-black text-[10px] uppercase tracking-widest text-destructive/60">System Alert</span>
+                  <span className="font-semibold text-sm">
+                    {error.message || 'The neural link was interrupted.'}
+                  </span>
+                </div>
                 <Button
                   variant="outline"
                   size="sm"
@@ -329,19 +340,20 @@ export function ChatInterface() {
                       handleSend(getUIMessageText(lastUserMessage))
                     }
                   }}
-                  className="ml-4 gap-2"
+                  className="shrink-0 bg-destructive/5 hover:bg-destructive/10 border-destructive/20 gap-2 font-bold uppercase tracking-tighter text-[10px] h-9 rounded-xl px-4 transition-all"
                 >
-                  <RefreshCw className="h-4 w-4" />
-                  Retry
+                  <RefreshCw className="h-3 w-3" />
+                  Sync Neural Link
                 </Button>
               </AlertDescription>
             </Alert>
           </div>
         )}
 
-        {/* Input */}
-        <div className="border-t border-border/50 bg-background/80 backdrop-blur-xl p-4">
-          <div className="mx-auto max-w-3xl">
+        {/* Input Area - Absolute positioned for premium 'floating' look */}
+        <div className="absolute bottom-0 left-0 right-0 z-30 pt-10 pb-4 sm:pb-6 pointer-events-none">
+          <div className="absolute inset-0 bg-gradient-to-t from-background via-background/80 to-transparent pointer-events-none" />
+          <div className="relative z-10 pointer-events-auto">
             <ChatInput
               onSend={handleSend}
               onStop={stop}
@@ -349,12 +361,21 @@ export function ChatInterface() {
               settings={settings}
               onSettingsChange={handleSaveSettings}
             />
-            <p className="mt-3 text-center text-xs text-muted-foreground">
-              Graviton AI can make mistakes. Please verify important information.
-            </p>
+            
+            <div className="flex items-center justify-center gap-6 opacity-20 hover:opacity-50 transition-opacity duration-1000 cursor-default px-4">
+              <div className="h-px flex-1 max-w-[100px] bg-gradient-to-r from-transparent to-foreground/50" />
+              <div className="flex items-center gap-3 shrink-0">
+                <Sparkles className="h-3 w-3 text-primary" />
+                <span className="text-[9px] font-black tracking-[0.4em] uppercase whitespace-nowrap">
+                  Graviton Core Intelligence v2.4
+                </span>
+                <Sparkles className="h-3 w-3 text-primary" />
+              </div>
+              <div className="h-px flex-1 max-w-[100px] bg-gradient-to-l from-transparent to-foreground/50" />
+            </div>
           </div>
         </div>
-      </div>
+      </main>
     </div>
   )
 }

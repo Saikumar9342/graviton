@@ -40,7 +40,7 @@ export interface Settings {
 }
 
 export const DEFAULT_SETTINGS: Settings = {
-  model: 'llama3.1',
+  model: 'llama3',
   apiKey: '',
   theme: 'dark',
   accentColor: 'violet',
@@ -63,10 +63,12 @@ export const ACCENT_COLORS: { id: AccentColor; name: string; class: string; hex:
 ]
 
 export const AVAILABLE_MODELS = [
-  { id: 'llama3.1', name: 'Llama 3.1', provider: 'Ollama', badge: 'Latest' },
-  { id: 'phi4', name: 'Phi-4', provider: 'Ollama', badge: 'Fast' },
-  { id: 'deepseek-r1:8b', name: 'DeepSeek R1 (8B)', provider: 'Ollama', badge: 'Reasoning' },
-  { id: 'openai/gpt-4o', name: 'GPT-4o', provider: 'OpenAI', badge: 'Cloud' },
-  { id: 'anthropic/claude-3-5-sonnet', name: 'Claude 3.5 Sonnet', provider: 'Anthropic', badge: 'Cloud' },
-  { id: 'google/gemini-2.0-flash', name: 'Gemini 2.0 Flash', provider: 'Google', badge: 'Cloud' },
+  { id: 'llama3', name: 'Llama 3', provider: 'Ollama', badge: 'Balanced' },
+  { id: 'mistral', name: 'Mistral', provider: 'Ollama', badge: 'Versatile' },
+  { id: 'phi3', name: 'Phi-3', provider: 'Ollama', badge: 'Reasoning' },
+  { id: 'deepseek-coder', name: 'DeepSeek Coder', provider: 'Ollama', badge: 'Coding' },
+  { id: 'gemma:2b', name: 'Gemma (2B)', provider: 'Ollama', badge: 'Efficient' },
+  { id: 'qwen:0.5b', name: 'Qwen (0.5B)', provider: 'Ollama', badge: 'Ultralight' },
+  { id: 'moondream', name: 'Moondream', provider: 'Ollama', badge: 'Vision-Lite' },
+  { id: 'llava', name: 'LLaVA', provider: 'Ollama', badge: 'Multimodal' },
 ]

@@ -12,7 +12,12 @@ from pydantic import BaseModel
 app = FastAPI(title="Graviton AI API")
 
 # Create database tables
-models.Base.metadata.create_all(bind=database.engine)
+try:
+    models.Base.metadata.create_all(bind=database.engine)
+    print("Database tables created successfully.")
+except Exception as e:
+    print(f"Warning: Could not connect to database. {e}")
+    print("Backend will continue to run, but database features will be unavailable.")
 
 # Configure CORS
 app.add_middleware(

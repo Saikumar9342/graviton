@@ -62,107 +62,106 @@ export function ChatMessage({
   }
 
   const getBubbleClasses = () => {
-    const base = 'transition-all duration-200'
+    const base = 'transition-all duration-300'
     switch (bubbleStyle) {
       case 'modern':
-        return cn(base, 'rounded-2xl px-4 py-3')
+        return cn(base, 'rounded-2xl px-5 py-3.5')
       case 'classic':
-        return cn(base, 'rounded-lg px-4 py-3')
+        return cn(base, 'rounded-xl px-5 py-3.5')
       case 'minimal':
-        return cn(base, 'rounded-md px-3 py-2')
+        return cn(base, 'rounded-lg px-4 py-2.5')
       case 'glass':
-        return cn(base, 'rounded-2xl px-4 py-3 glass')
+        return cn(base, 'rounded-2xl px-5 py-3.5 glass-strong')
       default:
-        return cn(base, 'rounded-2xl px-4 py-3')
+        return cn(base, 'rounded-2xl px-5 py-3.5')
     }
   }
 
   return (
     <div
       className={cn(
-        'group relative px-2 sm:px-4 transition-all animate-slide-up border-b border-border/5',
-        compactMode ? 'py-2 sm:py-2.5' : 'py-3 sm:py-4',
-        !isUser && 'bg-chat-assistant/20 backdrop-blur-sm'
+        'group relative px-3 sm:px-6 transition-all animate-slide-up',
+        compactMode ? 'py-2.5 sm:py-3.5' : 'py-4 sm:py-6',
+        !isUser && 'bg-muted/30 backdrop-blur-sm'
       )}
     >
-      <div className="mx-auto max-w-3xl">
-        <div className="flex gap-2 sm:gap-4">
+      <div className="mx-auto max-w-4xl">
+        <div className={cn("flex gap-3 sm:gap-5", isUser ? "flex-row-reverse" : "flex-row")}>
           {/* Avatar */}
-          <div className="relative shrink-0">
+          <div className="relative shrink-0 mt-1">
             <div
               className={cn(
-                'flex h-9 w-9 items-center justify-center rounded-xl transition-all duration-300',
+                'flex h-10 w-10 items-center justify-center rounded-2xl transition-all duration-500 shadow-md',
                 isUser
-                  ? 'bg-gradient-to-br from-primary to-primary/80 text-primary-foreground shadow-lg shadow-primary/20'
-                  : 'bg-gradient-to-br from-primary/80 via-primary to-primary/90 text-primary-foreground shadow-lg shadow-primary/30'
+                  ? 'bg-gradient-to-br from-primary via-primary/90 to-primary/80 text-primary-foreground shadow-primary/20'
+                  : 'bg-gradient-to-br from-sidebar-accent via-background to-sidebar-accent text-foreground shadow-inner border border-border/50'
               )}
             >
               {isUser ? (
-                <User className="h-4 w-4" />
+                <User className="h-5 w-5" />
               ) : (
-                <Sparkles className={cn('h-4 w-4', isStreaming && 'animate-pulse')} />
+                <Sparkles className={cn('h-5 w-5 text-primary', isStreaming && 'animate-pulse')} />
               )}
             </div>
             {/* Online indicator for assistant */}
             {!isUser && (
-              <div className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-background bg-emerald-500" />
+              <div className="absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 rounded-full border-[3px] border-background bg-emerald-500 shadow-sm" />
             )}
           </div>
 
           {/* Content */}
-          <div className="flex-1 space-y-2 overflow-hidden">
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-semibold">
-                {isUser ? 'You' : 'Graviton'}
+          <div className={cn("flex-1 space-y-2.5 overflow-hidden", isUser ? "text-right" : "text-left")}>
+            <div className={cn("flex items-center gap-2", isUser ? "justify-end" : "justify-start")}>
+              <span className="text-xs font-black tracking-widest uppercase text-muted-foreground/60">
+                {isUser ? 'User Identity' : 'Graviton Engine'}
               </span>
               {!isUser && isStreaming && (
-                <span className="flex items-center gap-1 text-xs text-primary">
-                  <span className="relative flex h-2 w-2">
-                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-75" />
-                    <span className="relative inline-flex h-2 w-2 rounded-full bg-primary" />
-                  </span>
-                  Thinking
+                <span className="flex items-center gap-1.5 text-[10px] font-bold text-primary uppercase tracking-wider bg-primary/10 px-2 py-0.5 rounded-full animate-pulse">
+                  Processing
                 </span>
               )}
             </div>
 
             {isEditing ? (
-              <div className="space-y-3 animate-scale-in">
+              <div className="space-y-4 animate-scale-in text-left">
                 <Textarea
                   value={editContent}
                   onChange={(e) => setEditContent(e.target.value)}
-                  className="min-h-[100px] resize-none border-primary/50 focus:border-primary input-glow"
+                  className="min-h-[120px] resize-none border-primary/30 focus:border-primary bg-background/50 backdrop-blur-sm shadow-inner rounded-2xl p-4 transition-all"
                   autoFocus
                 />
-                <div className="flex gap-2">
-                  <Button
-                    size="sm"
-                    onClick={handleSaveEdit}
-                    className="glow-sm gap-2"
-                  >
-                    <RotateCcw className="h-3.5 w-3.5" />
-                    Save & Regenerate
-                  </Button>
+                <div className="flex gap-2 justify-end">
                   <Button
                     size="sm"
                     variant="outline"
                     onClick={handleCancelEdit}
+                    className="rounded-xl px-4"
                   >
                     Cancel
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={handleSaveEdit}
+                    className="glow-sm gap-2 rounded-xl px-4"
+                  >
+                    <RotateCcw className="h-4 w-4" />
+                    Update Response
                   </Button>
                 </div>
               </div>
             ) : (
               <div
                 className={cn(
-                  'text-sm leading-relaxed',
-                  isUser ? cn(getBubbleClasses(), 'bg-primary/10 border border-primary/20 shadow-md ml-auto inline-block max-w-[90%] sm:max-w-[85%] rounded-tr-none') : 'text-foreground'
+                  'text-[15px] leading-relaxed transition-all duration-300',
+                  isUser 
+                    ? cn(getBubbleClasses(), 'bg-primary text-primary-foreground shadow-xl shadow-primary/10 ml-auto inline-block max-w-[92%] sm:max-w-[85%] rounded-tr-none text-left') 
+                    : 'text-foreground'
                 )}
               >
                 {isUser ? (
-                  <p className="whitespace-pre-wrap">{content}</p>
+                  <p className="whitespace-pre-wrap font-medium">{content}</p>
                 ) : (
-                  <div className="prose-chat">
+                  <div className="prose-chat max-w-none">
                     <MarkdownRenderer content={content} isStreaming={isStreaming} />
                   </div>
                 )}
@@ -171,68 +170,73 @@ export function ChatMessage({
 
             {/* Actions */}
             {!isEditing && !isStreaming && content && (
-              <div className="flex items-center gap-1 pt-1 opacity-0 transition-all duration-200 group-hover:opacity-100">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={handleCopy}
-                  className={cn(
-                    'h-8 gap-1.5 text-xs text-muted-foreground hover:text-foreground hover:bg-accent',
-                    copied && 'text-emerald-500'
-                  )}
-                >
-                  {copied ? (
-                    <>
-                      <Check className="h-3.5 w-3.5" />
-                      Copied!
-                    </>
-                  ) : (
-                    <>
-                      <Copy className="h-3.5 w-3.5" />
-                      Copy
-                    </>
-                  )}
-                </Button>
-
-                {isUser && canEdit && (
+              <div className={cn(
+                "flex items-center gap-2 pt-2 opacity-0 transition-all duration-300 group-hover:opacity-100",
+                isUser ? "justify-end" : "justify-start"
+              )}>
+                <div className="flex items-center gap-1 bg-background/50 backdrop-blur-md p-1 rounded-xl border border-border/40 shadow-sm">
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => setIsEditing(true)}
-                    className="h-8 gap-1.5 text-xs text-muted-foreground hover:text-foreground hover:bg-accent"
+                    onClick={handleCopy}
+                    className={cn(
+                      'h-8 px-2.5 gap-2 text-xs font-bold uppercase tracking-wider text-muted-foreground hover:text-foreground transition-all rounded-lg',
+                      copied && 'text-emerald-500'
+                    )}
                   >
-                    <Pencil className="h-3.5 w-3.5" />
-                    Edit
+                    {copied ? (
+                      <>
+                        <Check className="h-3.5 w-3.5" />
+                        Copied
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="h-3.5 w-3.5" />
+                        Copy
+                      </>
+                    )}
                   </Button>
-                )}
 
-                {!isUser && (
-                  <>
-                    <div className="mx-1 h-4 w-px bg-border" />
+                  {isUser && canEdit && (
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={() => setFeedback(feedback === 'up' ? null : 'up')}
-                      className={cn(
-                        'h-8 w-8 p-0 text-muted-foreground hover:text-foreground hover:bg-accent',
-                        feedback === 'up' && 'text-emerald-500 bg-emerald-500/10'
-                      )}
+                      onClick={() => setIsEditing(true)}
+                      className="h-8 px-2.5 gap-2 text-xs font-bold uppercase tracking-wider text-muted-foreground hover:text-foreground transition-all rounded-lg"
                     >
-                      <ThumbsUp className="h-3.5 w-3.5" />
+                      <Pencil className="h-3.5 w-3.5" />
+                      Edit
                     </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setFeedback(feedback === 'down' ? null : 'down')}
-                      className={cn(
-                        'h-8 w-8 p-0 text-muted-foreground hover:text-foreground hover:bg-accent',
-                        feedback === 'down' && 'text-rose-500 bg-rose-500/10'
-                      )}
-                    >
-                      <ThumbsDown className="h-3.5 w-3.5" />
-                    </Button>
-                  </>
-                )}
+                  )}
+
+                  {!isUser && (
+                    <>
+                      <div className="mx-1 h-4 w-px bg-border/50" />
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setFeedback(feedback === 'up' ? null : 'up')}
+                        className={cn(
+                          'h-8 w-8 p-0 text-muted-foreground hover:text-foreground transition-all rounded-lg',
+                          feedback === 'up' && 'text-emerald-500 bg-emerald-500/10'
+                        )}
+                      >
+                        <ThumbsUp className="h-3.5 w-3.5" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setFeedback(feedback === 'down' ? null : 'down')}
+                        className={cn(
+                          'h-8 w-8 p-0 text-muted-foreground hover:text-foreground transition-all rounded-lg',
+                          feedback === 'down' && 'text-rose-500 bg-rose-500/10'
+                        )}
+                      >
+                        <ThumbsDown className="h-3.5 w-3.5" />
+                      </Button>
+                    </>
+                  )}
+                </div>
               </div>
             )}
           </div>

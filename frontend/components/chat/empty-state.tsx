@@ -10,49 +10,49 @@ interface EmptyStateProps {
 const suggestions = [
   {
     icon: Code,
-    title: 'Write Code',
-    description: 'Create components, debug issues, or learn new patterns',
-    prompt: 'Help me create a responsive navbar component in React with Tailwind CSS that has a mobile menu, dark mode toggle, and smooth animations',
+    title: 'Advanced Engineering',
+    description: 'Architect complex systems, optimize algorithms, or refactor legacy patterns.',
+    prompt: 'Architect a high-performance React application structure that utilizes server components, advanced caching strategies, and specialized design patterns for massive scalability.',
     gradient: 'from-blue-500/20 to-cyan-500/20',
     iconColor: 'text-blue-500',
   },
   {
     icon: Brain,
-    title: 'Explain Concepts',
-    description: 'Deep dive into technical topics with clear examples',
-    prompt: 'Explain how async/await works in JavaScript, including error handling, Promise.all, and common pitfalls to avoid',
+    title: 'Cognitive Analysis',
+    description: 'Deconstruct sophisticated technical paradigms and emerging frameworks.',
+    prompt: 'Conduct a deep-dive analysis of modern distributed systems, specifically focusing on consistency models, consensus algorithms, and their implementation in cloud-native environments.',
     gradient: 'from-purple-500/20 to-pink-500/20',
     iconColor: 'text-purple-500',
   },
   {
     icon: Lightbulb,
-    title: 'Brainstorm Ideas',
-    description: 'Get creative solutions and fresh perspectives',
-    prompt: 'Give me 5 innovative project ideas for building a portfolio that stands out to tech recruiters in 2026',
+    title: 'Strategic Innovation',
+    description: 'Synthesize breakthrough solutions and industry-leading product directions.',
+    prompt: 'Develop a comprehensive technical roadmap for an AI-driven platform, identifying high-impact features and potential architectural bottlenecks for the 2026 tech landscape.',
     gradient: 'from-amber-500/20 to-orange-500/20',
     iconColor: 'text-amber-500',
   },
   {
     icon: Rocket,
-    title: 'Build Features',
-    description: 'Plan and implement complete application features',
-    prompt: 'Help me design and implement a user authentication system with email verification, password reset, and OAuth support',
+    title: 'System Deployment',
+    description: 'Execute end-to-end implementation of robust, production-ready features.',
+    prompt: 'Implement a secure, multi-tenant authentication microservice using industry-standard protocols, including specialized handling for JWT, OAuth2, and biometrics.',
     gradient: 'from-emerald-500/20 to-teal-500/20',
     iconColor: 'text-emerald-500',
   },
   {
     icon: Wand2,
-    title: 'Refactor Code',
-    description: 'Improve performance, readability, and best practices',
-    prompt: 'Review my code for best practices, suggest improvements for performance and maintainability, and help me refactor it',
+    title: 'Neural Refactoring',
+    description: 'Elevate code quality through rigorous best practices and performance tuning.',
+    prompt: 'Perform a comprehensive code review and refactoring of this repository, focusing on reducing cyclomatic complexity, improving memory efficiency, and ensuring type safety.',
     gradient: 'from-rose-500/20 to-red-500/20',
     iconColor: 'text-rose-500',
   },
   {
     icon: BookOpen,
-    title: 'Learn Together',
-    description: 'Step-by-step tutorials and guided learning',
-    prompt: 'Teach me how to build a real-time chat application with WebSockets, starting from the basics and building up to production-ready code',
+    title: 'Technical Mastery',
+    description: 'Accelerate your specialized learning path with expert-level mentorship.',
+    prompt: 'Provide an expert-level tutorial on building low-latency trading systems with WebSockets and Rust, covering everything from memory management to network optimization.',
     gradient: 'from-indigo-500/20 to-violet-500/20',
     iconColor: 'text-indigo-500',
   },
@@ -79,12 +79,12 @@ export function EmptyState({ onSuggestionClick }: EmptyStateProps) {
         <div className="absolute top-1/2 -right-4 h-2 w-2 rounded-full bg-primary/50 animate-bounce" style={{ animationDelay: '1s' }} />
       </div>
       
-      <h1 className="mb-3 text-center text-3xl font-bold tracking-tight text-foreground sm:text-4xl text-balance">
-        What can I help you build?
+      <h1 className="mb-4 text-center text-4xl font-black tracking-tighter text-foreground sm:text-6xl text-balance bg-clip-text text-transparent bg-gradient-to-b from-foreground to-foreground/40 leading-[0.9]">
+        Neural Core Active.
       </h1>
-      <p className="mb-10 max-w-md text-center text-muted-foreground text-balance">
-        I&apos;m Graviton AI, your intelligent coding companion. Ask me anything about 
-        development, debugging, or building amazing products.
+      <p className="mb-12 max-w-xl text-center text-muted-foreground/50 text-balance text-lg font-medium leading-relaxed tracking-tight">
+        I am <span className="text-primary font-black uppercase tracking-widest">Graviton</span>. 
+        Your specialized intelligence layer for high-stakes engineering and architectural synthesis.
       </p>
 
       {/* Suggestions Grid */}
