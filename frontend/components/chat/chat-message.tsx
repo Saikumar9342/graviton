@@ -91,33 +91,34 @@ export function ChatMessage({
           <div className="relative shrink-0 mt-1">
             <div
               className={cn(
-                'flex h-10 w-10 items-center justify-center rounded-2xl transition-all duration-500 shadow-md',
+                'flex h-11 w-11 items-center justify-center rounded-2xl transition-all duration-500 shadow-xl overflow-hidden relative group',
                 isUser
-                  ? 'bg-gradient-to-br from-primary via-primary/90 to-primary/80 text-primary-foreground shadow-primary/20'
-                  : 'bg-gradient-to-br from-sidebar-accent via-background to-sidebar-accent text-foreground shadow-inner border border-border/50'
+                  ? 'bg-gradient-to-br from-primary via-primary/90 to-primary/70 text-primary-foreground shadow-primary/30 ring-1 ring-white/20'
+                  : 'bg-gradient-to-br from-sidebar-accent via-background to-sidebar-accent text-foreground shadow-inner border border-border/50 ring-1 ring-white/5'
               )}
             >
+              <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity" />
               {isUser ? (
-                <User className="h-5 w-5" />
+                <User className="h-5.5 w-5.5 relative z-10" />
               ) : (
-                <Sparkles className={cn('h-5 w-5 text-primary', isStreaming && 'animate-pulse')} />
+                <Sparkles className={cn('h-5.5 w-5.5 text-primary relative z-10', isStreaming && 'animate-pulse')} />
               )}
             </div>
             {/* Online indicator for assistant */}
             {!isUser && (
-              <div className="absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 rounded-full border-[3px] border-background bg-emerald-500 shadow-sm" />
+              <div className="absolute -bottom-1 -right-1 h-4 w-4 rounded-full border-[3.5px] border-background bg-emerald-500 shadow-md" />
             )}
           </div>
 
           {/* Content */}
           <div className={cn("flex-1 space-y-2.5 overflow-hidden", isUser ? "text-right" : "text-left")}>
             <div className={cn("flex items-center gap-2", isUser ? "justify-end" : "justify-start")}>
-              <span className="text-xs font-black tracking-widest uppercase text-muted-foreground/60">
-                {isUser ? 'User Identity' : 'Graviton Engine'}
+              <span className="text-[10px] font-black tracking-[0.2em] uppercase text-muted-foreground/40 group-hover:text-muted-foreground/60 transition-colors">
+                {isUser ? 'Neural Signature' : 'Core Processing Unit'}
               </span>
               {!isUser && isStreaming && (
-                <span className="flex items-center gap-1.5 text-[10px] font-bold text-primary uppercase tracking-wider bg-primary/10 px-2 py-0.5 rounded-full animate-pulse">
-                  Processing
+                <span className="flex items-center gap-2 text-[9px] font-black text-primary uppercase tracking-[0.15em] bg-primary/5 px-2.5 py-1 rounded-lg border border-primary/10 animate-pulse">
+                  Linking...
                 </span>
               )}
             </div>
@@ -127,7 +128,7 @@ export function ChatMessage({
                 <Textarea
                   value={editContent}
                   onChange={(e) => setEditContent(e.target.value)}
-                  className="min-h-[120px] resize-none border-primary/30 focus:border-primary bg-background/50 backdrop-blur-sm shadow-inner rounded-2xl p-4 transition-all"
+                  className="min-h-[120px] resize-none border-primary/30 focus:border-primary bg-background/50 backdrop-blur-sm shadow-inner rounded-2xl p-4 transition-all text-sm"
                   autoFocus
                 />
                 <div className="flex gap-2 justify-end">
@@ -135,16 +136,16 @@ export function ChatMessage({
                     size="sm"
                     variant="outline"
                     onClick={handleCancelEdit}
-                    className="rounded-xl px-4"
+                    className="rounded-xl px-4 text-[10px] font-black uppercase tracking-widest"
                   >
                     Cancel
                   </Button>
                   <Button
                     size="sm"
                     onClick={handleSaveEdit}
-                    className="glow-sm gap-2 rounded-xl px-4"
+                    className="glow-sm gap-2 rounded-xl px-4 text-[10px] font-black uppercase tracking-widest"
                   >
-                    <RotateCcw className="h-4 w-4" />
+                    <RotateCcw className="h-3 w-3" />
                     Update Response
                   </Button>
                 </div>
@@ -152,14 +153,14 @@ export function ChatMessage({
             ) : (
               <div
                 className={cn(
-                  'text-[15px] leading-relaxed transition-all duration-300',
+                  'text-[14px] sm:text-[15.5px] leading-relaxed transition-all duration-300',
                   isUser 
-                    ? cn(getBubbleClasses(), 'bg-primary text-primary-foreground shadow-xl shadow-primary/10 ml-auto inline-block max-w-[92%] sm:max-w-[85%] rounded-tr-none text-left') 
-                    : 'text-foreground'
+                    ? cn(getBubbleClasses(), 'bg-primary text-primary-foreground shadow-2xl shadow-primary/20 ml-auto inline-block max-w-[95%] sm:max-w-[85%] rounded-tr-none text-left font-semibold tracking-tight ring-1 ring-white/10') 
+                    : 'text-foreground/90 font-medium'
                 )}
               >
                 {isUser ? (
-                  <p className="whitespace-pre-wrap font-medium">{content}</p>
+                  <p className="whitespace-pre-wrap">{content}</p>
                 ) : (
                   <div className="prose-chat max-w-none">
                     <MarkdownRenderer content={content} isStreaming={isStreaming} />

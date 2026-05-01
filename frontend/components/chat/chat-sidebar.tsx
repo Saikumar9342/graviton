@@ -101,7 +101,7 @@ export function ChatSidebar({
         className={cn(
           'fixed inset-y-0 left-0 z-50 flex flex-col border-r border-sidebar-border bg-sidebar/95 backdrop-blur-2xl transition-all duration-500 ease-in-out md:relative md:translate-x-0',
           isOpen ? 'translate-x-0' : '-translate-x-full',
-          isCollapsed ? 'w-[78px]' : 'w-72'
+          isCollapsed ? 'w-[80px]' : 'w-80'
         )}
       >
         {/* Desktop Collapse Toggle */}
@@ -122,21 +122,22 @@ export function ChatSidebar({
         </Button>
 
         {/* Header */}
-        <div className="flex flex-col gap-5 p-5">
+        <div className="flex flex-col gap-4 p-4 sm:p-6">
           <div className="flex items-center justify-between">
             <div className={cn("flex items-center gap-3 overflow-hidden transition-all duration-500", isCollapsed ? "w-0 opacity-0" : "w-full opacity-100")}>
-              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-primary shadow-lg shadow-primary/20 transition-all hover:scale-105 active:scale-95 cursor-default">
-                <Sparkles className="h-6 w-6 text-primary-foreground" />
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-primary shadow-lg shadow-primary/20 transition-all hover:scale-105 active:scale-95 cursor-default relative overflow-hidden group">
+                <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity" />
+                <Sparkles className="h-5.5 w-5.5 text-primary-foreground relative z-10" />
               </div>
               <div className="flex flex-col">
-                <span className="text-lg font-black tracking-tighter text-foreground leading-none">GRAVITON</span>
-                <span className="text-[10px] font-bold text-primary tracking-[0.2em] uppercase mt-0.5">Core v2.4</span>
+                <span className="text-lg font-black tracking-tight text-foreground leading-none">GRAVITON</span>
+                <span className="text-[10px] font-bold text-primary tracking-[0.2em] uppercase mt-1 opacity-70">Neural Link v2.4</span>
               </div>
             </div>
             <Button
               variant="ghost"
               size="icon"
-              className="h-10 w-10 md:hidden hover:bg-sidebar-accent/50 rounded-2xl"
+              className="h-10 w-10 md:hidden hover:bg-sidebar-accent/50 rounded-xl"
               onClick={onClose}
             >
               <X className="h-5 w-5 text-muted-foreground" />
@@ -151,24 +152,24 @@ export function ChatSidebar({
             }}
             size={isCollapsed ? "icon" : "default"}
             className={cn(
-              "relative overflow-hidden group justify-start gap-2.5 glow-sm transition-all duration-300 shadow-lg hover:shadow-primary/20",
-              isCollapsed ? "h-12 w-12 p-0 justify-center mx-auto rounded-2xl" : "w-full h-11 px-4 rounded-xl"
+              "relative overflow-hidden group justify-start gap-3 glow-sm transition-all duration-500 shadow-lg hover:shadow-primary/30",
+              isCollapsed ? "h-14 w-14 p-0 justify-center mx-auto rounded-2xl" : "w-full h-12 px-5 rounded-2xl"
             )}
           >
-            <div className="absolute inset-0 bg-gradient-to-r from-primary/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-            <Plus className={cn("h-5 w-5 transition-transform duration-300 group-hover:rotate-90", isCollapsed ? "h-6 w-6" : "")} />
-            {!isCollapsed && <span className="font-bold tracking-tight">New Message</span>}
+            <div className="absolute inset-0 bg-gradient-to-r from-primary/30 via-primary/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+            <Plus className={cn("h-5 w-5 transition-transform duration-500 group-hover:rotate-90", isCollapsed ? "h-6 w-6" : "")} />
+            {!isCollapsed && <span className="font-bold tracking-tight text-sm">Initiate Protocol</span>}
           </Button>
 
           {/* Search */}
           {!isCollapsed && (
-            <div className="relative group animate-in fade-in slide-in-from-top-4 duration-700">
-              <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground/30 group-focus-within:text-primary group-focus-within:scale-110 transition-all" />
+            <div className="relative group animate-in fade-in slide-in-from-top-2 duration-700">
+              <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground/20 group-focus-within:text-primary group-focus-within:scale-110 transition-all" />
               <Input
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search history..."
-                className="h-11 pl-11 bg-sidebar-accent/30 border-transparent hover:bg-sidebar-accent/50 focus:bg-sidebar-accent/70 focus:ring-2 focus:ring-primary/10 text-sm transition-all duration-300 rounded-2xl placeholder:text-muted-foreground/40 font-medium"
+                placeholder="Recall transmission..."
+                className="h-11 pl-11 bg-sidebar-accent/20 border-transparent hover:bg-sidebar-accent/40 focus:bg-sidebar-accent/60 focus:ring-2 focus:ring-primary/10 text-[13px] transition-all duration-300 rounded-2xl placeholder:text-muted-foreground/30 font-medium"
               />
             </div>
           )}
@@ -193,7 +194,7 @@ export function ChatSidebar({
                 {groupedChats.map(([group, groupChats], idx) => (
                   <div key={group} className={cn("animate-in fade-in slide-in-from-bottom-2", `delay-[${idx * 100}ms]`)}>
                     {!isCollapsed && (
-                      <h3 className="mb-3 px-3 text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/40">
+                      <h3 className="mb-3 px-4 text-[10px] font-black uppercase tracking-[0.25em] text-muted-foreground/30">
                         {group}
                       </h3>
                     )}
@@ -283,24 +284,24 @@ function ChatItem({ chat, isActive, isCollapsed, onSelect, onDelete }: ChatItemP
       
       {!isCollapsed && (
         <>
-          <div className="flex flex-1 flex-col overflow-hidden z-10 py-0.5">
+          <div className="flex flex-1 flex-col overflow-hidden z-10 py-1">
             <span className={cn(
               "truncate text-[13px] font-semibold tracking-tight transition-colors duration-300",
-              isActive ? "text-foreground" : "text-muted-foreground/90 group-hover:text-foreground"
+              isActive ? "text-foreground" : "text-muted-foreground/80 group-hover:text-foreground"
             )}>
               {chat.title}
             </span>
-            <div className="flex items-center gap-2 mt-1">
+            <div className="flex items-center gap-2 mt-1 opacity-40 group-hover:opacity-70 transition-opacity">
               <span className={cn(
-                "text-[9px] font-medium uppercase tracking-[0.05em] transition-colors",
-                isActive ? "text-primary/70" : "text-muted-foreground/40 group-hover:text-muted-foreground/60"
+                "text-[9px] font-bold uppercase tracking-[0.1em]",
+                isActive ? "text-primary/70" : "text-muted-foreground"
               )}>
                 {new Date(chat.updatedAt).toLocaleDateString([], { month: 'short', day: 'numeric' })}
               </span>
-              <span className="h-0.5 w-0.5 rounded-full bg-muted-foreground/20" />
+              <span className="h-0.5 w-0.5 rounded-full bg-current opacity-30" />
               <span className={cn(
-                "text-[9px] font-medium uppercase tracking-[0.05em] transition-colors",
-                isActive ? "text-primary/70" : "text-muted-foreground/40 group-hover:text-muted-foreground/60"
+                "text-[9px] font-bold uppercase tracking-[0.05em]",
+                isActive ? "text-primary/60" : "text-muted-foreground"
               )}>
                 {new Date(chat.updatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })}
               </span>

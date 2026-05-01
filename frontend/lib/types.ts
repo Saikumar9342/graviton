@@ -40,7 +40,7 @@ export interface Settings {
 }
 
 export const DEFAULT_SETTINGS: Settings = {
-  model: 'llama3',
+  model: 'llama3.1',
   apiKey: '',
   theme: 'dark',
   accentColor: 'violet',
@@ -63,12 +63,9 @@ export const ACCENT_COLORS: { id: AccentColor; name: string; class: string; hex:
 ]
 
 export const AVAILABLE_MODELS = [
-  { id: 'llama3', name: 'Llama 3', provider: 'Ollama', badge: 'Balanced' },
-  { id: 'mistral', name: 'Mistral', provider: 'Ollama', badge: 'Versatile' },
-  { id: 'phi3', name: 'Phi-3', provider: 'Ollama', badge: 'Reasoning' },
-  { id: 'deepseek-coder', name: 'DeepSeek Coder', provider: 'Ollama', badge: 'Coding' },
-  { id: 'gemma:2b', name: 'Gemma (2B)', provider: 'Ollama', badge: 'Efficient' },
-  { id: 'qwen:0.5b', name: 'Qwen (0.5B)', provider: 'Ollama', badge: 'Ultralight' },
-  { id: 'moondream', name: 'Moondream', provider: 'Ollama', badge: 'Vision-Lite' },
-  { id: 'llava', name: 'LLaVA', provider: 'Ollama', badge: 'Multimodal' },
+  { id: 'llama3.1', name: 'Llama 3.1', provider: 'Ollama', badge: 'Latest' },
+  { id: 'deepseek-r1:8b', name: 'DeepSeek R1 (8B)', provider: 'Ollama', badge: 'Powerful' },
+  { id: 'mistral', name: 'Mistral', provider: 'Ollama', badge: 'Balanced' },
+  { id: 'deepseek-coder-v2', name: 'DeepSeek Coder V2', provider: 'Ollama', badge: 'Pro Coding' },
 ]
+

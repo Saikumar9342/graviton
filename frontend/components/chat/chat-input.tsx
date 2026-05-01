@@ -99,19 +99,19 @@ export function ChatInput({
         )}
 
         {/* Model selector row */}
-        <div className="flex items-center gap-2 px-4 py-2 border-b border-border/10">
+        <div className="flex items-center gap-2 px-3 sm:px-4 py-1.5 sm:py-2 border-b border-border/5">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button
                 variant="ghost"
                 size="sm"
-                className="h-8 gap-2 px-2.5 text-muted-foreground hover:text-foreground hover:bg-primary/5 rounded-xl transition-colors"
+                className="h-7 sm:h-8 gap-2 px-2 text-muted-foreground hover:text-foreground hover:bg-primary/5 rounded-lg transition-colors"
               >
-                <div className="p-1 rounded-md bg-primary/10">
-                  <Zap className="h-3 w-3 text-primary" />
+                <div className="p-0.5 sm:p-1 rounded bg-primary/10">
+                  <Zap className="h-2.5 sm:h-3 w-2.5 sm:w-3 text-primary" />
                 </div>
-                <span className="text-[11px] font-bold uppercase tracking-wider">{currentModel?.name || 'Select Model'}</span>
-                <ChevronDown className="h-3 w-3 opacity-30" />
+                <span className="text-[10px] sm:text-[11px] font-black uppercase tracking-wider">{currentModel?.name || 'Select Model'}</span>
+                <ChevronDown className="h-2.5 sm:h-3 w-2.5 sm:w-3 opacity-30" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start" className="w-64 p-2 rounded-2xl backdrop-blur-3xl border-border/40 shadow-2xl">
@@ -119,16 +119,16 @@ export function ChatInput({
                 <DropdownMenuItem
                   key={model.id}
                   onClick={() => onSettingsChange({ ...settings, model: model.id })}
-                  className="flex items-center justify-between py-3 px-3 rounded-xl cursor-pointer hover:bg-primary/5 focus:bg-primary/5 transition-colors"
+                  className="flex items-center justify-between py-2.5 px-3 rounded-xl cursor-pointer hover:bg-primary/5 focus:bg-primary/5 transition-colors"
                 >
                   <div className="flex flex-col gap-0.5">
-                    <span className="font-semibold text-sm">{model.name}</span>
-                    <span className="text-[10px] text-muted-foreground uppercase tracking-widest">
+                    <span className="font-bold text-xs sm:text-sm">{model.name}</span>
+                    <span className="text-[9px] text-muted-foreground uppercase tracking-widest font-bold opacity-60">
                       {model.provider}
                     </span>
                   </div>
                   {model.badge && (
-                    <Badge variant="secondary" className="text-[9px] px-1.5 py-0 font-bold uppercase tracking-tighter bg-primary/10 text-primary border-none">
+                    <Badge variant="secondary" className="text-[8px] px-1.5 py-0 font-black uppercase tracking-tighter bg-primary/10 text-primary border-none">
                       {model.badge}
                     </Badge>
                   )}
@@ -138,7 +138,7 @@ export function ChatInput({
           </DropdownMenu>
         </div>
 
-        <div className="relative flex items-end gap-2 p-3">
+        <div className="relative flex items-end gap-1.5 sm:gap-2 p-2 sm:p-3">
           {/* Attachment button */}
           <Button
             type="button"
