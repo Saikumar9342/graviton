@@ -80,9 +80,9 @@ export function ChatMessage({
   return (
     <div
       className={cn(
-        'group relative px-3 sm:px-6 transition-all animate-slide-up',
-        compactMode ? 'py-2.5 sm:py-3.5' : 'py-4 sm:py-6',
-        !isUser && 'bg-muted/30 backdrop-blur-sm'
+        'group relative transition-all duration-700 animate-in fade-in slide-in-from-bottom-4',
+        compactMode ? 'py-4 sm:py-6' : 'py-8 sm:py-12',
+        !isUser && 'bg-muted/5'
       )}
     >
       <div className="mx-auto max-w-4xl">
@@ -91,35 +91,42 @@ export function ChatMessage({
           <div className="relative shrink-0 mt-1">
             <div
               className={cn(
-                'flex h-11 w-11 items-center justify-center rounded-2xl transition-all duration-500 shadow-xl overflow-hidden relative group',
+                'flex h-12 w-12 items-center justify-center rounded-[20px] transition-all duration-700 shadow-2xl overflow-hidden relative group',
                 isUser
-                  ? 'bg-gradient-to-br from-primary via-primary/90 to-primary/70 text-primary-foreground shadow-primary/30 ring-1 ring-white/20'
-                  : 'bg-gradient-to-br from-sidebar-accent via-background to-sidebar-accent text-foreground shadow-inner border border-border/50 ring-1 ring-white/5'
+                  ? 'bg-gradient-to-br from-primary via-primary/90 to-primary/70 text-primary-foreground shadow-primary/30 ring-2 ring-white/10'
+                  : 'bg-gradient-to-br from-sidebar-accent/80 via-background to-sidebar-accent text-foreground shadow-inner border border-border/20 ring-2 ring-white/5'
               )}
             >
-              <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity" />
+              <div className="absolute inset-0 bg-gradient-to-tr from-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
               {isUser ? (
-                <User className="h-5.5 w-5.5 relative z-10" />
+                <User className="h-6 w-6 relative z-10" />
               ) : (
-                <Sparkles className={cn('h-5.5 w-5.5 text-primary relative z-10', isStreaming && 'animate-pulse')} />
+                <Sparkles className={cn('h-6 w-6 text-primary relative z-10 drop-shadow-[0_0_8px_rgba(var(--primary),0.5)]', isStreaming && 'animate-pulse')} />
               )}
             </div>
             {/* Online indicator for assistant */}
             {!isUser && (
-              <div className="absolute -bottom-1 -right-1 h-4 w-4 rounded-full border-[3.5px] border-background bg-emerald-500 shadow-md" />
+              <div className="absolute -bottom-0.5 -right-0.5 h-4.5 w-4.5 rounded-full border-[3px] border-background bg-emerald-500 shadow-lg shadow-emerald-500/20" />
             )}
           </div>
 
           {/* Content */}
-          <div className={cn("flex-1 space-y-2.5 overflow-hidden", isUser ? "text-right" : "text-left")}>
-            <div className={cn("flex items-center gap-2", isUser ? "justify-end" : "justify-start")}>
-              <span className="text-[10px] font-black tracking-[0.2em] uppercase text-muted-foreground/40 group-hover:text-muted-foreground/60 transition-colors">
+          <div className={cn("flex-1 space-y-4 overflow-hidden", isUser ? "text-right" : "text-left")}>
+            <div className={cn("flex items-center gap-3", isUser ? "flex-row-reverse" : "flex-row")}>
+              <span className="text-[9px] font-black tracking-[0.3em] uppercase text-primary/40 group-hover:text-primary/70 transition-all duration-700">
                 {isUser ? 'Neural Signature' : 'Core Processing Unit'}
               </span>
+              <div className="h-px w-10 bg-gradient-to-r from-transparent via-primary/20 to-transparent" />
               {!isUser && isStreaming && (
-                <span className="flex items-center gap-2 text-[9px] font-black text-primary uppercase tracking-[0.15em] bg-primary/5 px-2.5 py-1 rounded-lg border border-primary/10 animate-pulse">
-                  Linking...
-                </span>
+                <div className="flex items-center gap-2.5 bg-primary/5 border border-primary/20 px-3.5 py-1.5 rounded-full animate-pulse shadow-[0_0_15px_rgba(var(--primary),0.1)]">
+                  <div className="relative flex h-2 w-2">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
+                  </div>
+                  <span className="text-[9px] font-black text-primary uppercase tracking-[0.2em]">
+                    Processing...
+                  </span>
+                </div>
               )}
             </div>
 
@@ -128,41 +135,41 @@ export function ChatMessage({
                 <Textarea
                   value={editContent}
                   onChange={(e) => setEditContent(e.target.value)}
-                  className="min-h-[120px] resize-none border-primary/30 focus:border-primary bg-background/50 backdrop-blur-sm shadow-inner rounded-2xl p-4 transition-all text-sm"
+                  className="min-h-[140px] resize-none border-primary/30 focus:border-primary bg-background/50 backdrop-blur-xl shadow-2xl rounded-3xl p-6 transition-all text-sm font-medium leading-relaxed"
                   autoFocus
                 />
-                <div className="flex gap-2 justify-end">
+                <div className="flex gap-3 justify-end">
                   <Button
                     size="sm"
-                    variant="outline"
+                    variant="ghost"
                     onClick={handleCancelEdit}
-                    className="rounded-xl px-4 text-[10px] font-black uppercase tracking-widest"
+                    className="rounded-xl px-5 text-[9px] font-black uppercase tracking-widest hover:bg-primary/5"
                   >
-                    Cancel
+                    Abort
                   </Button>
                   <Button
                     size="sm"
                     onClick={handleSaveEdit}
-                    className="glow-sm gap-2 rounded-xl px-4 text-[10px] font-black uppercase tracking-widest"
+                    className="glow gap-2 rounded-xl px-6 h-10 text-[9px] font-black uppercase tracking-widest"
                   >
-                    <RotateCcw className="h-3 w-3" />
-                    Update Response
+                    <RotateCcw className="h-3.5 w-3.5" />
+                    Re-Execute
                   </Button>
                 </div>
               </div>
             ) : (
               <div
                 className={cn(
-                  'text-[14px] sm:text-[15.5px] leading-relaxed transition-all duration-300',
+                  'text-[15px] sm:text-[16.5px] leading-[1.6] transition-all duration-700',
                   isUser 
-                    ? cn(getBubbleClasses(), 'bg-primary text-primary-foreground shadow-2xl shadow-primary/20 ml-auto inline-block max-w-[95%] sm:max-w-[85%] rounded-tr-none text-left font-semibold tracking-tight ring-1 ring-white/10') 
+                    ? cn(getBubbleClasses(), 'bg-primary text-primary-foreground shadow-2xl shadow-primary/20 ml-auto inline-block max-w-[92%] sm:max-w-[85%] rounded-[24px] rounded-tr-[4px] text-left font-semibold tracking-tight hover:shadow-primary/40 hover:-translate-y-0.5') 
                     : 'text-foreground/90 font-medium'
                 )}
               >
                 {isUser ? (
                   <p className="whitespace-pre-wrap">{content}</p>
                 ) : (
-                  <div className="prose-chat max-w-none">
+                  <div className="prose-chat max-w-none prose-p:leading-relaxed prose-pre:rounded-2xl prose-pre:bg-black/20 prose-pre:border prose-pre:border-white/5 prose-code:text-primary/90">
                     <MarkdownRenderer content={content} isStreaming={isStreaming} />
                   </div>
                 )}

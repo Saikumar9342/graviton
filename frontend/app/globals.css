@@ -293,6 +293,7 @@
   }
 }
 
+/* Custom utilities defined early for @apply usage */
 @utility glass {
   background: oklch(from var(--card) l c h / 0.3);
   backdrop-filter: blur(16px) saturate(160%);

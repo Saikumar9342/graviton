@@ -99,52 +99,56 @@ export function ChatSidebar({
       {/* Sidebar */}
       <aside
         className={cn(
-          'fixed inset-y-0 left-0 z-50 flex flex-col border-r border-sidebar-border bg-sidebar/95 backdrop-blur-2xl transition-all duration-500 ease-in-out md:relative md:translate-x-0',
+          'fixed inset-y-0 left-0 z-50 flex flex-col border-r border-sidebar-border bg-sidebar/95 backdrop-blur-3xl transition-all duration-700 ease-[cubic-bezier(0.2,0.8,0.2,1)] md:relative md:translate-x-0',
           isOpen ? 'translate-x-0' : '-translate-x-full',
-          isCollapsed ? 'w-[80px]' : 'w-80'
+          isCollapsed ? 'md:w-[80px]' : 'md:w-[300px]',
+          'w-[280px]' // Fixed width for mobile overlay
         )}
       >
-        {/* Desktop Collapse Toggle */}
+        {/* Desktop Collapse Toggle - Enhanced positioning and styling */}
         <Button
           variant="ghost"
           size="icon"
-          className="absolute -right-3 top-20 z-50 hidden h-7 w-7 rounded-full border border-sidebar-border bg-sidebar shadow-lg md:flex hover:scale-110 transition-all duration-300 group hover:shadow-primary/20"
+          className="absolute -right-3.5 top-24 z-50 hidden h-7 w-7 rounded-full border border-sidebar-border bg-sidebar shadow-2xl md:flex hover:scale-125 active:scale-90 transition-all duration-500 group hover:shadow-primary/40 hover:border-primary/50"
           onClick={(e) => {
             e.stopPropagation()
             onToggleCollapse()
           }}
         >
           {isCollapsed ? (
-            <ChevronRight className="h-4 w-4 text-primary group-hover:translate-x-0.5 transition-transform" />
+            <ChevronRight className="h-4 w-4 text-primary transition-transform group-hover:translate-x-0.5" />
           ) : (
-            <ChevronLeft className="h-4 w-4 text-primary group-hover:-translate-x-0.5 transition-transform" />
+            <ChevronLeft className="h-4 w-4 text-primary transition-transform group-hover:-translate-x-0.5" />
           )}
         </Button>
 
-        {/* Header */}
-        <div className="flex flex-col gap-4 p-4 sm:p-6">
+        {/* Header Section */}
+        <div className="flex flex-col gap-6 p-6">
           <div className="flex items-center justify-between">
-            <div className={cn("flex items-center gap-3 overflow-hidden transition-all duration-500", isCollapsed ? "w-0 opacity-0" : "w-full opacity-100")}>
-              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-primary shadow-lg shadow-primary/20 transition-all hover:scale-105 active:scale-95 cursor-default relative overflow-hidden group">
-                <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity" />
+            <div className={cn("flex items-center gap-3.5 overflow-hidden transition-all duration-700", isCollapsed ? "w-0 opacity-0" : "w-full opacity-100")}>
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-primary shadow-xl shadow-primary/20 transition-all hover:scale-110 active:scale-95 cursor-default relative overflow-hidden group">
+                <div className="absolute inset-0 bg-gradient-to-br from-white/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
                 <Sparkles className="h-5.5 w-5.5 text-primary-foreground relative z-10" />
               </div>
-              <div className="flex flex-col">
-                <span className="text-lg font-black tracking-tight text-foreground leading-none">GRAVITON</span>
-                <span className="text-[10px] font-bold text-primary tracking-[0.2em] uppercase mt-1 opacity-70">Neural Link v2.4</span>
+              <div className="flex flex-col min-w-0">
+                <span className="text-xl font-bold tracking-tight text-foreground leading-none">Graviton</span>
+                <span className="text-[10px] font-medium text-primary/70 tracking-[0.2em] uppercase mt-1 flex items-center gap-1.5">
+                  <span className="h-1 w-1 rounded-full bg-primary animate-pulse shadow-[0_0_8px_var(--primary)]" />
+                  Interface v2
+                </span>
               </div>
             </div>
             <Button
               variant="ghost"
               size="icon"
-              className="h-10 w-10 md:hidden hover:bg-sidebar-accent/50 rounded-xl"
+              className="h-10 w-10 md:hidden hover:bg-sidebar-accent/50 rounded-2xl transition-all active:scale-90"
               onClick={onClose}
             >
               <X className="h-5 w-5 text-muted-foreground" />
             </Button>
           </div>
 
-          {/* New Chat Button */}
+          {/* New Chat Button - Refined aesthetics */}
           <Button
             onClick={() => {
               onNewChat()
@@ -152,24 +156,28 @@ export function ChatSidebar({
             }}
             size={isCollapsed ? "icon" : "default"}
             className={cn(
-              "relative overflow-hidden group justify-start gap-3 glow-sm transition-all duration-500 shadow-lg hover:shadow-primary/30",
-              isCollapsed ? "h-14 w-14 p-0 justify-center mx-auto rounded-2xl" : "w-full h-12 px-5 rounded-2xl"
+              "relative overflow-hidden group justify-start gap-4 transition-all duration-700 shadow-2xl hover:shadow-primary/30 active:scale-95",
+              isCollapsed 
+                ? "h-14 w-14 p-0 justify-center mx-auto rounded-[18px]" 
+                : "w-full h-13 px-5 rounded-[20px] bg-primary text-primary-foreground font-bold tracking-tight"
             )}
           >
-            <div className="absolute inset-0 bg-gradient-to-r from-primary/30 via-primary/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-            <Plus className={cn("h-5 w-5 transition-transform duration-500 group-hover:rotate-90", isCollapsed ? "h-6 w-6" : "")} />
-            {!isCollapsed && <span className="font-bold tracking-tight text-sm">Initiate Protocol</span>}
+            <div className="absolute inset-0 bg-gradient-to-br from-white/20 via-transparent to-black/5 opacity-0 group-hover:opacity-100 transition-opacity" />
+            <div className="relative z-10 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-white/10 group-hover:bg-white/20 transition-colors">
+              <Plus className={cn("h-4 w-4 transition-transform duration-700 group-hover:rotate-180", isCollapsed ? "h-5 w-5" : "")} />
+            </div>
+            {!isCollapsed && <span className="text-xs font-semibold tracking-tight">New Transmission</span>}
           </Button>
 
-          {/* Search */}
+          {/* Search Bar - Better integration */}
           {!isCollapsed && (
-            <div className="relative group animate-in fade-in slide-in-from-top-2 duration-700">
-              <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground/20 group-focus-within:text-primary group-focus-within:scale-110 transition-all" />
+            <div className="relative group animate-in fade-in slide-in-from-top-4 duration-700">
+              <Search className="absolute left-4 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground/40 group-focus-within:text-primary transition-all duration-300" />
               <Input
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Recall transmission..."
-                className="h-11 pl-11 bg-sidebar-accent/20 border-transparent hover:bg-sidebar-accent/40 focus:bg-sidebar-accent/60 focus:ring-2 focus:ring-primary/10 text-[13px] transition-all duration-300 rounded-2xl placeholder:text-muted-foreground/30 font-medium"
+                className="h-11 pl-10 bg-sidebar-accent/5 border-border/10 hover:border-primary/20 focus:bg-sidebar-accent/10 focus:border-primary/30 focus:ring-0 text-[12px] transition-all duration-300 rounded-xl placeholder:text-muted-foreground/30 font-semibold tracking-tight"
               />
             </div>
           )}
@@ -192,11 +200,14 @@ export function ChatSidebar({
             ) : (
               <div className="space-y-6">
                 {groupedChats.map(([group, groupChats], idx) => (
-                  <div key={group} className={cn("animate-in fade-in slide-in-from-bottom-2", `delay-[${idx * 100}ms]`)}>
+                  <div key={group} className={cn("animate-in fade-in slide-in-from-bottom-2 duration-700")}>
                     {!isCollapsed && (
-                      <h3 className="mb-3 px-4 text-[10px] font-black uppercase tracking-[0.25em] text-muted-foreground/30">
-                        {group}
-                      </h3>
+                      <div className="flex items-center gap-3 mb-3 mt-8 px-4 first:mt-2">
+                        <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-primary/60 whitespace-nowrap">
+                          {group}
+                        </h3>
+                        <div className="h-px w-full bg-gradient-to-r from-primary/20 via-primary/5 to-transparent" />
+                      </div>
                     )}
                     <div className="space-y-1.5">
                       {groupChats.map((chat) => (
@@ -250,33 +261,23 @@ function ChatItem({ chat, isActive, isCollapsed, onSelect, onDelete }: ChatItemP
       className={cn(
         'group relative flex items-center gap-3 rounded-2xl px-2.5 py-3 transition-all duration-300 cursor-pointer overflow-hidden',
         isActive
-          ? 'bg-primary/10 text-foreground shadow-sm ring-1 ring-primary/20 scale-[1.02]'
-          : 'text-muted-foreground hover:bg-sidebar-accent/50 hover:text-foreground hover:translate-x-1',
-        isCollapsed && "justify-center px-0 hover:translate-x-0 hover:scale-110"
+          ? 'bg-primary/10 text-foreground shadow-[inset_0_1px_1px_rgba(255,255,255,0.1)] ring-1 ring-primary/20'
+          : 'text-muted-foreground/60 hover:bg-sidebar-accent/30 hover:text-foreground',
+        isCollapsed && "justify-center px-0 hover:translate-x-0 hover:scale-105"
       )}
       onClick={onSelect}
     >
-      {/* Active Indicator Bar */}
-      {isActive && !isCollapsed && (
-        <div className="absolute left-0 top-1/4 bottom-1/4 w-1 bg-primary rounded-r-full shadow-[0_0_10px_rgba(var(--primary),0.5)] z-10" />
-      )}
-
-      {/* Background glow for active item */}
-      {isActive && (
-        <div className="absolute inset-0 bg-gradient-to-r from-primary/10 via-primary/5 to-transparent animate-in fade-in duration-700" />
-      )}
-
       <div
         className={cn(
-          'flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition-all duration-500 shadow-sm z-10',
+          'flex h-10 w-10 shrink-0 items-center justify-center rounded-[16px] transition-all duration-500 shadow-sm z-10',
           isActive 
-            ? 'bg-primary text-primary-foreground shadow-primary/30 rotate-0' 
-            : 'bg-sidebar-accent/50 text-muted-foreground/60 group-hover:bg-primary/20 group-hover:text-primary group-hover:rotate-12'
+            ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/30 rotate-3' 
+            : 'bg-sidebar-accent/40 text-muted-foreground/40 group-hover:bg-primary/20 group-hover:text-primary group-hover:-rotate-3'
         )}
       >
         <MessageSquare
           className={cn(
-            'h-5 w-5 transition-transform duration-500',
+            'h-4.5 w-4.5 transition-transform duration-500',
             isActive ? 'scale-110' : 'group-hover:scale-110'
           )}
         />
@@ -284,31 +285,25 @@ function ChatItem({ chat, isActive, isCollapsed, onSelect, onDelete }: ChatItemP
       
       {!isCollapsed && (
         <>
-          <div className="flex flex-1 flex-col overflow-hidden z-10 py-1">
+          <div className="flex flex-1 flex-col overflow-hidden z-10 pr-2">
             <span className={cn(
-              "truncate text-[13px] font-semibold tracking-tight transition-colors duration-300",
-              isActive ? "text-foreground" : "text-muted-foreground/80 group-hover:text-foreground"
+              "truncate text-[13px] font-medium tracking-tight transition-colors duration-300",
+              isActive ? "text-foreground" : "text-foreground/70 group-hover:text-foreground"
             )}>
               {chat.title}
             </span>
-            <div className="flex items-center gap-2 mt-1 opacity-40 group-hover:opacity-70 transition-opacity">
-              <span className={cn(
-                "text-[9px] font-bold uppercase tracking-[0.1em]",
-                isActive ? "text-primary/70" : "text-muted-foreground"
-              )}>
+            <div className="flex items-center gap-2 mt-1 opacity-40 group-hover:opacity-70 transition-all duration-500">
+              <span className="text-[9px] font-medium uppercase tracking-wider">
                 {new Date(chat.updatedAt).toLocaleDateString([], { month: 'short', day: 'numeric' })}
               </span>
               <span className="h-0.5 w-0.5 rounded-full bg-current opacity-30" />
-              <span className={cn(
-                "text-[9px] font-bold uppercase tracking-[0.05em]",
-                isActive ? "text-primary/60" : "text-muted-foreground"
-              )}>
+              <span className="text-[9px] font-medium uppercase tracking-wider">
                 {new Date(chat.updatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })}
               </span>
             </div>
           </div>
 
-          {/* Delete Button */}
+          {/* More Actions Button */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button
@@ -316,16 +311,16 @@ function ChatItem({ chat, isActive, isCollapsed, onSelect, onDelete }: ChatItemP
                 size="icon"
                 className={cn(
                   'h-8 w-8 shrink-0 rounded-xl transition-all',
-                  isActive ? 'opacity-100 bg-primary/5' : 'opacity-0 group-hover:opacity-100 hover:bg-destructive/10 hover:text-destructive'
+                  isActive ? 'opacity-100 bg-primary/5' : 'opacity-0 group-hover:opacity-100 hover:bg-primary/10'
                 )}
                 onClick={(e) => e.stopPropagation()}
               >
                 <MoreHorizontal className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-52 p-2 rounded-2xl glass-strong shadow-2xl border-primary/5">
+            <DropdownMenuContent align="end" className="w-52 p-2 rounded-2xl glass-strong shadow-2xl border-primary/10 animate-in zoom-in-95 duration-300">
               <DropdownMenuItem
-                className="text-destructive focus:text-destructive focus:bg-destructive/10 gap-3 py-3 rounded-xl cursor-pointer font-black text-[10px] uppercase tracking-[0.2em]"
+                className="text-destructive focus:text-destructive focus:bg-destructive/10 gap-3 py-3 rounded-xl cursor-pointer font-black text-[10px] uppercase tracking-[0.2em] transition-all"
                 onClick={(e) => {
                   e.stopPropagation()
                   onDelete()
@@ -337,14 +332,14 @@ function ChatItem({ chat, isActive, isCollapsed, onSelect, onDelete }: ChatItemP
             </DropdownMenuContent>
           </DropdownMenu>
 
-          {/* Active indicator bar */}
+          {/* Active indicator bar - Premium Glow */}
           {isActive && (
-            <div className="absolute left-0 top-1/2 h-10 w-1.5 -translate-y-1/2 rounded-r-full bg-primary shadow-[0_0_15px_var(--primary)]" />
+            <div className="absolute left-0 top-1/2 h-10 w-1 -translate-y-1/2 rounded-r-full bg-primary shadow-[0_0_15px_var(--primary)] animate-pulse" />
           )}
         </>
       )}
 
-      {/* Collapsed Active Dot */}
+      {/* Collapsed Active Indicator */}
       {isCollapsed && isActive && (
         <div className="absolute -left-1 top-1/2 h-8 w-2 -translate-y-1/2 rounded-r-full bg-primary shadow-[0_0_10px_var(--primary)]" />
       )}

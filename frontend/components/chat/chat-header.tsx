@@ -23,28 +23,34 @@ export function ChatHeader({
   const { theme, setTheme } = useTheme()
 
   return (
-    <header className="flex h-16 items-center justify-between border-b border-border/40 bg-background/60 backdrop-blur-3xl px-4 sm:px-6 sticky top-0 z-40">
-      <div className="flex items-center gap-4">
+    <header className="flex h-18 items-center justify-between border-b border-white/5 bg-background/20 backdrop-blur-3xl px-4 sm:px-8 sticky top-0 z-40 transition-all duration-500">
+      <div className="flex items-center gap-4 sm:gap-6">
         <Button
           variant="ghost"
           size="icon"
           onClick={onToggleSidebar}
-          className="h-10 w-10 md:hidden hover:bg-primary/5 rounded-xl transition-all duration-300 hover:scale-110 active:scale-95"
+          className="h-11 w-11 md:hidden hover:bg-primary/10 rounded-2xl transition-all duration-500 hover:scale-110 active:scale-90 border border-transparent hover:border-primary/20 shadow-none hover:shadow-lg hover:shadow-primary/10"
         >
-          <Menu className="h-5 w-5 text-primary" />
+          <Menu className="h-5.5 w-5.5 text-primary" />
           <span className="sr-only">Toggle sidebar</span>
         </Button>
 
         <div className={cn(
-          "flex items-center gap-2 group cursor-pointer transition-all duration-500",
-          !isSidebarCollapsed && "md:opacity-0 md:pointer-events-none"
+          "flex items-center gap-3.5 group cursor-pointer transition-all duration-700 ease-[cubic-bezier(0.2,0.8,0.2,1)]",
+          !isSidebarCollapsed && "md:opacity-0 md:pointer-events-none md:-translate-x-4"
         )}>
-          <div className="h-9 w-9 rounded-xl bg-primary shadow-lg shadow-primary/20 flex items-center justify-center transition-all duration-500 group-hover:rotate-12 group-hover:scale-110">
-            <Sparkles className="h-5 w-5 text-primary-foreground" />
+          <div className="relative h-11 w-11 rounded-[18px] bg-primary shadow-2xl shadow-primary/20 flex items-center justify-center transition-all duration-700 group-hover:rotate-[15deg] group-hover:scale-115 overflow-hidden">
+            <div className="absolute inset-0 bg-gradient-to-br from-white/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+            <Sparkles className="h-6 w-6 text-primary-foreground relative z-10" />
           </div>
-          <span className="text-xl font-black tracking-tighter text-foreground bg-clip-text text-transparent bg-gradient-to-r from-foreground to-foreground/60">
-            GRAVITON
-          </span>
+          <div className="flex flex-col">
+            <span className="text-xl font-bold tracking-tight text-foreground leading-none">
+              Graviton
+            </span>
+            <span className="text-[9px] font-medium text-primary/70 tracking-[0.2em] uppercase mt-1">
+              Interface v2
+            </span>
+          </div>
         </div>
       </div>
 
