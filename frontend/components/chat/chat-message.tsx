@@ -80,13 +80,13 @@ export function ChatMessage({
   return (
     <div
       className={cn(
-        'group relative px-4 py-4 transition-all animate-slide-up border-b border-border/5',
-        compactMode ? 'py-2.5' : 'py-4',
+        'group relative px-2 sm:px-4 transition-all animate-slide-up border-b border-border/5',
+        compactMode ? 'py-2 sm:py-2.5' : 'py-3 sm:py-4',
         !isUser && 'bg-chat-assistant/20 backdrop-blur-sm'
       )}
     >
       <div className="mx-auto max-w-3xl">
-        <div className="flex gap-4">
+        <div className="flex gap-2 sm:gap-4">
           {/* Avatar */}
           <div className="relative shrink-0">
             <div
@@ -156,7 +156,7 @@ export function ChatMessage({
               <div
                 className={cn(
                   'text-sm leading-relaxed',
-                  isUser ? cn(getBubbleClasses(), 'bg-primary/10 border border-primary/20 shadow-sm ml-auto inline-block max-w-[85%]') : 'text-foreground'
+                  isUser ? cn(getBubbleClasses(), 'bg-primary/10 border border-primary/20 shadow-md ml-auto inline-block max-w-[90%] sm:max-w-[85%] rounded-tr-none') : 'text-foreground'
                 )}
               >
                 {isUser ? (

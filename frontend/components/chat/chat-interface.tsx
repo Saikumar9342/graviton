@@ -12,14 +12,12 @@ import { EmptyState } from './empty-state'
 import { Button } from '@/components/ui/button'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import {
-  getChats,
-  saveChat,
-  deleteChat,
   getSettings,
   saveSettings,
   generateId,
   generateTitle,
 } from '@/lib/chat-store'
+import { fetchChats, createChat, deleteChat as apiDeleteChat, fetchMessages } from '@/lib/api'
 import { Chat, Settings, DEFAULT_SETTINGS } from '@/lib/types'
 import { cn } from '@/lib/utils'
 
@@ -41,10 +39,13 @@ export function ChatInterface() {
   const [shouldAutoScroll, setShouldAutoScroll] = useState(true)
   const [mounted, setMounted] = useState(false)
 
-  // Initialize data from localStorage
+  // Initialize data from backend and localStorage
   useEffect(() => {
     setMounted(true)
-    setChats(getChats())
+    
+    // Fetch chats from backend
+    fetchChats().then(setChats).catch(console.error)
+
     const savedSettings = getSettings()
     setSettings(savedSettings)
     
@@ -82,6 +83,7 @@ export function ChatInterface() {
         body: {
           messages,
           model: settings.model,
+          chatId: currentChatId,
         },
       }),
     }),
@@ -89,26 +91,17 @@ export function ChatInterface() {
 
   const isLoading = status === 'streaming' || status === 'submitted'
 
-  // Save messages to chat when they change
+  // Note: We'll rely on the backend to persist messages eventually.
+  // For now, we still keep the UI updated.
   useEffect(() => {
     if (currentChatId && messages.length > 0) {
-      const chat = chats.find((c) => c.id === currentChatId)
-      if (chat) {
-        const updatedChat: Chat = {
-          ...chat,
-          messages: messages.map((m) => ({
-            id: m.id,
-            role: m.role as 'user' | 'assistant',
-            content: getUIMessageText(m),
-            createdAt: new Date(),
-          })),
-          updatedAt: new Date(),
-        }
-        saveChat(updatedChat)
-        setChats((prev) =>
-          prev.map((c) => (c.id === currentChatId ? updatedChat : c))
+      setChats((prev) =>
+        prev.map((c) => 
+          c.id === currentChatId 
+            ? { ...c, updatedAt: new Date() } 
+            : c
         )
-      }
+      )
     }
   }, [messages, currentChatId])
 
@@ -133,51 +126,59 @@ export function ChatInterface() {
   }, [setMessages])
 
   const handleSelectChat = useCallback(
-    (id: string) => {
+    async (id: string) => {
       const chat = chats.find((c) => c.id === id)
       if (chat) {
         setCurrentChatId(id)
-        // Convert stored messages to UIMessage format
-        setMessages(
-          chat.messages.map((m) => ({
-            id: m.id,
-            role: m.role,
-            parts: [{ type: 'text' as const, text: m.content }],
-          }))
-        )
+        try {
+          const backendMessages = await fetchMessages(id)
+          setMessages(
+            backendMessages.map((m) => ({
+              id: m.id,
+              role: m.role,
+              parts: [{ type: 'text' as const, text: m.content }],
+            }))
+          )
+        } catch (err) {
+          console.error('Failed to fetch messages:', err)
+          // Fallback to empty messages or existing local messages if any
+          setMessages([])
+        }
       }
     },
     [chats, setMessages]
   )
 
   const handleDeleteChat = useCallback(
-    (id: string) => {
-      deleteChat(id)
-      setChats((prev) => prev.filter((c) => c.id !== id))
-      if (currentChatId === id) {
-        handleNewChat()
+    async (id: string) => {
+      try {
+        await apiDeleteChat(id)
+        setChats((prev) => prev.filter((c) => c.id !== id))
+        if (currentChatId === id) {
+          handleNewChat()
+        }
+      } catch (err) {
+        console.error('Failed to delete chat:', err)
       }
     },
     [currentChatId, handleNewChat]
   )
 
   const handleSend = useCallback(
-    (content: string) => {
+    async (content: string) => {
       let chatId = currentChatId
 
-      // Create new chat if needed
+      // Create new chat in backend if needed
       if (!chatId) {
-        chatId = generateId()
-        const newChat: Chat = {
-          id: chatId,
-          title: generateTitle(content),
-          messages: [],
-          createdAt: new Date(),
-          updatedAt: new Date(),
+        try {
+          const newChat = await createChat(generateTitle(content))
+          setChats((prev) => [newChat, ...prev])
+          setCurrentChatId(newChat.id)
+          chatId = newChat.id
+        } catch (err) {
+          console.error('Failed to create chat:', err)
+          return
         }
-        saveChat(newChat)
-        setChats((prev) => [newChat, ...prev])
-        setCurrentChatId(chatId)
       }
 
       setShouldAutoScroll(true)
@@ -217,6 +218,12 @@ export function ChatInterface() {
       setIsSidebarCollapsed(newState)
       localStorage.setItem('sidebar-collapsed', String(newState))
     }
+  }
+
+  const toggleCollapse = () => {
+    const newState = !isSidebarCollapsed
+    setIsSidebarCollapsed(newState)
+    localStorage.setItem('sidebar-collapsed', String(newState))
   }
 
   const getBackgroundClass = () => {
@@ -260,6 +267,7 @@ export function ChatInterface() {
         isOpen={sidebarOpen}
         isCollapsed={isSidebarCollapsed}
         onClose={() => setSidebarOpen(false)}
+        onToggleCollapse={toggleCollapse}
       />
 
       {/* Main content */}

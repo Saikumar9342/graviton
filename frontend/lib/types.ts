@@ -40,7 +40,7 @@ export interface Settings {
 }
 
 export const DEFAULT_SETTINGS: Settings = {
-  model: 'openai/gpt-4o',
+  model: 'llama3.1',
   apiKey: '',
   theme: 'dark',
   accentColor: 'violet',
@@ -63,10 +63,10 @@ export const ACCENT_COLORS: { id: AccentColor; name: string; class: string; hex:
 ]
 
 export const AVAILABLE_MODELS = [
-  { id: 'openai/gpt-4o', name: 'GPT-4o', provider: 'OpenAI', badge: 'Popular' },
-  { id: 'openai/gpt-4o-mini', name: 'GPT-4o Mini', provider: 'OpenAI', badge: 'Fast' },
-  { id: 'openai/gpt-5-mini', name: 'GPT-5 Mini', provider: 'OpenAI', badge: 'Latest' },
-  { id: 'anthropic/claude-sonnet-4', name: 'Claude Sonnet 4', provider: 'Anthropic', badge: null },
-  { id: 'anthropic/claude-opus-4.6', name: 'Claude Opus 4.6', provider: 'Anthropic', badge: 'Powerful' },
-  { id: 'google/gemini-3-flash', name: 'Gemini 3 Flash', provider: 'Google', badge: 'Fast' },
-] as const
+  { id: 'llama3.1', name: 'Llama 3.1', provider: 'Ollama', badge: 'Latest' },
+  { id: 'phi4', name: 'Phi-4', provider: 'Ollama', badge: 'Fast' },
+  { id: 'deepseek-r1:8b', name: 'DeepSeek R1 (8B)', provider: 'Ollama', badge: 'Reasoning' },
+  { id: 'openai/gpt-4o', name: 'GPT-4o', provider: 'OpenAI', badge: 'Cloud' },
+  { id: 'anthropic/claude-3-5-sonnet', name: 'Claude 3.5 Sonnet', provider: 'Anthropic', badge: 'Cloud' },
+  { id: 'google/gemini-2.0-flash', name: 'Gemini 2.0 Flash', provider: 'Google', badge: 'Cloud' },
+]

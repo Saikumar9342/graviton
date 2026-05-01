@@ -3,12 +3,16 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 from typing import List, Optional
+from datetime import datetime
 import json
 
-from . import models, database, ollama_client
+import models, database, ollama_client
 from pydantic import BaseModel
 
 app = FastAPI(title="Graviton AI API")
+
+# Create database tables
+models.Base.metadata.create_all(bind=database.engine)
 
 # Configure CORS
 app.add_middleware(
@@ -30,11 +34,20 @@ class ChatCreate(BaseModel):
 class ChatUpdate(BaseModel):
     title: Optional[str] = None
 
+class MessageResponse(BaseModel):
+    id: str
+    role: str
+    content: str
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
 class ChatResponse(BaseModel):
     id: str
     title: str
-    created_at: str
-    updated_at: str
+    created_at: datetime
+    updated_at: datetime
 
     class Config:
         from_attributes = True
@@ -54,22 +67,60 @@ async def chat_endpoint(
     body: dict = Body(...),
     db: Session = Depends(database.get_db)
 ):
-    messages = body.get("messages", [])
+    messages_data = body.get("messages", [])
     model = body.get("model", "llama3")
+    chat_id = body.get("chatId")
     
-    # In a real app, you might want to save the user message to DB here
-    # For now, we'll just stream the response
+    if not messages_data:
+        raise HTTPException(status_code=400, detail="No messages provided")
     
+    # Save user message if chat_id is provided
+    if chat_id:
+        user_msg = messages_data[-1]
+        db_msg = models.Message(
+            chat_id=chat_id,
+            role=user_msg["role"],
+            content=user_msg.get("content", "") or next((p["text"] for p in user_msg.get("parts", []) if p["type"] == "text"), "")
+        )
+        db.add(db_msg)
+        db.commit()
+
     async def generate():
         full_response = ""
-        async for chunk in ollama_client.chat_with_ollama(model, messages):
+        # Format messages for Ollama (it expects {role, content})
+        ollama_messages = []
+        for m in messages_data:
+            content = m.get("content", "")
+            if not content and "parts" in m:
+                content = next((p["text"] for p in m["parts"] if p["type"] == "text"), "")
+            ollama_messages.append({"role": m["role"], "content": content})
+
+        async for chunk in ollama_client.chat_with_ollama(model, ollama_messages):
             full_response += chunk
             yield chunk
         
-        # After streaming completes, you could save the assistant message to DB
-        # This requires passing more context (like chat_id) in the request body
+        # Save assistant message after streaming completes
+        if chat_id and full_response:
+            # We need a new session here because the generator runs outside the initial request context
+            with database.SessionLocal() as session:
+                assistant_msg = models.Message(
+                    chat_id=chat_id,
+                    role="assistant",
+                    content=full_response
+                )
+                session.add(assistant_msg)
+                # Update chat timestamp
+                db_chat = session.query(models.Chat).filter(models.Chat.id == chat_id).first()
+                if db_chat:
+                    db_chat.updated_at = datetime.utcnow()
+                session.commit()
     
     return StreamingResponse(generate(), media_type="text/plain")
+
+@app.get("/api/chats/{chat_id}/messages", response_model=List[MessageResponse])
+def get_chat_messages(chat_id: str, db: Session = Depends(database.get_db)):
+    messages = db.query(models.Message).filter(models.Message.chat_id == chat_id).order_by(models.Message.created_at.asc()).all()
+    return messages
 
 @app.get("/api/chats", response_model=List[ChatResponse])
 def get_chats(db: Session = Depends(database.get_db)):
