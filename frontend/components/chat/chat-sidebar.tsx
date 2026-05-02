@@ -4,6 +4,7 @@ import { useState, useMemo, useEffect, useRef } from 'react'
 import {
   Plus, Trash2, ChevronLeft, ChevronRight, Search, Pencil, Check, X,
   Folder, FolderPlus, ChevronDown, MoreHorizontal, Pin, AlertTriangle, Lightbulb,
+  MessageSquare, Clock, Zap,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -84,6 +85,109 @@ interface ChatSidebarProps {
   isCollapsed: boolean
   onClose: () => void
   onToggleCollapse: () => void
+}
+
+// ── Search Chats Dialog ────────────────────────────────────────────────────────
+
+function SearchChatsDialog({
+  chats,
+  onSelectChat,
+}: {
+  chats: Chat[]
+  onSelectChat: (id: string) => void
+}) {
+  const [open, setOpen] = useState(false)
+  const [searchTerm, setSearchTerm] = useState('')
+
+  const filteredChats = useMemo(() => {
+    if (!searchTerm.trim()) return chats.slice(0, 10) // Show recent 10 if no search
+    return chats.filter(c => c.title.toLowerCase().includes(searchTerm.toLowerCase()))
+  }, [chats, searchTerm])
+
+  const handleSelectChat = (id: string) => {
+    onSelectChat(id)
+    setOpen(false)
+    setSearchTerm('')
+  }
+
+  return (
+    <>
+      <Button
+        onClick={() => setOpen(true)}
+        variant="outline"
+        className="w-full justify-start gap-3 h-11 text-sm font-medium rounded-2xl border border-border/60 bg-muted/20 hover:bg-muted/40 hover:border-primary/50 text-muted-foreground hover:text-foreground transition-all"
+      >
+        <Search className="h-4 w-4 shrink-0 text-muted-foreground/60" />
+        <span className="flex-1 text-left">Search chats…</span>
+      </Button>
+
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="max-w-2xl rounded-2xl p-0 gap-0 overflow-hidden [&>button]:hidden">
+          <DialogTitle className="sr-only">Search chats</DialogTitle>
+          <DialogDescription className="sr-only">Find and open your chats</DialogDescription>
+
+          <div className="flex items-center gap-3 px-5 py-4 border-b border-border/40 bg-muted/10">
+            <Search className="h-4 w-4 text-muted-foreground/60 shrink-0" />
+            <input
+              autoFocus
+              placeholder="Search chats by title…"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="flex-1 bg-transparent text-sm focus:outline-none placeholder:text-muted-foreground/60 text-foreground"
+            />
+            {searchTerm && (
+              <button
+                onClick={() => setSearchTerm('')}
+                className="h-6 w-6 rounded-md flex items-center justify-center text-muted-foreground/50 hover:text-foreground hover:bg-muted/50 transition-colors shrink-0"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            )}
+            <button
+              onClick={() => setOpen(false)}
+              className="h-6 w-6 rounded-md flex items-center justify-center text-muted-foreground/50 hover:text-foreground hover:bg-muted/50 transition-colors shrink-0"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          </div>
+
+          <ScrollArea className="max-h-[400px] w-full">
+            <div className="p-2">
+              {filteredChats.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-12 px-4">
+                  <MessageSquare className="h-8 w-8 text-muted-foreground/30 mb-2" />
+                  <p className="text-sm text-muted-foreground/60">
+                    {searchTerm ? 'No chats found' : 'No chats yet'}
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-1">
+                  {filteredChats.map((chat) => (
+                    <button
+                      key={chat.id}
+                      onClick={() => handleSelectChat(chat.id)}
+                      className="w-full flex items-start gap-3 px-3 py-3 rounded-xl hover:bg-muted/40 active:bg-muted/60 transition-colors group text-left"
+                    >
+                      <MessageSquare className="h-4 w-4 text-primary/60 shrink-0 mt-0.5 group-hover:text-primary transition-colors" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-foreground truncate group-hover:text-primary transition-colors">
+                          {chat.title}
+                        </p>
+                        <p className="text-xs text-muted-foreground/60 mt-0.5">
+                          {new Date(chat.createdAt).toLocaleDateString()}
+                        </p>
+                      </div>
+                      <Zap className="h-3.5 w-3.5 text-muted-foreground/30 shrink-0" />
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </ScrollArea>
+        </DialogContent>
+      </Dialog>
+    </>
+  )
 }
 
 // ── Create Project Dialog ──────────────────────────────────────────────────────
@@ -534,7 +638,7 @@ export function ChatSidebar({
         </div>
 
         {/* New chat + search */}
-        <div className={cn('space-y-1.5 shrink-0', isCollapsed ? 'p-1.5' : 'p-[var(--sidebar-padding)]')}>
+        <div className={cn('space-y-2 shrink-0', isCollapsed ? 'p-1.5' : 'p-[var(--sidebar-padding)]')}>
           {isCollapsed ? (
             <Tooltip>
               <TooltipTrigger asChild>
@@ -542,7 +646,7 @@ export function ChatSidebar({
                   onClick={onNewChat}
                   variant="ghost"
                   size="icon"
-                  className="h-9 w-9 mx-auto flex rounded-2xl border border-dashed border-border/50 hover:border-primary/40 hover:bg-primary/5 hover:text-primary"
+                  className="h-9 w-9 mx-auto flex rounded-2xl bg-primary/10 border border-primary/30 hover:bg-primary/20 hover:border-primary/50 text-primary hover:text-primary/90 transition-all"
                 >
                   <Plus className="h-4 w-4" />
                 </Button>
@@ -553,27 +657,14 @@ export function ChatSidebar({
             <>
               <Button
                 onClick={onNewChat}
-                className="w-full justify-start gap-2 h-10 text-sm font-bold rounded-2xl bg-primary text-primary-foreground hover:bg-primary/90 border-none shadow-lg shadow-primary/20 new-project-btn"
+                className="w-full justify-center gap-2 h-11 text-sm font-bold rounded-2xl"
               >
-                <Plus className="h-4 w-4 shrink-0" /> New chat
+                <Plus className="h-5 w-5 shrink-0" />New Chat
               </Button>
-              <div className="relative">
-                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground/60 pointer-events-none" />
-                <input
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  placeholder="Search chats…"
-                  className="w-full h-9 pl-9 pr-7 text-xs bg-muted/40 border border-border/60 focus:outline-none focus:ring-2 focus:ring-primary/50 rounded-2xl placeholder:text-foreground/60 text-foreground sidebar-search-input transition-all"
-                />
-                {search && (
-                  <button
-                    onClick={() => setSearch('')}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground/35 hover:text-foreground"
-                  >
-                    <X className="h-3 w-3" />
-                  </button>
-                )}
-              </div>
+              <SearchChatsDialog
+                chats={chats}
+                onSelectChat={onSelectChat}
+              />
             </>
           )}
         </div>

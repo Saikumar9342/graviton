@@ -40,7 +40,7 @@ export function EmptyState({ onSuggestionClick }: EmptyStateProps) {
 
       {/* Heading */}
       <h1
-        className="mb-3 text-center font-bold tracking-tight leading-none"
+        className="mb-2 text-center font-bold tracking-tight leading-none"
         style={{
           fontSize: 'clamp(1rem, 4vw, 2.5rem)',
           letterSpacing: '-0.02em',
@@ -53,7 +53,7 @@ export function EmptyState({ onSuggestionClick }: EmptyStateProps) {
         How can I help you?
       </h1>
 
-      <p className="mb-10 text-[13.5px] text-muted-foreground/55 text-center max-w-[270px] leading-relaxed">
+      <p className="mb-8 text-[13.5px] text-muted-foreground/55 text-center max-w-[270px] leading-relaxed">
         Ask anything — code, research, writing, or just a conversation.
       </p>
 
