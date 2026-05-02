@@ -1,7 +1,7 @@
 'use client'
 
 import { Menu, Sun, Moon, Sparkles } from 'lucide-react'
-import { useTheme } from 'next-themes'
+import { useTheme } from '@/components/theme-provider'
 import { Button } from '@/components/ui/button'
 import { SettingsDialog } from './settings-dialog'
 import { Settings } from '@/lib/types'

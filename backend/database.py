@@ -1,5 +1,5 @@
 import os
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from dotenv import load_dotenv
@@ -19,3 +19,15 @@ def get_db():
         yield db
     finally:
         db.close()
+
+def get_db_optional():
+    """Returns a DB session if available, otherwise yields None gracefully."""
+    try:
+        db = SessionLocal()
+        db.execute(text("SELECT 1"))  # quick connectivity check
+        try:
+            yield db
+        finally:
+            db.close()
+    except Exception:
+        yield None

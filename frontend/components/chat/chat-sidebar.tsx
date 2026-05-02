@@ -146,12 +146,15 @@ export function ChatSidebar({
                       </p>
                     </div>
                     {currentChatId !== chat.id && (
-                      <button
+                      <div
+                        role="button"
+                        tabIndex={0}
                         onClick={(e) => { e.stopPropagation(); onDeleteChat(chat.id) }}
+                        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.stopPropagation(); onDeleteChat(chat.id) } }}
                         className="opacity-0 group-hover/btn:opacity-100 h-6 w-6 rounded-lg flex items-center justify-center hover:bg-destructive/10 hover:text-destructive text-muted-foreground/40 transition-all shrink-0"
                       >
                         <Trash2 className="h-3 w-3" />
-                      </button>
+                      </div>
                     )}
                   </button>
                 )}

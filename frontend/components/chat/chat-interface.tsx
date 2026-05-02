@@ -1,8 +1,6 @@
 'use client'
 
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { useChat } from '@ai-sdk/react'
-import { DefaultChatTransport, UIMessage } from 'ai'
 import { AlertCircle, RefreshCw, Sparkles } from 'lucide-react'
 import { ChatHeader } from './chat-header'
 import { ChatSidebar } from './chat-sidebar'
@@ -12,26 +10,19 @@ import { EmptyState } from './empty-state'
 import { ChatDetails } from './chat-details'
 import { Button } from '@/components/ui/button'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import {
-  getSettings,
-  saveSettings,
-  generateTitle,
-} from '@/lib/chat-store'
+import { getSettings, saveSettings, generateId, generateTitle } from '@/lib/chat-store'
 import { fetchChats, createChat, deleteChat as apiDeleteChat, fetchMessages, fetchModels, ModelInfo } from '@/lib/api'
 import { Chat, Settings, DEFAULT_SETTINGS, AVAILABLE_MODELS, MODE_SYSTEM_PROMPTS } from '@/lib/types'
 import { cn } from '@/lib/utils'
 
-function getUIMessageText(msg: UIMessage): string {
-  if (!msg.parts || !Array.isArray(msg.parts)) return ''
-  return msg.parts
-    .filter((p): p is { type: 'text'; text: string } => p.type === 'text')
-    .map((p) => p.text)
-    .join('')
+type Message = {
+  id: string
+  role: 'user' | 'assistant'
+  content: string
 }
 
 function estimateTokens(text: string): number {
-  const words = text.trim().split(/\s+/).filter(Boolean).length
-  return Math.ceil(words * 1.3)
+  return Math.ceil(text.trim().split(/\s+/).filter(Boolean).length * 1.3)
 }
 
 export function ChatInterface() {
@@ -45,39 +36,35 @@ export function ChatInterface() {
     currentChatIdRef.current = id
     setCurrentChatIdState(id)
   }, [])
+
   const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS)
   const [availableModels, setAvailableModels] = useState<ModelInfo[]>(AVAILABLE_MODELS)
+  const [messages, setMessages] = useState<Message[]>([])
+  const [isLoading, setIsLoading] = useState(false)
+  const [streamingId, setStreamingId] = useState<string | null>(null)
+  const [error, setError] = useState<Error | null>(null)
+  const [mounted, setMounted] = useState(false)
+
   const scrollRef = useRef<HTMLDivElement>(null)
   const [shouldAutoScroll, setShouldAutoScroll] = useState(true)
-  const [mounted, setMounted] = useState(false)
-  const pendingResend = useRef<string | null>(null)
+  const abortRef = useRef<AbortController | null>(null)
+  const pendingResend = useRef<{ content: string; mode: string } | null>(null)
 
-  // Initialize data from backend and localStorage
+  // Init
   useEffect(() => {
     setMounted(true)
-
     fetchChats().then(setChats).catch(console.error)
-
-    fetchModels()
-      .then((models) => {
-        if (models.length > 0) setAvailableModels(models)
-      })
-      .catch(console.error)
-
-    const savedSettings = getSettings()
-    setSettings(savedSettings)
-
-    const savedSidebarState = localStorage.getItem('sidebar-collapsed')
-    if (savedSidebarState) setIsSidebarCollapsed(savedSidebarState === 'true')
-
-    const savedDetailsState = localStorage.getItem('details-collapsed')
-    if (savedDetailsState) setIsDetailsCollapsed(savedDetailsState === 'true')
-
-    document.documentElement.setAttribute('data-accent', savedSettings.accentColor)
-    document.documentElement.setAttribute('data-font-size', savedSettings.fontSize)
+    fetchModels().then((m) => { if (m.length > 0) setAvailableModels(m) }).catch(console.error)
+    const saved = getSettings()
+    setSettings(saved)
+    const sc = localStorage.getItem('sidebar-collapsed')
+    if (sc) setIsSidebarCollapsed(sc === 'true')
+    const dc = localStorage.getItem('details-collapsed')
+    if (dc) setIsDetailsCollapsed(dc === 'true')
+    document.documentElement.setAttribute('data-accent', saved.accentColor)
+    document.documentElement.setAttribute('data-font-size', saved.fontSize)
   }, [])
 
-  // Apply accent color and font size when settings change
   useEffect(() => {
     if (mounted) {
       document.documentElement.setAttribute('data-accent', settings.accentColor)
@@ -85,31 +72,7 @@ export function ChatInterface() {
     }
   }, [settings.accentColor, settings.fontSize, mounted])
 
-  const {
-    messages,
-    sendMessage,
-    setMessages,
-    status,
-    error,
-    stop,
-  } = useChat({
-    id: currentChatId || undefined,
-    transport: new DefaultChatTransport({
-      api: '/api/chat',
-      prepareSendMessagesRequest: ({ messages, body }) => ({
-        body: {
-          messages,
-          model: settings.model,
-          chatId: currentChatIdRef.current,
-          systemPrompt: (body as { systemPrompt?: string })?.systemPrompt ?? '',
-        },
-      }),
-    }),
-  })
-
-  const isLoading = status === 'streaming' || status === 'submitted'
-
-  // Auto-scroll to bottom
+  // Auto-scroll
   useEffect(() => {
     if (shouldAutoScroll && scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight
@@ -119,92 +82,144 @@ export function ChatInterface() {
   const handleScroll = useCallback(() => {
     if (scrollRef.current) {
       const { scrollTop, scrollHeight, clientHeight } = scrollRef.current
-      const isAtBottom = scrollHeight - scrollTop - clientHeight < 100
-      setShouldAutoScroll(isAtBottom)
+      setShouldAutoScroll(scrollHeight - scrollTop - clientHeight < 100)
     }
+  }, [])
+
+  const stop = useCallback(() => {
+    abortRef.current?.abort()
+    setIsLoading(false)
+    setStreamingId(null)
   }, [])
 
   const handleNewChat = useCallback(() => {
     setCurrentChatId(null)
     setMessages([])
-  }, [setMessages])
+    setError(null)
+  }, [setCurrentChatId])
 
-  const handleSelectChat = useCallback(
-    async (id: string) => {
-      setCurrentChatId(id)
+  const handleSelectChat = useCallback(async (id: string) => {
+    setCurrentChatId(id)
+    setError(null)
+    try {
+      const backendMessages = await fetchMessages(id)
+      setMessages(backendMessages.map((m) => ({ id: m.id, role: m.role, content: m.content })))
+    } catch (err) {
+      console.error('Failed to fetch messages:', err)
+      setMessages([])
+    }
+  }, [setCurrentChatId])
+
+  const handleDeleteChat = useCallback(async (id: string) => {
+    try {
+      await apiDeleteChat(id)
+      setChats((prev) => prev.filter((c) => c.id !== id))
+      if (currentChatIdRef.current === id) handleNewChat()
+    } catch (err) {
+      console.error('Failed to delete chat:', err)
+    }
+  }, [handleNewChat])
+
+  const handleSend = useCallback(async (content: string, mode = 'chat') => {
+    if (isLoading || !content.trim()) return
+
+    let chatId = currentChatIdRef.current
+    if (!chatId) {
       try {
-        const backendMessages = await fetchMessages(id)
-        setMessages(
-          backendMessages.map((m) => ({
-            id: m.id,
-            role: m.role,
-            parts: [{ type: 'text' as const, text: m.content }],
-          }))
-        )
+        const newChat = await createChat(generateTitle(content))
+        setChats((prev) => [newChat, ...prev])
+        setCurrentChatId(newChat.id)
+        chatId = newChat.id
       } catch (err) {
-        console.error('Failed to fetch messages:', err)
-        setMessages([])
+        console.error('Failed to create chat:', err)
+        return
       }
-    },
-    [setMessages]
-  )
+    }
 
-  const handleDeleteChat = useCallback(
-    async (id: string) => {
-      try {
-        await apiDeleteChat(id)
-        setChats((prev) => prev.filter((c) => c.id !== id))
-        if (currentChatId === id) {
-          handleNewChat()
-        }
-      } catch (err) {
-        console.error('Failed to delete chat:', err)
+    setError(null)
+    setShouldAutoScroll(true)
+
+    const userMsg: Message = { id: generateId(), role: 'user', content }
+    const assistantId = generateId()
+
+    // Compute the full message list BEFORE updating state
+    const allMsgs = [...messages, userMsg]
+
+    // Update state — add user msg + empty assistant placeholder (shows typing dots)
+    setMessages([...allMsgs, { id: assistantId, role: 'assistant', content: '' }])
+    setIsLoading(true)
+    setStreamingId(assistantId)
+
+    // Start streaming directly — NOT inside setState or setTimeout
+    startStream(allMsgs, assistantId, chatId, mode)
+  }, [isLoading, messages, setCurrentChatId, startStream])
+
+  const startStream = useCallback(async (
+    allMessages: Message[],
+    assistantId: string,
+    chatId: string,
+    mode: string
+  ) => {
+    const controller = new AbortController()
+    abortRef.current = controller
+
+    try {
+      const res = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          messages: allMessages,
+          model: settings.model,
+          chatId,
+          systemPrompt: MODE_SYSTEM_PROMPTS[mode] ?? '',
+        }),
+        signal: controller.signal,
+      })
+
+      if (!res.ok) {
+        const errText = await res.text().catch(() => `Server error (${res.status})`)
+        throw new Error(errText)
       }
-    },
-    [currentChatId, handleNewChat]
-  )
+      if (!res.body) throw new Error('No response body')
 
-  const handleSend = useCallback(
-    async (content: string, mode = 'chat') => {
-      let chatId = currentChatId
-      if (!chatId) {
-        try {
-          const newChat = await createChat(generateTitle(content))
-          setChats((prev) => [newChat, ...prev])
-          setCurrentChatId(newChat.id)
-          chatId = newChat.id
-        } catch (err) {
-          console.error('Failed to create chat:', err)
-          return
-        }
+      const reader = res.body.getReader()
+      const decoder = new TextDecoder()
+      let accumulated = ''
+
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+        accumulated += decoder.decode(value, { stream: true })
+        const snap = accumulated
+        setMessages((prev) => prev.map((m) => m.id === assistantId ? { ...m, content: snap } : m))
       }
-      setShouldAutoScroll(true)
-      sendMessage(
-        { text: content },
-        { body: { systemPrompt: MODE_SYSTEM_PROMPTS[mode] ?? '' } }
-      )
-    },
-    [currentChatId, sendMessage]
-  )
+    } catch (err: unknown) {
+      if (err instanceof Error && err.name !== 'AbortError') {
+        setError(err)
+        // Remove the empty assistant placeholder on error
+        setMessages((prev) => prev.filter((m) => !(m.id === assistantId && m.content === '')))
+      }
+    } finally {
+      setIsLoading(false)
+      setStreamingId(null)
+    }
+  }, [settings.model])
 
-  // Effect-based resend after message trim — avoids the setTimeout race condition
+  // Edit-and-resend via pending ref
   useEffect(() => {
-    if (pendingResend.current !== null) {
-      const content = pendingResend.current
+    if (pendingResend.current) {
+      const { content, mode } = pendingResend.current
       pendingResend.current = null
-      handleSend(content)
+      handleSend(content, mode)
     }
   }, [messages, handleSend])
 
-  const handleEditMessage = useCallback(
-    (messageId: string, newContent: string) => {
-      const messageIndex = messages.findIndex((m) => m.id === messageId)
-      if (messageIndex === -1) return
-      pendingResend.current = newContent
-      setMessages(messages.slice(0, messageIndex))
-    },
-    [messages, setMessages]
-  )
+  const handleEditMessage = useCallback((messageId: string, newContent: string) => {
+    const idx = messages.findIndex((m) => m.id === messageId)
+    if (idx === -1) return
+    pendingResend.current = { content: newContent, mode: 'chat' }
+    setMessages(messages.slice(0, idx))
+  }, [messages])
 
   const handleSaveSettings = useCallback((newSettings: Settings) => {
     saveSettings(newSettings)
@@ -248,8 +263,8 @@ export function ChatInterface() {
     )
   }
 
-  const currentModel = availableModels.find(m => m.id === settings.model) ?? availableModels[0]
-  const totalTokens = messages.reduce((acc, m) => acc + estimateTokens(getUIMessageText(m)), 0)
+  const currentModel = availableModels.find((m) => m.id === settings.model) ?? availableModels[0]
+  const totalTokens = messages.reduce((acc, m) => acc + estimateTokens(m.content), 0)
 
   return (
     <div className={cn('relative flex h-[100svh] overflow-hidden bg-background', getBackgroundClass())}>
@@ -259,7 +274,7 @@ export function ChatInterface() {
 
       <ChatSidebar
         chats={chats}
-        currentChatId={currentChatId}
+        currentChatId={currentChatIdRef.current}
         onSelectChat={handleSelectChat}
         onNewChat={handleNewChat}
         onDeleteChat={handleDeleteChat}
@@ -287,17 +302,13 @@ export function ChatInterface() {
               <EmptyState onSuggestionClick={(text) => handleSend(text)} />
             ) : (
               <div className="pb-36 pt-6 max-w-3xl mx-auto w-full space-y-1">
-                {messages.map((message, index) => (
+                {messages.map((message) => (
                   <ChatMessage
                     key={message.id}
-                    role={message.role as 'user' | 'assistant'}
-                    content={getUIMessageText(message)}
-                    isStreaming={
-                      isLoading &&
-                      index === messages.length - 1 &&
-                      message.role === 'assistant'
-                    }
-                    canEdit={message.role === 'user'}
+                    role={message.role}
+                    content={message.content}
+                    isStreaming={message.id === streamingId}
+                    canEdit={message.role === 'user' && !isLoading}
                     onEdit={(newContent) => handleEditMessage(message.id, newContent)}
                     compactMode={settings.compactMode}
                   />
@@ -322,16 +333,15 @@ export function ChatInterface() {
               <AlertDescription className="flex items-center justify-between gap-6">
                 <div className="flex flex-col gap-1">
                   <span className="text-xs font-medium text-muted-foreground">Connection error</span>
-                  <span className="text-sm">
-                    {error.message || 'Something went wrong. Please try again.'}
-                  </span>
+                  <span className="text-sm">{error.message || 'Something went wrong. Please try again.'}</span>
                 </div>
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={() => {
-                    const lastUserMessage = [...messages].reverse().find((m) => m.role === 'user')
-                    if (lastUserMessage) handleSend(getUIMessageText(lastUserMessage))
+                    setError(null)
+                    const lastUser = [...messages].reverse().find((m) => m.role === 'user')
+                    if (lastUser) handleSend(lastUser.content)
                   }}
                   className="shrink-0 gap-2 text-xs h-8 rounded-lg px-3"
                 >

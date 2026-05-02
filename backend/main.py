@@ -71,7 +71,7 @@ async def list_models():
 @app.post("/api/chat")
 async def chat_endpoint(
     body: dict = Body(...),
-    db: Session = Depends(database.get_db)
+    db: Optional[Session] = Depends(database.get_db_optional)
 ):
     messages_data = body.get("messages", [])
     model = body.get("model", "llama3")
@@ -81,16 +81,19 @@ async def chat_endpoint(
     if not messages_data:
         raise HTTPException(status_code=400, detail="No messages provided")
 
-    # Save user message if chat_id is provided
-    if chat_id:
-        user_msg = messages_data[-1]
-        db_msg = models.Message(
-            chat_id=chat_id,
-            role=user_msg["role"],
-            content=user_msg.get("content", "") or next((p["text"] for p in user_msg.get("parts", []) if p["type"] == "text"), "")
-        )
-        db.add(db_msg)
-        db.commit()
+    # Save user message if chat_id is provided and DB is available
+    if chat_id and db:
+        try:
+            user_msg = messages_data[-1]
+            db_msg = models.Message(
+                chat_id=chat_id,
+                role=user_msg["role"],
+                content=user_msg.get("content", "") or next((p["text"] for p in user_msg.get("parts", []) if p["type"] == "text"), "")
+            )
+            db.add(db_msg)
+            db.commit()
+        except Exception as e:
+            print(f"Warning: Could not save user message: {e}")
 
     async def generate():
         full_response = ""
@@ -109,18 +112,22 @@ async def chat_endpoint(
             full_response += chunk
             yield chunk
 
+        # Save assistant response if DB is available
         if chat_id and full_response:
-            with database.SessionLocal() as session:
-                assistant_msg = models.Message(
-                    chat_id=chat_id,
-                    role="assistant",
-                    content=full_response
-                )
-                session.add(assistant_msg)
-                db_chat = session.query(models.Chat).filter(models.Chat.id == chat_id).first()
-                if db_chat:
-                    db_chat.updated_at = datetime.utcnow()
-                session.commit()
+            try:
+                with database.SessionLocal() as session:
+                    assistant_msg = models.Message(
+                        chat_id=chat_id,
+                        role="assistant",
+                        content=full_response
+                    )
+                    session.add(assistant_msg)
+                    db_chat = session.query(models.Chat).filter(models.Chat.id == chat_id).first()
+                    if db_chat:
+                        db_chat.updated_at = datetime.utcnow()
+                    session.commit()
+            except Exception as e:
+                print(f"Warning: Could not save assistant message: {e}")
 
     return StreamingResponse(generate(), media_type="text/plain")
 
