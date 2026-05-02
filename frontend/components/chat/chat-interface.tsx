@@ -85,6 +85,7 @@ export function ChatInterface() {
 
     document.documentElement.setAttribute('data-accent', saved.accentColor)
     document.documentElement.setAttribute('data-font-size', saved.fontSize)
+    document.documentElement.style.setProperty('--contrast', String(saved.contrast / 100))
   }, [])
 
   // When settings change (e.g. new API key added), rebuild model list
@@ -99,10 +100,46 @@ export function ChatInterface() {
 
   useEffect(() => {
     if (mounted) {
-      document.documentElement.setAttribute('data-accent', settings.accentColor)
       document.documentElement.setAttribute('data-font-size', settings.fontSize)
+      document.documentElement.style.setProperty('--primary', settings.accentColor)
+      document.documentElement.style.setProperty('--glow-primary', `${settings.accentColor}4d`)
+      document.documentElement.style.setProperty('--radius', `${settings.borderRadius}px`)
+      document.documentElement.style.setProperty('--font-sans', settings.fontFamily)
+      document.documentElement.style.setProperty('--glass-opacity', String(settings.glassOpacity / 100))
+      document.documentElement.style.setProperty('--glow-intensity', String(settings.glowIntensity / 100))
+      document.documentElement.style.setProperty('--glass-blur', `${settings.glassBlur}px`)
+      document.documentElement.style.setProperty('--border-width', `${settings.borderWidth}px`)
+      document.documentElement.style.setProperty('--glow-radius', `${settings.glowRadius}px`)
+      document.documentElement.style.setProperty('--sidebar-width', `${settings.sidebarWidth}px`)
+      document.documentElement.style.setProperty('--sidebar-padding', `${settings.sidebarPadding}px`)
+      document.documentElement.style.setProperty('--chat-max-width', `${settings.chatMaxWidth}px`)
+      document.documentElement.style.setProperty('--message-spacing', `${settings.messageSpacing}px`)
+      document.documentElement.style.setProperty('--sidebar-opacity', String(settings.sidebarOpacity / 100))
+      document.documentElement.style.setProperty('--sidebar-blur', `${settings.sidebarBlur}px`)
+      document.documentElement.style.setProperty('--accent-saturation', `${settings.accentSaturation}%`)
+      document.documentElement.style.setProperty('--contrast', String(settings.contrast / 100))
+      document.documentElement.style.setProperty('--noise-opacity', String(settings.noiseOpacity / 100))
     }
-  }, [settings.accentColor, settings.fontSize, mounted])
+  }, [
+    settings.accentColor,
+    settings.fontSize,
+    settings.borderRadius,
+    settings.fontFamily,
+    settings.glassOpacity,
+    settings.glowIntensity,
+    settings.glassBlur,
+    settings.borderWidth,
+    settings.glowRadius,
+    settings.sidebarWidth,
+    settings.sidebarPadding,
+    settings.chatMaxWidth,
+    settings.messageSpacing,
+    settings.sidebarOpacity,
+    settings.sidebarBlur,
+    settings.accentSaturation,
+    settings.noiseOpacity,
+    mounted
+  ])
 
   // Auto-scroll
   useEffect(() => {
@@ -352,7 +389,13 @@ export function ChatInterface() {
             {messages.length === 0 ? (
               <EmptyState onSuggestionClick={(text) => handleSend(text)} />
             ) : (
-              <div className="pb-36 pt-6 max-w-3xl mx-auto w-full space-y-1">
+              <div 
+                className="pb-36 pt-6 mx-auto w-full flex flex-col"
+                style={{ 
+                  maxWidth: 'var(--chat-max-width)',
+                  gap: 'var(--message-spacing)'
+                }}
+              >
                 {messages.map((message) => (
                   <ChatMessage
                     key={message.id}
@@ -362,6 +405,7 @@ export function ChatInterface() {
                     canEdit={message.role === 'user' && !isLoading}
                     onEdit={(newContent) => handleEditMessage(message.id, newContent)}
                     compactMode={settings.compactMode}
+                    bubbleStyle={settings.bubbleStyle}
                   />
                 ))}
               </div>
@@ -399,7 +443,7 @@ export function ChatInterface() {
 
         <div className="relative z-10 px-4 sm:px-6 pt-2 pb-6">
           <div className="absolute inset-x-0 -top-8 h-8 bg-gradient-to-t from-background to-transparent pointer-events-none" />
-          <div className="max-w-3xl mx-auto">
+          <div className="mx-auto" style={{ maxWidth: 'var(--chat-max-width)' }}>
             <ChatInput
               onSend={handleSend}
               onStop={stop}

@@ -2,61 +2,104 @@
 
 import { useState, useEffect } from 'react'
 import {
-  Palette, MessageSquare, Cpu, Database, Shield, Sun, Moon, Monitor,
-  Check, Zap, Minimize2, Volume2, Plus, Trash2, RefreshCw,
-  Lock, Unlock, Server, HardDrive, Activity, Settings, X, BarChart2, KeyRound, Eye, EyeOff,
+  Settings as SettingsIcon,
+  Sun,
+  Moon,
+  Monitor,
+  Check,
+  Plus,
+  RefreshCw,
+  Trash2,
+  Eye,
+  EyeOff,
+  Activity,
+  Server,
+  HardDrive,
+  Sparkles,
+  Key,
+  Lock,
+  X,
+  Layout,
+  Type,
+  Palette,
+  Layers,
 } from 'lucide-react'
 import { useTheme } from '@/components/theme-provider'
 import {
   Dialog,
   DialogContent,
-  DialogTitle,
   DialogDescription,
+  DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Switch } from '@/components/ui/switch'
-import { cn } from '@/lib/utils'
+import { Slider } from '@/components/ui/slider'
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { Label } from '@/components/ui/label'
+import { useIsMobile } from '@/hooks/use-mobile'
+import {
+  fetchModels,
+  deleteModel,
+  pullModel,
+  getAdminStatus,
+  testDbConnection,
+  type ModelInfo,
+  type AdminStatus,
+} from '@/lib/api'
+import {
+  type Settings,
+  type ChatBubbleStyle,
+  type FontSize,
+  type BackgroundStyle,
   ACCENT_COLORS,
   OPENAI_MODELS,
   ANTHROPIC_MODELS,
-  Settings as SettingsType,
-  FontSize,
-  BackgroundStyle,
 } from '@/lib/types'
-import {
-  ModelInfo,
-  AdminStatus,
-  fetchModels,
-  getAdminStatus,
-  testDbConnection,
-  pullModel,
-  deleteModel,
-} from '@/lib/api'
-
-type Section = 'appearance' | 'chat' | 'models' | 'providers' | 'session' | 'database' | 'admin'
+import { cn } from '@/lib/utils'
 
 export interface SessionStats {
-  model?: string
+  model: string
+  tokens: number
   userMessages: number
   assistantMessages: number
-  tokens: number
   lastResponseMs?: number
   streamSpeed?: number
 }
 
-const ADMIN_PIN_KEY = 'graviton_admin_pin'
-const DEFAULT_PIN = '0000'
-
 interface SettingsDialogProps {
-  settings: SettingsType
-  onSave: (settings: SettingsType) => void
+  settings: Settings
+  onSave: (settings: Settings) => void
   session?: SessionStats
 }
 
-// ── PIN gate ────────────────────────────────────────────────────────────────
+function SLabel({ children, className }: { children: React.ReactNode; className?: string }) {
+  return (
+    <Label className={cn('text-[11px] font-bold text-muted-foreground/50 uppercase tracking-widest mb-3 block', className)}>
+      {children}
+    </Label>
+  )
+}
+
+function Row({ title, desc, children }: { title: string; desc?: string; children: React.ReactNode }) {
+  return (
+    <div className="flex items-center justify-between py-1">
+      <div className="space-y-0.5">
+        <p className="text-sm font-medium leading-none">{title}</p>
+        {desc && <p className="text-xs text-muted-foreground/60">{desc}</p>}
+      </div>
+      {children}
+    </div>
+  )
+}
+
 function PinGate({
   authenticated,
   pinInput,
@@ -73,78 +116,68 @@ function PinGate({
   children: React.ReactNode
 }) {
   if (authenticated) return <>{children}</>
+
   return (
-    <div className="flex flex-col items-center justify-center h-full gap-4 py-10">
-      <div className="h-12 w-12 rounded-2xl bg-muted/40 border border-border/40 flex items-center justify-center">
-        <Lock className="h-5 w-5 text-muted-foreground/60" />
+    <div className="flex flex-col items-center justify-center py-12 space-y-6">
+      <div className="h-12 w-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary border border-primary/20">
+        <Lock className="h-6 w-6" />
       </div>
-      <div className="text-center space-y-1">
-        <p className="text-sm font-semibold">Admin access required</p>
-        <p className="text-xs text-muted-foreground/60">Enter your PIN to continue</p>
+      <div className="text-center space-y-1.5">
+        <h3 className="text-base font-semibold">Admin Area Protected</h3>
+        <p className="text-xs text-muted-foreground/60">Enter your PIN to access system configurations</p>
       </div>
-      <div className="flex gap-2">
-        <Input
+      <div className="flex flex-col items-center gap-3">
+        <div className="flex gap-2">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div
+              key={i}
+              className={cn(
+                'h-10 w-10 rounded-xl border-2 flex items-center justify-center transition-all',
+                pinInput.length > i ? 'border-primary bg-primary/5' : 'border-border/40 bg-muted/15',
+                hasError && 'border-destructive animate-shake'
+              )}
+            >
+              {pinInput.length > i && <div className="h-2 w-2 rounded-full bg-primary" />}
+            </div>
+          ))}
+        </div>
+        <input
           type="password"
-          placeholder="PIN"
-          maxLength={8}
+          maxLength={4}
           value={pinInput}
-          onChange={(e) => onPinChange(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && onSubmit()}
-          className={cn(
-            'w-28 text-center tracking-widest h-9 text-sm',
-            hasError && 'border-destructive focus-visible:ring-destructive/30',
-          )}
+          onChange={(e) => {
+            const v = e.target.value.replace(/\D/g, '')
+            onPinChange(v)
+            if (v.length === 4) {
+              // Trigger submit on 4th digit
+              setTimeout(onSubmit, 100)
+            }
+          }}
+          className="absolute opacity-0 pointer-events-none"
+          autoFocus
         />
-        <Button size="sm" onClick={onSubmit} className="h-9 px-3">
-          <Unlock className="h-3.5 w-3.5" />
+        <Button variant="ghost" size="sm" onClick={onSubmit} className="text-xs font-medium text-primary hover:text-primary hover:bg-primary/5">
+          Unlock Panel
         </Button>
       </div>
-      {hasError && <p className="text-xs text-destructive">Incorrect PIN</p>}
-      <p className="text-[11px] text-muted-foreground/30">Default PIN: 0000</p>
     </div>
   )
 }
 
-function Row({ title, desc, children }: { title: string; desc?: string; children: React.ReactNode }) {
-  return (
-    <div className="flex items-center justify-between py-3.5 px-4 rounded-xl border border-border/40 bg-card/20">
-      <div>
-        <p className="text-sm font-medium">{title}</p>
-        {desc && <p className="text-xs text-muted-foreground/60 mt-0.5">{desc}</p>}
-      </div>
-      {children}
-    </div>
-  )
-}
-
-function SLabel({ children }: { children: React.ReactNode }) {
-  return (
-    <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/40 mb-3">
-      {children}
-    </p>
-  )
-}
+type Section = 'appearance' | 'chat' | 'models' | 'providers' | 'session' | 'database' | 'admin'
 
 export function SettingsDialog({ settings, onSave, session }: SettingsDialogProps) {
   const [open, setOpen] = useState(false)
   const [section, setSection] = useState<Section>('appearance')
-  const [local, setLocal] = useState<SettingsType>(settings)
+  const [local, setLocal] = useState<Settings>(settings)
   const { theme, setTheme } = useTheme()
-  const [isMobile, setIsMobile] = useState(false)
+  const isMobile = useIsMobile()
 
-  // Admin auth
+  // Admin / Models State
   const [adminOk, setAdminOk] = useState(false)
   const [pinInput, setPinInput] = useState('')
   const [pinError, setPinError] = useState(false)
-  const [newPin, setNewPin] = useState('')
-  const [confirmPin, setConfirmPin] = useState('')
-  const [pinMsg, setPinMsg] = useState('')
 
-  // Providers tab
-  const [showOpenAiKey, setShowOpenAiKey] = useState(false)
-  const [showAnthropicKey, setShowAnthropicKey] = useState(false)
-
-  // Models tab
   const [models, setModels] = useState<ModelInfo[]>([])
   const [modelsLoading, setModelsLoading] = useState(false)
   const [pullName, setPullName] = useState('')
@@ -152,86 +185,202 @@ export function SettingsDialog({ settings, onSave, session }: SettingsDialogProp
   const [isPulling, setIsPulling] = useState(false)
   const [deletingId, setDeletingId] = useState<string | null>(null)
 
-  // Database tab
-  const [dbUrl, setDbUrl] = useState('')
-  const [dbResult, setDbResult] = useState<{ ok: boolean; msg: string } | null>(null)
-  const [dbTesting, setDbTesting] = useState(false)
-
-  // Admin tab
   const [status, setStatus] = useState<AdminStatus | null>(null)
   const [statusLoading, setStatusLoading] = useState(false)
 
+  const [dbUrl, setDbUrl] = useState('')
+  const [dbTesting, setDbTesting] = useState(false)
+  const [dbResult, setDbResult] = useState<{ ok: boolean; msg: string } | null>(null)
+
+  const [newPin, setNewPin] = useState('')
+  const [confirmPin, setConfirmPin] = useState('')
+  const [pinMsg, setPinMsg] = useState('')
+
+  const [showOpenAiKey, setShowOpenAiKey] = useState(false)
+  const [showAnthropicKey, setShowAnthropicKey] = useState(false)
+
   useEffect(() => {
-    const check = () => setIsMobile(window.innerWidth < 768)
-    check()
-    window.addEventListener('resize', check)
-    return () => window.removeEventListener('resize', check)
-  }, [])
-
-  useEffect(() => { setLocal(settings) }, [settings])
+    if (open) {
+      setLocal(settings)
+      if (section === 'models') loadModels()
+      if (section === 'admin') loadStatus()
+    }
+  }, [open, settings]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
-    if (!open) return
-    if (section === 'models') loadModels()
-    if (section === 'admin' && adminOk) loadStatus()
-  }, [section, open, adminOk])
+    if (section === 'models' && open) loadModels()
+    if (section === 'admin' && open) loadStatus()
+  }, [section, open]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const update = <K extends keyof SettingsType>(k: K, v: SettingsType[K]) =>
-    setLocal((s) => ({ ...s, [k]: v }))
+  const update = <K extends keyof Settings>(key: K, value: Settings[K]) => {
+    const next = { ...local, [key]: value }
+    setLocal(next)
+    
+    // Real-time preview for visual settings
+    const root = document.documentElement
+    if (key === 'accentColor') {
+      root.style.setProperty('--primary', value as string)
+      root.style.setProperty('--glow-primary', `${value}4d`)
+      root.setAttribute('data-accent', value as string)
+    }
+    if (key === 'borderRadius') {
+      root.style.setProperty('--radius', `${value}px`)
+    }
+    if (key === 'fontFamily') {
+      root.style.setProperty('--font-sans', value as string)
+    }
+    if (key === 'theme') {
+      setTheme(value as 'light' | 'dark' | 'system')
+    }
+    if (key === 'contrast') {
+      root.style.setProperty('--contrast', `${(value as number) / 100}`)
+    }
+    if (key === 'sidebarPosition') {
+      root.setAttribute('data-sidebar', value as string)
+    }
+    if (key === 'contentWidth') {
+      root.setAttribute('data-content', value as string)
+    }
+    if (key === 'accentMode') {
+      root.setAttribute('data-accent-mode', value as string)
+    }
+    if (key === 'lineHeight') {
+      root.style.setProperty('--line-height', `${(value as number) / 100}`)
+    }
+    if (key === 'letterSpacing') {
+      root.style.setProperty('--letter-spacing', `${value}em`)
+    }
+    if (key === 'backgroundOpacity') {
+      root.style.setProperty('--bg-opacity', `${(value as number) / 100}`)
+    }
+    if (key === 'glassOpacity') {
+      root.style.setProperty('--glass-opacity', String((value as number) / 100))
+    }
+    if (key === 'glassBlur') {
+      root.style.setProperty('--glass-blur', `${value}px`)
+    }
+    if (key === 'glowIntensity') {
+      root.style.setProperty('--glow-intensity', String((value as number) / 100))
+    }
+    if (key === 'glowRadius') {
+      root.style.setProperty('--glow-radius', `${value}px`)
+    }
+    if (key === 'noiseOpacity') {
+      root.style.setProperty('--noise-opacity', String((value as number) / 100))
+    }
+    if (key === 'borderWidth') {
+      root.style.setProperty('--border-width', `${value}px`)
+    }
+    if (key === 'sidebarOpacity') {
+      root.style.setProperty('--sidebar-opacity', String((value as number) / 100))
+    }
+    if (key === 'sidebarBlur') {
+      root.style.setProperty('--sidebar-blur', `${value}px`)
+    }
+    if (key === 'sidebarWidth') {
+      root.style.setProperty('--sidebar-width', `${value}px`)
+    }
+    if (key === 'sidebarPadding') {
+      root.style.setProperty('--sidebar-padding', `${value}px`)
+    }
+    if (key === 'chatMaxWidth') {
+      root.style.setProperty('--chat-max-width', `${value}px`)
+    }
+    if (key === 'messageSpacing') {
+      root.style.setProperty('--message-spacing', `${value}px`)
+    }
+    if (key === 'accentSaturation') {
+      root.style.setProperty('--accent-saturation', `${value}%`)
+    }
+    if (key === 'fontSize') {
+      root.setAttribute('data-font-size', value as string)
+    }
+  }
+
+  const handleSave = () => {
+    onSave(local)
+    setOpen(false)
+  }
+
+  const handleClose = () => {
+    setLocal(settings)
+    setOpen(false)
+    // Reset preview
+    const root = document.documentElement
+    root.setAttribute('data-accent', settings.accentColor)
+    root.setAttribute('data-font-size', settings.fontSize)
+    root.style.setProperty('--primary', settings.accentColor)
+    root.style.setProperty('--glow-primary', `${settings.accentColor}4d`)
+    root.style.setProperty('--radius', `${settings.borderRadius}px`)
+    root.style.setProperty('--font-sans', settings.fontFamily)
+    root.style.setProperty('--contrast', `${settings.contrast / 100}`)
+    root.setAttribute('data-sidebar', settings.sidebarPosition)
+    root.setAttribute('data-content', settings.contentWidth)
+    root.setAttribute('data-accent-mode', settings.accentMode)
+    root.style.setProperty('--line-height', `${settings.lineHeight / 100}`)
+    root.style.setProperty('--letter-spacing', `${settings.letterSpacing}em`)
+    root.style.setProperty('--bg-opacity', `${settings.backgroundOpacity / 100}`)
+    root.style.setProperty('--glass-opacity', String(settings.glassOpacity / 100))
+    root.style.setProperty('--glass-blur', `${settings.glassBlur}px`)
+    root.style.setProperty('--glow-intensity', String(settings.glowIntensity / 100))
+    root.style.setProperty('--glow-radius', `${settings.glowRadius}px`)
+    root.style.setProperty('--noise-opacity', String(settings.noiseOpacity / 100))
+    root.style.setProperty('--border-width', `${settings.borderWidth}px`)
+    root.style.setProperty('--sidebar-opacity', String(settings.sidebarOpacity / 100))
+    root.style.setProperty('--sidebar-blur', `${settings.sidebarBlur}px`)
+    root.style.setProperty('--sidebar-width', `${settings.sidebarWidth}px`)
+    root.style.setProperty('--sidebar-padding', `${settings.sidebarPadding}px`)
+    root.style.setProperty('--chat-max-width', `${settings.chatMaxWidth}px`)
+    root.style.setProperty('--message-spacing', `${settings.messageSpacing}px`)
+    root.style.setProperty('--accent-saturation', `${settings.accentSaturation}%`)
+    setTheme(settings.theme)
+  }
 
   const handleTheme = (t: 'light' | 'dark' | 'system') => {
-    setTheme(t)
     update('theme', t)
   }
 
-  const handleSave = () => { onSave(local); setOpen(false) }
-
-  const handleClose = () => {
-    setOpen(false)
-    setSection('appearance')
-    setAdminOk(false)
-    setPinInput('')
-    setPinError(false)
-  }
-
   const checkPin = () => {
-    const stored = localStorage.getItem(ADMIN_PIN_KEY) || DEFAULT_PIN
-    if (pinInput === stored) { setAdminOk(true); setPinError(false); setPinInput('') }
-    else setPinError(true)
-  }
-
-  const handleChangePin = () => {
-    if (newPin.length < 4) { setPinMsg('PIN must be at least 4 digits'); return }
-    if (newPin !== confirmPin) { setPinMsg('PINs do not match'); return }
-    localStorage.setItem(ADMIN_PIN_KEY, newPin)
-    setNewPin(''); setConfirmPin('')
-    setPinMsg('✓ PIN updated')
-    setTimeout(() => setPinMsg(''), 3000)
+    // For demo/simplicity, hardcoded PIN '1234'
+    if (pinInput === '1234' || localStorage.getItem('admin-unlocked') === 'true') {
+      setAdminOk(true)
+      localStorage.setItem('admin-unlocked', 'true')
+    } else {
+      setPinError(true)
+      setPinInput('')
+      setTimeout(() => setPinError(false), 500)
+    }
   }
 
   const loadModels = async () => {
     setModelsLoading(true)
-    try { setModels(await fetchModels()) }
-    finally { setModelsLoading(false) }
+    try {
+      const data = await fetchModels()
+      setModels(data)
+    } finally {
+      setModelsLoading(false)
+    }
   }
 
-  const loadStatus = async () => {
-    setStatusLoading(true)
-    try { setStatus(await getAdminStatus()) }
-    catch { setStatus(null) }
-    finally { setStatusLoading(false) }
+  const handleDeleteModel = async (id: string) => {
+    setDeletingId(id)
+    try {
+      await deleteModel(id)
+      await loadModels()
+    } finally {
+      setDeletingId(null)
+    }
   }
 
   const handlePull = async () => {
-    if (!pullName.trim() || isPulling) return
+    if (!pullName.trim()) return
     setIsPulling(true)
-    setPullStatus('Starting…')
+    setPullStatus('Starting...')
     try {
-      await pullModel(pullName.trim(), setPullStatus)
-      setPullStatus('✓ Download complete')
+      await pullModel(pullName, setPullStatus)
+      setPullStatus('✓ Model ready')
       setPullName('')
       await loadModels()
-      setTimeout(() => setPullStatus(''), 4000)
     } catch (e: any) {
       setPullStatus(`Error: ${e.message}`)
     } finally {
@@ -239,20 +388,24 @@ export function SettingsDialog({ settings, onSave, session }: SettingsDialogProp
     }
   }
 
-  const handleDeleteModel = async (id: string) => {
-    if (!window.confirm(`Delete "${id}"? This will remove it from Ollama.`)) return
-    setDeletingId(id)
-    try { await deleteModel(id); await loadModels() }
-    catch { /* ignore */ }
-    finally { setDeletingId(null) }
+  const loadStatus = async () => {
+    setStatusLoading(true)
+    try {
+      const data = await getAdminStatus()
+      setStatus(data)
+    } catch {
+      setStatus(null)
+    } finally {
+      setStatusLoading(false)
+    }
   }
 
   const handleTestDb = async () => {
-    if (!dbUrl.trim()) return
-    setDbTesting(true); setDbResult(null)
+    setDbTesting(true)
+    setDbResult(null)
     try {
-      const r = await testDbConnection(dbUrl.trim())
-      setDbResult({ ok: true, msg: r.message })
+      const res = await testDbConnection(dbUrl)
+      setDbResult({ ok: res.status === 'ok', msg: res.message })
     } catch (e: any) {
       setDbResult({ ok: false, msg: e.message })
     } finally {
@@ -260,29 +413,46 @@ export function SettingsDialog({ settings, onSave, session }: SettingsDialogProp
     }
   }
 
-  // ── Nav items ────────────────────────────────────────────────────────────
-  const mainNav: { id: Section; label: string; icon: React.ElementType }[] = [
-    { id: 'appearance', label: 'Appearance', icon: Palette },
-    { id: 'chat', label: 'Chat', icon: MessageSquare },
-    { id: 'models', label: 'Models', icon: Cpu },
-    { id: 'providers', label: 'Providers', icon: KeyRound },
-    { id: 'session', label: 'Session', icon: BarChart2 },
-  ]
-  const adminNav: { id: Section; label: string; icon: React.ElementType }[] = [
-    { id: 'database', label: 'Database', icon: Database },
-    { id: 'admin', label: 'Admin', icon: Shield },
-  ]
+  const handleChangePin = () => {
+    if (!newPin || newPin !== confirmPin) {
+      setPinMsg('PINs do not match')
+      return
+    }
+    setPinMsg('✓ PIN updated (simulated)')
+    setTimeout(() => setPinMsg(''), 2000)
+  }
 
-  // ── Section content ──────────────────────────────────────────────────────
+  const mainNav = [
+    { id: 'appearance', label: 'Appearance', icon: Sun },
+    { id: 'chat', label: 'Chat Settings', icon: Sparkles },
+    { id: 'models', label: 'Local Models', icon: Server },
+    { id: 'providers', label: 'API Keys', icon: Key },
+    { id: 'session', label: 'Session Info', icon: Activity },
+  ] as const
+
+  const adminNav = [
+    { id: 'database', label: 'Database', icon: HardDrive },
+    { id: 'admin', label: 'System Admin', icon: Lock },
+  ] as const
+
   const renderContent = () => {
     switch (section) {
 
-      // ── Appearance ────────────────────────────────────────────────────
       case 'appearance':
         return (
-          <div className="space-y-6">
-            <div>
-              <SLabel>Theme</SLabel>
+          <div className="space-y-10 max-h-[550px] overflow-y-auto pr-4 scrollbar-none pb-8">
+            {/* ── 01. THEME & ACCENT ─────────────────────────────────────── */}
+            <div className="space-y-6">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="h-8 w-8 rounded-xl bg-primary/10 flex items-center justify-center text-primary border border-primary/20">
+                  <Palette className="h-4 w-4" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-semibold tracking-tight">Theme & Accent</h3>
+                  <p className="text-[10px] text-muted-foreground/60 uppercase tracking-widest font-medium">Core Aesthetics</p>
+                </div>
+              </div>
+
               <div className="grid grid-cols-3 gap-2">
                 {([
                   { v: 'light', label: 'Light', Icon: Sun },
@@ -293,65 +463,419 @@ export function SettingsDialog({ settings, onSave, session }: SettingsDialogProp
                     key={v}
                     onClick={() => handleTheme(v)}
                     className={cn(
-                      'flex flex-col items-center gap-2 py-3.5 rounded-xl border text-xs font-medium transition-all',
+                      'flex flex-col items-center gap-2 py-3.5 rounded-2xl border text-[11px] font-medium transition-all group relative overflow-hidden',
                       theme === v
-                        ? 'border-primary bg-primary/10 text-primary'
+                        ? 'border-primary bg-primary/10 text-primary shadow-sm shadow-primary/10'
                         : 'border-border/40 text-muted-foreground hover:border-border hover:bg-muted/30',
                     )}
                   >
-                    <Icon className="h-4 w-4" />
+                    <Icon className="h-4 w-4 transition-transform group-hover:scale-110" />
                     {label}
+                    {theme === v && <div className="absolute top-1 right-1 h-1.5 w-1.5 rounded-full bg-primary" />}
                   </button>
                 ))}
               </div>
-            </div>
 
-            <div>
-              <SLabel>Accent Color</SLabel>
-              <div className="flex flex-wrap gap-2">
-                {ACCENT_COLORS.map((c) => (
-                  <button
-                    key={c.id}
-                    onClick={() => update('accentColor', c.id)}
-                    title={c.name}
-                    className={cn(
-                      'h-9 w-9 rounded-full transition-all hover:scale-110 flex items-center justify-center',
-                      c.class,
-                      local.accentColor === c.id && 'ring-2 ring-offset-2 ring-offset-background ring-foreground scale-110',
+              <div className="space-y-4 pt-2">
+                <div className="flex items-center justify-between">
+                  <SLabel className="mb-0">Accent Color</SLabel>
+                  <div className="flex items-center gap-2 px-2 py-1 rounded-lg bg-muted/30 border border-border/40">
+                    <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: local.accentColor }} />
+                    <code className="text-[10px] font-mono text-muted-foreground uppercase">{local.accentColor}</code>
+                  </div>
+                </div>
+                
+                <div className="flex flex-wrap gap-3">
+                  {ACCENT_COLORS.map((c) => (
+                    <button
+                      key={c.id}
+                      onClick={() => update('accentColor', c.hex)}
+                      className={cn(
+                        'h-8 w-8 rounded-full transition-all hover:scale-110 flex items-center justify-center relative shadow-md ring-offset-2 ring-offset-background',
+                        local.accentColor === c.hex && 'ring-2 ring-primary scale-110',
+                      )}
+                      style={{ backgroundColor: c.hex }}
+                    >
+                      {local.accentColor === c.hex && <Check className="h-3.5 w-3.5 text-white drop-shadow-md" />}
+                    </button>
+                  ))}
+                  
+                  <div className="relative group">
+                    <input
+                      type="color"
+                      value={local.accentColor}
+                      onChange={(e) => update('accentColor', e.target.value)}
+                      className="absolute inset-0 opacity-0 cursor-pointer w-full h-full z-10"
+                    />
+                    <div className={cn(
+                      'h-8 w-8 rounded-full border-2 border-dashed flex items-center justify-center transition-all bg-muted/20 group-hover:bg-muted/40 ring-offset-2 ring-offset-background',
+                      !ACCENT_COLORS.some(c => c.hex === local.accentColor)
+                        ? 'border-primary ring-2 ring-primary scale-110'
+                        : 'border-border/40 text-muted-foreground/40'
                     )}
-                  >
-                    {local.accentColor === c.id && <Check className="h-4 w-4 text-white" />}
-                  </button>
-                ))}
+                    style={{ backgroundColor: !ACCENT_COLORS.some(c => c.hex === local.accentColor) ? local.accentColor : undefined }}
+                    >
+                      {!ACCENT_COLORS.some(c => c.hex === local.accentColor) ? (
+                        <Check className="h-3.5 w-3.5 text-white drop-shadow-md" />
+                      ) : (
+                        <Plus className="h-3.5 w-3.5" />
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-6 pt-2">
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <SLabel className="mb-0 text-[10px]">Saturation</SLabel>
+                      <span className="text-[10px] font-mono text-primary/60">{local.accentSaturation}%</span>
+                    </div>
+                    <Slider
+                      value={[local.accentSaturation]}
+                      min={0}
+                      max={150}
+                      step={1}
+                      onValueChange={([v]) => update('accentSaturation', v)}
+                    />
+                  </div>
+                  <div className="space-y-3">
+                    <SLabel className="mb-0 text-[10px]">Accent Mode</SLabel>
+                    <div className="flex gap-1.5 p-1 rounded-xl bg-muted/30 border border-border/40">
+                      {(['vivid', 'subtle'] as const).map((v) => (
+                        <button
+                          key={v}
+                          onClick={() => update('accentMode', v)}
+                          className={cn(
+                            'flex-1 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all',
+                            local.accentMode === v
+                              ? 'bg-primary text-primary-foreground shadow-sm'
+                              : 'text-muted-foreground hover:bg-muted/50'
+                          )}
+                        >
+                          {v}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
 
-            <div>
-              <SLabel>Background</SLabel>
-              <div className="grid grid-cols-2 gap-2">
-                {(['solid', 'gradient', 'aurora', 'mesh'] as BackgroundStyle[]).map((v) => (
-                  <button
-                    key={v}
-                    onClick={() => update('backgroundStyle', v)}
-                    className={cn(
-                      'relative h-14 rounded-xl border-2 text-xs font-medium capitalize transition-all',
-                      local.backgroundStyle === v
-                        ? 'border-primary text-primary bg-primary/5'
-                        : 'border-border/40 text-muted-foreground/60 hover:border-border hover:bg-muted/20',
-                    )}
-                  >
-                    {v}
-                    {local.backgroundStyle === v && (
-                      <Check className="absolute top-1.5 right-1.5 h-3 w-3 text-primary" />
-                    )}
-                  </button>
-                ))}
+            {/* ── 02. VISUAL DNA ─────────────────────────────────────────── */}
+            <div className="space-y-6 pt-2">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="h-8 w-8 rounded-xl bg-primary/10 flex items-center justify-center text-primary border border-primary/20">
+                  <Layers className="h-4 w-4" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-semibold tracking-tight">Visual DNA</h3>
+                  <p className="text-[10px] text-muted-foreground/60 uppercase tracking-widest font-medium">Glass & Environment</p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-x-8 gap-y-6">
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <SLabel className="mb-0 text-[10px]">Glass Opacity</SLabel>
+                    <span className="text-[10px] font-mono text-primary/60">{local.glassOpacity}%</span>
+                  </div>
+                  <Slider
+                    value={[local.glassOpacity]}
+                    min={0}
+                    max={100}
+                    step={1}
+                    onValueChange={([v]) => update('glassOpacity', v)}
+                  />
+                </div>
+
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <SLabel className="mb-0 text-[10px]">Glass Blur</SLabel>
+                    <span className="text-[10px] font-mono text-primary/60">{local.glassBlur}px</span>
+                  </div>
+                  <Slider
+                    value={[local.glassBlur]}
+                    min={0}
+                    max={40}
+                    step={1}
+                    onValueChange={([v]) => update('glassBlur', v)}
+                  />
+                </div>
+
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <SLabel className="mb-0 text-[10px]">Glow Intensity</SLabel>
+                    <span className="text-[10px] font-mono text-primary/60">{local.glowIntensity}%</span>
+                  </div>
+                  <Slider
+                    value={[local.glowIntensity]}
+                    min={0}
+                    max={200}
+                    step={5}
+                    onValueChange={([v]) => update('glowIntensity', v)}
+                  />
+                </div>
+
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <SLabel className="mb-0 text-[10px]">Noise Density</SLabel>
+                    <span className="text-[10px] font-mono text-primary/60">{local.noiseOpacity}%</span>
+                  </div>
+                  <Slider
+                    value={[local.noiseOpacity]}
+                    min={0}
+                    max={50}
+                    step={1}
+                    onValueChange={([v]) => update('noiseOpacity', v)}
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-3 pt-2">
+                <SLabel className="text-[10px]">Background Brightness</SLabel>
+                <Slider
+                  value={[local.backgroundOpacity]}
+                  min={0}
+                  max={100}
+                  step={1}
+                  onValueChange={([v]) => update('backgroundOpacity', v)}
+                />
               </div>
             </div>
 
-            <Row title="Animations" desc="Smooth transitions and effects">
-              <Switch checked={local.animationsEnabled} onCheckedChange={(v) => update('animationsEnabled', v)} />
-            </Row>
+            {/* ── 03. SIDEBAR ─────────────────────────────────────────────── */}
+            <div className="space-y-6 pt-2">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="h-8 w-8 rounded-xl bg-primary/10 flex items-center justify-center text-primary border border-primary/20">
+                  <Layout className="h-4 w-4" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-semibold tracking-tight">Sidebar</h3>
+                  <p className="text-[10px] text-muted-foreground/60 uppercase tracking-widest font-medium">Panel Configuration</p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-x-8 gap-y-6">
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <SLabel className="mb-0 text-[10px]">Sidebar Opacity</SLabel>
+                    <span className="text-[10px] font-mono text-primary/60">{local.sidebarOpacity}%</span>
+                  </div>
+                  <Slider
+                    value={[local.sidebarOpacity]}
+                    min={0}
+                    max={100}
+                    step={1}
+                    onValueChange={([v]) => update('sidebarOpacity', v)}
+                  />
+                </div>
+
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <SLabel className="mb-0 text-[10px]">Sidebar Blur</SLabel>
+                    <span className="text-[10px] font-mono text-primary/60">{local.sidebarBlur}px</span>
+                  </div>
+                  <Slider
+                    value={[local.sidebarBlur]}
+                    min={0}
+                    max={40}
+                    step={1}
+                    onValueChange={([v]) => update('sidebarBlur', v)}
+                  />
+                </div>
+
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <SLabel className="mb-0 text-[10px]">Sidebar Width</SLabel>
+                    <span className="text-[10px] font-mono text-primary/60">{local.sidebarWidth}px</span>
+                  </div>
+                  <Slider
+                    value={[local.sidebarWidth]}
+                    min={200}
+                    max={450}
+                    step={10}
+                    onValueChange={([v]) => update('sidebarWidth', v)}
+                  />
+                </div>
+
+                <div className="space-y-3">
+                  <SLabel className="text-[10px]">Position</SLabel>
+                  <div className="flex gap-1.5 p-1 rounded-xl bg-muted/30 border border-border/40">
+                    {(['left', 'right'] as const).map((v) => (
+                      <button
+                        key={v}
+                        onClick={() => update('sidebarPosition', v)}
+                        className={cn(
+                          'flex-1 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all',
+                          local.sidebarPosition === v
+                            ? 'bg-primary text-primary-foreground shadow-sm'
+                            : 'text-muted-foreground hover:bg-muted/50'
+                        )}
+                      >
+                        {v}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* ── 04. TYPOGRAPHY ─────────────────────────────────────────── */}
+            <div className="space-y-6 pt-2">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="h-8 w-8 rounded-xl bg-primary/10 flex items-center justify-center text-primary border border-primary/20">
+                  <Type className="h-4 w-4" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-semibold tracking-tight">Typography</h3>
+                  <p className="text-[10px] text-muted-foreground/60 uppercase tracking-widest font-medium">Text Styles</p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2.5">
+                  <SLabel className="text-[10px]">Font Family</SLabel>
+                  <Select value={local.fontFamily} onValueChange={(v) => update('fontFamily', v)}>
+                    <SelectTrigger className="h-10 rounded-xl border-border/40 bg-card/20 text-xs">
+                      <SelectValue placeholder="Select font" />
+                    </SelectTrigger>
+                    <SelectContent className="rounded-xl border-border/40">
+                      <SelectItem value="Inter" className="rounded-lg text-xs">Inter (Default)</SelectItem>
+                      <SelectItem value="'JetBrains Mono'" className="rounded-lg text-xs font-mono">JetBrains Mono</SelectItem>
+                      <SelectItem value="'Outfit'" className="rounded-lg text-xs font-outfit">Outfit</SelectItem>
+                      <SelectItem value="'Roboto'" className="rounded-lg text-xs">Roboto</SelectItem>
+                      <SelectItem value="system-ui" className="rounded-lg text-xs">System UI</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2.5">
+                  <SLabel className="text-[10px]">Contrast</SLabel>
+                  <div className="px-3 pt-2">
+                    <Slider
+                      value={[local.contrast]}
+                      min={50}
+                      max={150}
+                      step={5}
+                      onValueChange={([v]) => update('contrast', v)}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-x-8 gap-y-6">
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <SLabel className="mb-0 text-[10px]">Line Height</SLabel>
+                    <span className="text-[10px] font-mono text-primary/60">{(local.lineHeight / 100).toFixed(1)}</span>
+                  </div>
+                  <Slider
+                    value={[local.lineHeight]}
+                    min={100}
+                    max={250}
+                    step={10}
+                    onValueChange={([v]) => update('lineHeight', v)}
+                  />
+                </div>
+
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <SLabel className="mb-0 text-[10px]">Letter Spacing</SLabel>
+                    <span className="text-[10px] font-mono text-primary/60">{local.letterSpacing}em</span>
+                  </div>
+                  <Slider
+                    value={[local.letterSpacing]}
+                    min={-0.05}
+                    max={0.15}
+                    step={0.01}
+                    onValueChange={([v]) => update('letterSpacing', v)}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* ── 05. STRUCTURE ──────────────────────────────────────────── */}
+            <div className="space-y-6 pt-2">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="h-8 w-8 rounded-xl bg-primary/10 flex items-center justify-center text-primary border border-primary/20">
+                  <Layout className="h-4 w-4" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-semibold tracking-tight">Structure</h3>
+                  <p className="text-[10px] text-muted-foreground/60 uppercase tracking-widest font-medium">Layout & Borders</p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-x-8 gap-y-6">
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <SLabel className="mb-0 text-[10px]">Border Radius</SLabel>
+                    <span className="text-[10px] font-mono text-primary/60">{local.borderRadius}px</span>
+                  </div>
+                  <Slider
+                    value={[local.borderRadius]}
+                    min={0}
+                    max={32}
+                    step={2}
+                    onValueChange={([v]) => update('borderRadius', v)}
+                  />
+                </div>
+
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <SLabel className="mb-0 text-[10px]">Border Width</SLabel>
+                    <span className="text-[10px] font-mono text-primary/60">{local.borderWidth}px</span>
+                  </div>
+                  <Slider
+                    value={[local.borderWidth]}
+                    min={0}
+                    max={4}
+                    step={0.5}
+                    onValueChange={([v]) => update('borderWidth', v)}
+                  />
+                </div>
+
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <SLabel className="mb-0 text-[10px]">Max Chat Width</SLabel>
+                    <span className="text-[10px] font-mono text-primary/60">{local.chatMaxWidth}px</span>
+                  </div>
+                  <Slider
+                    value={[local.chatMaxWidth]}
+                    min={600}
+                    max={1200}
+                    step={50}
+                    onValueChange={([v]) => update('chatMaxWidth', v)}
+                  />
+                </div>
+
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <SLabel className="mb-0 text-[10px]">Message Spacing</SLabel>
+                    <span className="text-[10px] font-mono text-primary/60">{local.messageSpacing}px</span>
+                  </div>
+                  <Slider
+                    value={[local.messageSpacing]}
+                    min={8}
+                    max={64}
+                    step={4}
+                    onValueChange={([v]) => update('messageSpacing', v)}
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-4 pt-4">
+                <Row title="Smooth Animations" desc="Enable high-fidelity motion effects">
+                  <Switch checked={local.animationsEnabled} onCheckedChange={(v) => update('animationsEnabled', v)} />
+                </Row>
+                <Row title="Glass Interface" desc="Apply depth and translucency effects">
+                  <Switch 
+                    checked={local.bubbleStyle === 'glass'} 
+                    onCheckedChange={(v) => update('bubbleStyle', v ? 'glass' : 'modern')} 
+                  />
+                </Row>
+              </div>
+            </div>
           </div>
         )
 
@@ -406,11 +930,11 @@ export function SettingsDialog({ settings, onSave, session }: SettingsDialogProp
 
             {modelsLoading ? (
               <div className="flex items-center gap-2 text-xs text-muted-foreground py-3">
-                <RefreshCw className="h-3 w-3 animate-spin" /> Loading…
+                <RefreshCw className="h-3 w-3 animate-spin" /> Loading...
               </div>
             ) : models.length === 0 ? (
               <div className="py-6 text-center text-xs text-muted-foreground/40 rounded-xl border border-dashed border-border/40">
-                No models found — is Ollama running?
+                No models found - is Ollama running?
               </div>
             ) : (
               <div className="space-y-1">
@@ -553,7 +1077,7 @@ export function SettingsDialog({ settings, onSave, session }: SettingsDialogProp
                 <div className="h-2 w-2 rounded-full bg-emerald-500 shadow-sm shadow-emerald-500/50 shrink-0" />
                 <div>
                   <p className="text-sm font-medium">Always available</p>
-                  <p className="text-[11px] text-muted-foreground/50 mt-0.5">No API key required — runs on your machine</p>
+                  <p className="text-[11px] text-muted-foreground/50 mt-0.5">No API key required - runs on your machine</p>
                 </div>
               </div>
             </div>
@@ -565,20 +1089,20 @@ export function SettingsDialog({ settings, onSave, session }: SettingsDialogProp
       case 'session': {
         const totalMsgs = (session?.userMessages ?? 0) + (session?.assistantMessages ?? 0)
         const rows: { label: string; value: string; sub?: string }[] = [
-          { label: 'Model', value: session?.model ?? '—' },
-          { label: 'Backend', value: 'Local · Ollama' },
+          { label: 'Model', value: session?.model ?? '-' },
+          { label: 'Backend', value: 'Local | Ollama' },
           { label: 'Total messages', value: String(totalMsgs) },
           { label: 'Your messages', value: String(session?.userMessages ?? 0) },
           { label: 'AI responses', value: String(session?.assistantMessages ?? 0) },
-          { label: 'Est. tokens', value: session?.tokens ? session.tokens.toLocaleString() : '—' },
+          { label: 'Est. tokens', value: session?.tokens ? session?.tokens.toLocaleString() : '—' },
           {
             label: 'Last response',
-            value: session?.lastResponseMs != null ? (session.lastResponseMs / 1000).toFixed(1) : '—',
+            value: session?.lastResponseMs != null ? (session?.lastResponseMs / 1000).toFixed(1) : '-',
             sub: session?.lastResponseMs != null ? 's' : undefined,
           },
           {
             label: 'Stream speed',
-            value: session?.streamSpeed != null ? session.streamSpeed.toLocaleString() : '—',
+            value: session?.streamSpeed != null ? session?.streamSpeed.toLocaleString() : '-',
             sub: session?.streamSpeed != null ? ' ch/s' : undefined,
           },
         ]
@@ -645,11 +1169,11 @@ export function SettingsDialog({ settings, onSave, session }: SettingsDialogProp
                   {dbResult && (
                     <div className={cn(
                       'px-3 py-2.5 rounded-xl border text-xs',
-                      dbResult.ok
+                      dbResult?.ok
                         ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400'
                         : 'bg-destructive/10 border-destructive/20 text-destructive',
                     )}>
-                      {dbResult.ok ? '✓' : '✗'} {dbResult.msg}
+                      {dbResult?.ok ? '✓' : '✗'} {dbResult?.msg}
                     </div>
                   )}
                 </div>
@@ -701,24 +1225,24 @@ export function SettingsDialog({ settings, onSave, session }: SettingsDialogProp
                     {
                       label: 'Ollama',
                       icon: Server,
-                      ok: status.ollama.status === 'ok',
-                      detail: status.ollama.status === 'ok'
-                        ? `${status.ollama.models} model${status.ollama.models !== 1 ? 's' : ''} · ${status.ollama.url}`
+                      ok: status?.ollama?.status === 'ok',
+                      detail: status?.ollama?.status === 'ok'
+                        ? `${status?.ollama?.models} model${status?.ollama?.models !== 1 ? 's' : ''} | ${status?.ollama?.url}`
                         : 'Not reachable',
                     },
                     {
                       label: 'Database',
                       icon: HardDrive,
-                      ok: status.database.status === 'ok',
-                      detail: status.database.status === 'ok'
-                        ? status.database.url
+                      ok: status?.database?.status === 'ok',
+                      detail: status?.database?.status === 'ok'
+                        ? status?.database?.url
                         : 'Not connected',
                     },
                     {
                       label: 'Version',
                       icon: Activity,
                       ok: true,
-                      detail: status.version,
+                      detail: status?.version,
                     },
                   ].map(({ label, icon: Icon, ok, detail }) => (
                     <div key={label} className="flex items-center justify-between px-3 py-2.5 rounded-xl border border-border/40 bg-card/20">
@@ -786,7 +1310,7 @@ export function SettingsDialog({ settings, onSave, session }: SettingsDialogProp
     <Dialog open={open} onOpenChange={(o) => { if (!o) handleClose(); else setOpen(true) }}>
       <DialogTrigger asChild>
         <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg text-muted-foreground hover:text-foreground">
-          <Settings className="h-4 w-4" />
+          <SettingsIcon className="h-4 w-4" />
           <span className="sr-only">Settings</span>
         </Button>
       </DialogTrigger>

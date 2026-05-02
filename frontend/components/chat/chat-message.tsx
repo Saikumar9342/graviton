@@ -8,6 +8,8 @@ import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 
+import { ChatBubbleStyle } from '@/lib/types'
+
 interface ChatMessageProps {
   role: 'user' | 'assistant'
   content: string
@@ -15,6 +17,7 @@ interface ChatMessageProps {
   onEdit?: (newContent: string) => void
   canEdit?: boolean
   compactMode?: boolean
+  bubbleStyle?: ChatBubbleStyle
 }
 
 export function ChatMessage({
@@ -24,6 +27,7 @@ export function ChatMessage({
   onEdit,
   canEdit = false,
   compactMode = false,
+  bubbleStyle = 'modern',
 }: ChatMessageProps) {
   const [isEditing, setIsEditing] = useState(false)
   const [editContent, setEditContent] = useState(content)
@@ -76,14 +80,20 @@ export function ChatMessage({
               </div>
             ) : (
               <div className="relative group/bubble">
-                <div className="px-4 py-3 rounded-2xl rounded-br-sm bg-primary/12 border border-primary/15 text-sm leading-relaxed whitespace-pre-wrap text-foreground/90">
+                <div className={cn(
+                  "px-4 py-3 leading-relaxed whitespace-pre-wrap text-sm transition-all",
+                  "rounded-[var(--radius)]",
+                  bubbleStyle === 'modern' && "bg-primary/12 border border-primary/15 text-foreground/90 rounded-br-sm",
+                  bubbleStyle === 'glass' && "glass text-foreground rounded-br-sm",
+                  bubbleStyle === 'minimal' && "bg-transparent border border-border/40 text-foreground/80"
+                )}>
                   {content}
                 </div>
                 {/* Edit button */}
                 {canEdit && !isEditing && (
                   <button
                     onClick={() => setIsEditing(true)}
-                    className="absolute -bottom-2 -right-2 opacity-0 group-hover/bubble:opacity-100 transition-opacity h-6 w-6 rounded-full bg-background border border-border/60 flex items-center justify-center text-muted-foreground/60 hover:text-foreground shadow-sm"
+                    className="absolute -bottom-2 -right-2 opacity-0 group-hover/bubble:opacity-100 transition-opacity h-6 w-6 rounded-full bg-background border border-border/60 flex items-center justify-center text-muted-foreground/60 hover:text-foreground shadow-sm z-10"
                   >
                     <Pencil className="h-3 w-3" />
                   </button>
@@ -114,8 +124,15 @@ export function ChatMessage({
             )}
 
             {content && (
-              <div className="prose-chat max-w-none">
-                <MarkdownRenderer content={content} isStreaming={isStreaming} />
+              <div className={cn(
+                "max-w-none transition-all",
+                bubbleStyle === 'modern' && "bg-card/20 border border-border/20 px-4 py-3 rounded-[var(--radius)] rounded-tl-sm",
+                bubbleStyle === 'glass' && "glass px-4 py-3 rounded-[var(--radius)] rounded-tl-sm",
+                bubbleStyle === 'minimal' && "prose-chat py-1"
+              )}>
+                <div className="prose-chat">
+                  <MarkdownRenderer content={content} isStreaming={isStreaming} />
+                </div>
               </div>
             )}
 

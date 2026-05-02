@@ -511,8 +511,12 @@ export function ChatSidebar({
         className={cn(
           'fixed inset-y-0 left-0 z-50 flex flex-col border-r border-border/40 bg-sidebar transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] md:relative',
           isOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0',
-          isCollapsed ? 'w-[60px]' : 'w-[260px]',
+          isCollapsed ? 'w-[60px]' : 'w-[var(--sidebar-width)]',
         )}
+        style={{ 
+          backgroundColor: `color-mix(in srgb, var(--sidebar), transparent calc(100% - (var(--sidebar-opacity) * 100%)))`,
+          backdropFilter: 'blur(var(--glass-blur))'
+        }}
       >
         {/* Header */}
         <div className="flex h-14 items-center justify-between px-3 border-b border-border/40 shrink-0">
@@ -530,7 +534,7 @@ export function ChatSidebar({
         </div>
 
         {/* New chat + search */}
-        <div className={cn('p-2 space-y-1.5 shrink-0', isCollapsed && 'px-1.5')}>
+        <div className={cn('space-y-1.5 shrink-0', isCollapsed ? 'p-1.5' : 'p-[var(--sidebar-padding)]')}>
           {isCollapsed ? (
             <Tooltip>
               <TooltipTrigger asChild>
@@ -549,9 +553,9 @@ export function ChatSidebar({
             <>
               <Button
                 onClick={onNewChat}
-                className="w-full justify-start gap-2 h-9 text-sm font-medium rounded-2xl bg-primary/10 text-primary hover:bg-primary/15 border-none shadow-none"
+                className="w-full justify-start gap-2 h-10 text-sm font-bold rounded-2xl bg-primary text-primary-foreground hover:bg-primary/90 border-none shadow-lg shadow-primary/20 new-project-btn"
               >
-                <Plus className="h-3.5 w-3.5 shrink-0" /> New chat
+                <Plus className="h-4 w-4 shrink-0" /> New chat
               </Button>
               <div className="relative">
                 <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground/60 pointer-events-none" />
@@ -559,7 +563,7 @@ export function ChatSidebar({
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   placeholder="Search chats…"
-                  className="w-full h-8 pl-8 pr-7 text-xs bg-muted/20 border border-border/25 focus:outline-none focus:ring-1 focus:ring-primary/30 rounded-2xl placeholder:text-muted-foreground/60 text-foreground"
+                  className="w-full h-9 pl-9 pr-7 text-xs bg-muted/30 border border-border/40 focus:outline-none focus:ring-2 focus:ring-primary/50 rounded-2xl placeholder:text-foreground/40 text-foreground sidebar-search-input transition-all"
                 />
                 {search && (
                   <button
@@ -575,7 +579,7 @@ export function ChatSidebar({
         </div>
 
         {/* Chat list */}
-        <ScrollArea className="flex-1 min-h-0 [&>[data-slot=scroll-area-scrollbar]]:hidden">
+        <ScrollArea className="flex-1 min-h-0 scrollbar-none [&>[data-slot=scroll-area-viewport]]:scrollbar-none">
           <div className="pb-4">
 
             {/* Pinned section */}

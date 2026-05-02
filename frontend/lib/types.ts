@@ -13,31 +13,44 @@ export interface ChatMessage {
   createdAt: Date
 }
 
-export type AccentColor =
-  | 'violet'
-  | 'blue'
-  | 'cyan'
-  | 'emerald'
-  | 'amber'
-  | 'rose'
-  | 'orange'
-
-export type ChatBubbleStyle = 'modern' | 'classic' | 'minimal' | 'glass'
+export type ChatBubbleStyle = 'modern' | 'glass' | 'minimal'
 export type FontSize = 'small' | 'medium' | 'large'
-export type BackgroundStyle = 'solid' | 'gradient' | 'mesh' | 'aurora'
+export type BackgroundStyle = 'solid' | 'gradient' | 'aurora' | 'mesh'
 
 export interface Settings {
   model: string
   openaiApiKey: string
   anthropicApiKey: string
   theme: 'light' | 'dark' | 'system'
-  accentColor: AccentColor
+  accentColor: string
   bubbleStyle: ChatBubbleStyle
   fontSize: FontSize
   backgroundStyle: BackgroundStyle
   animationsEnabled: boolean
   soundEnabled: boolean
   compactMode: boolean
+  borderRadius: number
+  fontFamily: string
+  glassOpacity: number
+  glowIntensity: number
+  glassBlur: number
+  borderWidth: number
+  glowRadius: number
+  sidebarWidth: number
+  sidebarPadding: number
+  chatMaxWidth: number
+  messageSpacing: number
+  sidebarOpacity: number
+  sidebarBlur: number
+  accentSaturation: number
+  noiseOpacity: number
+  sidebarPosition: 'left' | 'right'
+  contentWidth: 'centered' | 'full'
+  contrast: number
+  accentMode: 'vivid' | 'subtle'
+  lineHeight: number
+  letterSpacing: number
+  backgroundOpacity: number
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -45,16 +58,38 @@ export const DEFAULT_SETTINGS: Settings = {
   openaiApiKey: '',
   anthropicApiKey: '',
   theme: 'dark',
-  accentColor: 'violet',
+  accentColor: '#8b5cf6',
   bubbleStyle: 'modern',
   fontSize: 'medium',
   backgroundStyle: 'aurora',
   animationsEnabled: true,
   soundEnabled: false,
   compactMode: false,
+  borderRadius: 12,
+  fontFamily: 'Inter',
+  glassOpacity: 30,
+  glowIntensity: 100,
+  glassBlur: 12,
+  borderWidth: 1,
+  glowRadius: 20,
+  sidebarWidth: 280,
+  sidebarPadding: 16,
+  chatMaxWidth: 800,
+  messageSpacing: 24,
+  sidebarOpacity: 100,
+  sidebarBlur: 12,
+  accentSaturation: 100,
+  noiseOpacity: 10,
+  sidebarPosition: 'left',
+  contentWidth: 'centered',
+  contrast: 100,
+  accentMode: 'vivid',
+  lineHeight: 160,
+  letterSpacing: 0,
+  backgroundOpacity: 100,
 }
 
-export const ACCENT_COLORS: { id: AccentColor; name: string; class: string; hex: string }[] = [
+export const ACCENT_COLORS: { id: string; name: string; class: string; hex: string }[] = [
   { id: 'violet', name: 'Violet', class: 'bg-violet-500', hex: '#8b5cf6' },
   { id: 'blue', name: 'Blue', class: 'bg-blue-500', hex: '#3b82f6' },
   { id: 'cyan', name: 'Cyan', class: 'bg-cyan-500', hex: '#06b6d4' },
