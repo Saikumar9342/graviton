@@ -508,7 +508,6 @@ export function SettingsDialog({ settings, onSave, session }: SettingsDialogProp
                   >
                     <Icon className="h-4 w-4 transition-transform group-hover:scale-110" />
                     {label}
-                    {theme === v && <div className="absolute top-1 right-1 h-1.5 w-1.5 rounded-full bg-primary" />}
                   </button>
                 ))}
               </div>
@@ -727,7 +726,7 @@ export function SettingsDialog({ settings, onSave, session }: SettingsDialogProp
 
                 <div className="space-y-3">
                   <SLabel className="text-[10px]">UI Density</SLabel>
-                  <div className="flex gap-1.5 p-1 rounded-xl bg-muted/30 border border-border/40">
+                  <div className="flex gap-1.5 p-1.5 rounded-xl bg-muted/30 border border-border/40">
                     {(['compact', 'comfortable', 'spacious'] as const).map((v) => (
                       <button
                         key={v}
