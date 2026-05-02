@@ -76,7 +76,7 @@ export function ChatInput({
     <div className="relative w-full">
       {/* Single container — no outer wrapper div that caused double border */}
       <div className={cn(
-        'relative rounded-2xl border bg-card transition-all duration-200 overflow-hidden',
+        'relative rounded-2xl border bg-muted/20 transition-all duration-200 overflow-hidden',
         isFocused
           ? 'border-primary/40 ring-[3px] ring-primary/[0.07] shadow-xl shadow-black/15'
           : 'border-border/50 hover:border-border/80 shadow-md shadow-black/10',
@@ -84,20 +84,20 @@ export function ChatInput({
       )}>
 
         {/* Toolbar */}
-        <div className="flex items-center gap-1.5 px-3 pt-3 pb-1.5">
+        <div className="flex items-center gap-1.5 px-4 pt-3 pb-1.5">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button
                 variant="ghost"
                 size="sm"
-                className="h-7 gap-1.5 px-2.5 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted/60 rounded-lg shrink-0"
+                className="h-7 gap-1.5 px-2.5 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted/60 rounded-2xl shrink-0"
               >
                 <Cpu className="h-3 w-3 text-primary/70" />
                 {currentModel?.name ?? settings.model}
                 <ChevronDown className="h-3 w-3 opacity-40" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="w-60 rounded-xl p-1.5">
+            <DropdownMenuContent align="start" className="w-60 rounded-2xl p-1.5">
               <div className="px-2 py-1.5 mb-1">
                 <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">Models</p>
               </div>
@@ -106,7 +106,7 @@ export function ChatInput({
                   key={model.id}
                   onClick={() => onSettingsChange({ ...settings, model: model.id })}
                   className={cn(
-                    'flex items-center justify-between py-2 px-2.5 rounded-lg cursor-pointer',
+                    'flex items-center justify-between py-2 px-2.5 rounded-xl cursor-pointer',
                     settings.model === model.id && 'bg-primary/10 text-primary'
                   )}
                 >
@@ -133,7 +133,7 @@ export function ChatInput({
                 key={m.id}
                 onClick={() => setMode(m.id)}
                 className={cn(
-                  'flex items-center gap-1.5 text-[11px] font-medium h-6 px-2.5 rounded-md transition-all duration-150',
+                  'flex items-center gap-1.5 text-[11px] font-medium h-6 px-2.5 rounded-2xl transition-all duration-150',
                   mode === m.id
                     ? 'bg-primary/15 text-primary'
                     : 'text-muted-foreground/45 hover:text-muted-foreground hover:bg-muted/40'
@@ -147,7 +147,7 @@ export function ChatInput({
         </div>
 
         {/* Textarea */}
-        <div className="px-3 py-1">
+        <div className="px-4 py-1">
           <Textarea
             ref={textareaRef}
             value={input}
@@ -167,14 +167,14 @@ export function ChatInput({
         </div>
 
         {/* Bottom bar */}
-        <div className="flex items-center justify-between px-3 pb-3 pt-1">
+        <div className="flex items-center justify-between px-4 pb-3 pt-1">
           <div className="flex items-center gap-0.5">
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-7 w-7 rounded-lg text-muted-foreground/35 hover:text-muted-foreground/70 hover:bg-muted/40"
+                  className="h-7 w-7 rounded-2xl text-muted-foreground/35 hover:text-muted-foreground/70 hover:bg-muted/40"
                 >
                   <Paperclip className="h-3.5 w-3.5" />
                 </Button>
@@ -187,7 +187,7 @@ export function ChatInput({
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-7 w-7 rounded-lg text-muted-foreground/35 hover:text-muted-foreground/70 hover:bg-muted/40 hidden sm:flex"
+                  className="h-7 w-7 rounded-2xl text-muted-foreground/35 hover:text-muted-foreground/70 hover:bg-muted/40 hidden sm:flex"
                 >
                   <Globe className="h-3.5 w-3.5" />
                 </Button>
@@ -217,7 +217,7 @@ export function ChatInput({
                 onClick={handleSubmit}
                 disabled={!hasContent || disabled}
                 className={cn(
-                  'h-8 w-8 rounded-xl transition-all duration-200',
+                  'h-8 w-8 rounded-2xl transition-all duration-200',
                   hasContent
                     ? 'bg-primary text-primary-foreground hover:opacity-90 shadow-md shadow-primary/25 active:scale-95'
                     : 'bg-muted/40 text-muted-foreground/20 cursor-not-allowed'

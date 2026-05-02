@@ -4,6 +4,7 @@ import { useState, useMemo, useEffect, useRef } from 'react'
 import {
   Plus, MessageSquare, Trash2, ChevronLeft, ChevronRight, Sparkles,
   Search, Pencil, Check, X, Folder, FolderPlus, ChevronDown, AlertTriangle,
+  Code, Database, Book, FileText, Zap, Globe, Layers, Terminal, Clock
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -14,12 +15,35 @@ import { renameChat } from '@/lib/api'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { formatDistanceToNow } from 'date-fns'
 
+function useNow(interval = 30000) {
+  const [now, setNow] = useState(Date.now())
+  useEffect(() => {
+    const i = setInterval(() => setNow(Date.now()), interval)
+    return () => clearInterval(i)
+  }, [interval])
+  return now
+}
+
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 interface Project {
   id: string
   name: string
   color: string
+  icon: string
+}
+
+const PROJECT_ICONS: Record<string, any> = {
+  folder: Folder,
+  code: Code,
+  database: Database,
+  book: Book,
+  file: FileText,
+  zap: Zap,
+  sparkles: Sparkles,
+  globe: Globe,
+  layers: Layers,
+  terminal: Terminal,
 }
 
 const PROJECT_COLORS = ['violet', 'blue', 'emerald', 'amber', 'rose', 'sky', 'orange', 'pink']
@@ -103,16 +127,21 @@ function ProjectPicker({
         >
           <MessageSquare className="h-3 w-3 shrink-0" /> No project
         </button>
-        {projects.map((p) => (
-          <button
-            key={p.id}
-            onClick={() => { onPick(p.id); onClose() }}
-            className={cn('w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg text-left text-[12px] transition-colors', current === p.id ? 'bg-primary/10 text-primary' : 'text-muted-foreground/70 hover:bg-muted/50 hover:text-foreground')}
-          >
-            <span className={cn('h-2 w-2 rounded-full shrink-0', COLOR_CLASSES[p.color] ?? 'bg-primary')} />
-            <span className="truncate">{p.name}</span>
-          </button>
-        ))}
+        {projects.map((p) => {
+          const Icon = PROJECT_ICONS[p.icon] || Folder
+          return (
+            <button
+              key={p.id}
+              onClick={() => { onPick(p.id); onClose() }}
+              className={cn('w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg text-left text-[12px] transition-colors', current === p.id ? 'bg-primary/10 text-primary' : 'text-muted-foreground/70 hover:bg-muted/50 hover:text-foreground')}
+            >
+              <div className={cn('h-5 w-5 flex items-center justify-center rounded-md shrink-0 transition-colors', COLOR_CLASSES[p.color] ? `${COLOR_CLASSES[p.color]}/10` : 'bg-primary/10')}>
+                <Icon className={cn('h-3 w-3', COLOR_CLASSES[p.color]?.replace('bg-', 'text-') ?? 'text-primary')} />
+              </div>
+              <span className="truncate">{p.name}</span>
+            </button>
+          )
+        })}
       </div>
     </div>
   )
@@ -137,12 +166,13 @@ interface ChatRowProps {
   onCommitEdit: () => void
   onCancelEdit: () => void
   onAssign: (projectId: string | null) => void
+  now: number
 }
 
 function ChatRow({
   chat, isActive, projects, chatProject, editingId, editValue,
   isPendingDelete, onSelect, onRequestDelete, onConfirmDelete, onCancelDelete,
-  onStartEdit, onEditChange, onCommitEdit, onCancelEdit, onAssign,
+  onStartEdit, onEditChange, onCommitEdit, onCancelEdit, onAssign, now,
 }: ChatRowProps) {
   const [pickerOpen, setPickerOpen] = useState(false)
 
@@ -151,7 +181,7 @@ function ChatRow({
       <div className="flex items-center gap-1 px-1 py-0.5">
         <Input autoFocus value={editValue} onChange={(e) => onEditChange(e.target.value)}
           onKeyDown={(e) => { if (e.key === 'Enter') onCommitEdit(); if (e.key === 'Escape') onCancelEdit() }}
-          className="h-7 flex-1 text-[13px] py-0 px-2 rounded-lg" />
+          className="h-7 flex-1 text-[13px] py-0 px-2 rounded-2xl" />
         <button onClick={onCommitEdit} className="h-6 w-6 rounded-md flex items-center justify-center text-emerald-500 hover:bg-emerald-500/10">
           <Check className="h-3 w-3" />
         </button>
@@ -186,15 +216,15 @@ function ChatRow({
         onClick={onSelect}
         onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && onSelect()}
         className={cn(
-          'w-full flex items-center gap-2 px-2.5 py-1.5 rounded-xl text-left transition-all duration-150 cursor-pointer select-none',
+          'w-full flex items-center gap-2 px-2.5 py-1.5 rounded-2xl text-left transition-all duration-150 cursor-pointer select-none',
           isActive ? 'bg-primary/10 text-foreground' : 'text-muted-foreground/55 hover:text-foreground hover:bg-muted/40',
         )}
       >
         <MessageSquare className={cn('h-3.5 w-3.5 shrink-0', isActive ? 'text-primary' : 'text-muted-foreground/25')} />
         <div className="flex-1 min-w-0 pr-1">
           <p className="truncate text-[12px] font-medium leading-tight">{chat.title}</p>
-          <p className="text-[10px] text-muted-foreground/30 mt-0.5 leading-none">
-            {formatDistanceToNow(chat.updatedAt, { addSuffix: true })}
+          <p className="text-[10px] text-muted-foreground/30 mt-1 leading-none tabular-nums">
+            {formatDistanceToNow(new Date(chat.createdAt), { addSuffix: true })}
           </p>
         </div>
 
@@ -241,6 +271,7 @@ export function ChatSidebar({
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editValue, setEditValue] = useState('')
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null)
+  const now = useNow()
 
   // Projects state
   const [projects, setProjects] = useState<Project[]>([])
@@ -258,7 +289,9 @@ export function ChatSidebar({
 
   const createProject = () => {
     const color = PROJECT_COLORS[projects.length % PROJECT_COLORS.length]
-    const p: Project = { id: genId(), name: 'New project', color }
+    const iconKeys = Object.keys(PROJECT_ICONS)
+    const icon = iconKeys[projects.length % iconKeys.length]
+    const p: Project = { id: genId(), name: 'New project', color, icon }
     const next = [...projects, p]
     setProjects(next)
     saveProjects(next)
@@ -276,14 +309,19 @@ export function ChatSidebar({
     saveChatProject(nextMap)
   }
 
-  const commitProjectEdit = (id: string) => {
-    const trimmed = editProjectValue.trim()
-    if (trimmed) {
-      const next = projects.map((p) => p.id === id ? { ...p, name: trimmed } : p)
-      setProjects(next)
-      saveProjects(next)
-    }
-    setEditingProjectId(null)
+  const commitProjectEdit = (id: string, updates?: Partial<Project>) => {
+    const next = projects.map((p) => {
+      if (p.id !== id) return p
+      const updated = { ...p, ...updates }
+      if (updates?.name === undefined) {
+        const trimmed = editProjectValue.trim()
+        if (trimmed) updated.name = trimmed
+      }
+      return updated
+    })
+    setProjects(next)
+    saveProjects(next)
+    if (!updates || updates.name !== undefined) setEditingProjectId(null)
   }
 
   const toggleProjectCollapse = (id: string) => {
@@ -341,7 +379,7 @@ export function ChatSidebar({
   const grouped = useMemo(() => {
     const map: Record<string, Chat[]> = {}
     for (const chat of unassigned) {
-      const g = getChatGroup(chat.updatedAt)
+      const g = getChatGroup(new Date(chat.createdAt))
       if (!map[g]) map[g] = []
       map[g].push(chat)
     }
@@ -368,6 +406,7 @@ export function ChatSidebar({
     onCommitEdit: () => commitEdit(chat.id),
     onCancelEdit: () => setEditingId(null),
     onAssign: (pid: string | null) => assignChat(chat.id, pid),
+    now,
   })
 
   return (
@@ -398,7 +437,7 @@ export function ChatSidebar({
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button onClick={onNewChat} variant="ghost" size="icon"
-                  className="h-9 w-9 mx-auto flex rounded-xl border border-dashed border-border/50 hover:border-primary/40 hover:bg-primary/5 hover:text-primary">
+                  className="h-9 w-9 mx-auto flex rounded-2xl border border-dashed border-border/50 hover:border-primary/40 hover:bg-primary/5 hover:text-primary">
                   <Plus className="h-4 w-4" />
                 </Button>
               </TooltipTrigger>
@@ -407,13 +446,13 @@ export function ChatSidebar({
           ) : (
             <>
               <Button onClick={onNewChat}
-                className="w-full justify-start gap-2 h-9 text-sm font-medium rounded-xl bg-primary/10 text-primary hover:bg-primary/15 border-none shadow-none">
+                className="w-full justify-start gap-2 h-9 text-sm font-medium rounded-2xl bg-primary/10 text-primary hover:bg-primary/15 border-none shadow-none">
                 <Plus className="h-3.5 w-3.5 shrink-0" /> New chat
               </Button>
               <div className="relative">
                 <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground/35 pointer-events-none" />
                 <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search chats…"
-                  className="h-8 pl-8 pr-7 text-xs bg-muted/25 border-border/25 focus-visible:ring-1 rounded-lg placeholder:text-muted-foreground/30" />
+                  className="h-8 pl-8 pr-7 text-xs bg-muted/20 border-border/25 focus-visible:ring-1 rounded-2xl placeholder:text-muted-foreground/30" />
                 {search && (
                   <button onClick={() => setSearch('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground/35 hover:text-foreground">
                     <X className="h-3 w-3" />
@@ -452,15 +491,37 @@ export function ChatSidebar({
                     const isCollapsedP = collapsedProjects.has(project.id)
                     return (
                       <div key={project.id}>
-                        <div className="group flex items-center gap-1.5 px-2 py-1.5 rounded-xl hover:bg-muted/30 transition-colors cursor-pointer"
+                        <div className="group flex items-center gap-1.5 px-2 py-1.5 rounded-2xl hover:bg-muted/30 transition-colors cursor-pointer"
                           onClick={() => toggleProjectCollapse(project.id)}>
                           <ChevronDown className={cn('h-3 w-3 text-muted-foreground/30 shrink-0 transition-transform duration-200', isCollapsedP && '-rotate-90')} />
-                          <span className={cn('h-2 w-2 rounded-full shrink-0', COLOR_CLASSES[project.color] ?? 'bg-primary')} />
+                          
+                          {/* Project Icon/Color */}
+                          <div className={cn('flex items-center justify-center h-5 w-5 rounded-lg shrink-0 transition-colors', COLOR_CLASSES[project.color] ? `${COLOR_CLASSES[project.color]}/10` : 'bg-primary/10')}>
+                            {(() => {
+                              const Icon = PROJECT_ICONS[project.icon] || Folder
+                              return <Icon className={cn('h-3 w-3', COLOR_CLASSES[project.color]?.replace('bg-', 'text-') ?? 'text-primary')} />
+                            })()}
+                          </div>
+
                           {editingProjectId === project.id ? (
-                            <Input autoFocus value={editProjectValue} onChange={(e) => setEditProjectValue(e.target.value)}
-                              onKeyDown={(e) => { e.stopPropagation(); if (e.key === 'Enter') commitProjectEdit(project.id); if (e.key === 'Escape') setEditingProjectId(null) }}
-                              onClick={(e) => e.stopPropagation()} onBlur={() => commitProjectEdit(project.id)}
-                              className="h-5 flex-1 text-[12px] py-0 px-1.5 rounded-md min-w-0" />
+                            <div className="flex-1 flex items-center gap-1.5 min-w-0" onClick={(e) => e.stopPropagation()}>
+                              <Input autoFocus value={editProjectValue} onChange={(e) => setEditProjectValue(e.target.value)}
+                                onKeyDown={(e) => { if (e.key === 'Enter') commitProjectEdit(project.id); if (e.key === 'Escape') setEditingProjectId(null) }}
+                                className="h-6 flex-1 text-[12px] py-0 px-2 bg-muted/20 border-none rounded-xl min-w-0" />
+                              
+                              {/* Icon Picker (mini) */}
+                              <div className="flex items-center gap-0.5 overflow-x-auto no-scrollbar max-w-[100px]">
+                                {Object.keys(PROJECT_ICONS).map((ik) => {
+                                  const PIcon = PROJECT_ICONS[ik]
+                                  return (
+                                    <button key={ik} onClick={() => commitProjectEdit(project.id, { icon: ik })}
+                                      className={cn('h-5 w-5 flex items-center justify-center rounded-md hover:bg-muted/60 transition-colors shrink-0', project.icon === ik ? 'text-primary bg-primary/10' : 'text-muted-foreground/40')}>
+                                      <PIcon className="h-2.5 w-2.5" />
+                                    </button>
+                                  )
+                                })}
+                              </div>
+                            </div>
                           ) : (
                             <span className="flex-1 text-[12px] font-medium text-muted-foreground/70 truncate">{project.name}</span>
                           )}
@@ -497,16 +558,19 @@ export function ChatSidebar({
             {/* Collapsed project icons */}
             {isCollapsed && projects.length > 0 && (
               <div className="mb-2 space-y-0.5">
-                {projects.map((p) => (
-                  <Tooltip key={p.id}>
-                    <TooltipTrigger asChild>
-                      <Button variant="ghost" size="icon" className="h-9 w-9 mx-auto flex rounded-xl text-muted-foreground/35 hover:text-foreground hover:bg-muted/50">
-                        <Folder className="h-4 w-4" />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent side="right" className="text-xs">{p.name}</TooltipContent>
-                  </Tooltip>
-                ))}
+                {projects.map((p) => {
+                  const Icon = PROJECT_ICONS[p.icon] || Folder
+                  return (
+                    <Tooltip key={p.id}>
+                      <TooltipTrigger asChild>
+                        <Button variant="ghost" size="icon" className={cn('h-9 w-9 mx-auto flex rounded-xl transition-all', COLOR_CLASSES[p.color]?.replace('bg-', 'text-') ?? 'text-muted-foreground/35', 'hover:text-foreground hover:bg-muted/50')}>
+                          <Icon className="h-4 w-4" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent side="right" className="text-xs">{p.name}</TooltipContent>
+                    </Tooltip>
+                  )
+                })}
               </div>
             )}
 

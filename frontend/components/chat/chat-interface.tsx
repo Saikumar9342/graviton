@@ -7,7 +7,6 @@ import { ChatSidebar } from './chat-sidebar'
 import { ChatMessage } from './chat-message'
 import { ChatInput } from './chat-input'
 import { EmptyState } from './empty-state'
-import { ChatDetails } from './chat-details'
 import { Button } from '@/components/ui/button'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { getSettings, saveSettings, generateId, generateTitle } from '@/lib/chat-store'
@@ -337,17 +336,6 @@ export function ChatInterface() {
               </div>
             )}
           </div>
-
-          <ChatDetails
-            isCollapsed={isDetailsCollapsed}
-            onToggle={toggleDetails}
-            model={currentModel?.name}
-            tokens={totalTokens}
-            userMessages={messages.filter((m) => m.role === 'user').length}
-            assistantMessages={messages.filter((m) => m.role === 'assistant').length}
-            lastResponseMs={lastResponseMs ?? undefined}
-            streamSpeed={streamSpeed ?? undefined}
-          />
         </div>
 
         {error && (

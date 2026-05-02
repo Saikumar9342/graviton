@@ -62,7 +62,7 @@ export function ChatMessage({
                 <Textarea
                   value={editContent}
                   onChange={(e) => setEditContent(e.target.value)}
-                  className="min-h-[80px] resize-none rounded-2xl border-primary/30 bg-primary/5 p-3 text-sm focus-visible:ring-1 focus-visible:ring-primary/50"
+                  className="min-h-[80px] resize-none rounded-2xl border border-border/50 bg-card p-3 text-sm focus-visible:ring-1 focus-visible:ring-primary/40 shadow-md shadow-black/5"
                   autoFocus
                 />
                 <div className="flex gap-2 justify-end">
