@@ -1,6 +1,6 @@
 'use client'
 
-import { Sparkles, Code, BookOpen, Lightbulb, Wand2, Rocket, Brain } from 'lucide-react'
+import { Sparkles, Code, Brain, Zap, Terminal, Activity, Shield, Cpu, ChevronRight } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 interface EmptyStateProps {
@@ -10,132 +10,128 @@ interface EmptyStateProps {
 const suggestions = [
   {
     icon: Code,
-    title: 'Advanced Engineering',
-    description: 'Architect complex systems, optimize algorithms, or refactor legacy patterns.',
-    prompt: 'Architect a high-performance React application structure that utilizes server components, advanced caching strategies, and specialized design patterns for massive scalability.',
-    gradient: 'from-blue-500/20 to-cyan-500/20',
-    iconColor: 'text-blue-500',
+    title: 'System Architecture',
+    prompt: 'Design a high-performance, distributed backend architecture for a real-time analytics platform using Go and gRPC.',
+    tag: 'ENG_ALPHA',
   },
   {
     icon: Brain,
-    title: 'Cognitive Analysis',
-    description: 'Deconstruct sophisticated technical paradigms and emerging frameworks.',
-    prompt: 'Conduct a deep-dive analysis of modern distributed systems, specifically focusing on consistency models, consensus algorithms, and their implementation in cloud-native environments.',
-    gradient: 'from-purple-500/20 to-pink-500/20',
-    iconColor: 'text-purple-500',
+    title: 'Neural Optimization',
+    prompt: 'Analyze this React component tree for performance bottlenecks and suggest optimizations for rendering and state management.',
+    tag: 'OPT_NODE',
   },
   {
-    icon: Lightbulb,
-    title: 'Strategic Innovation',
-    description: 'Synthesize breakthrough solutions and industry-leading product directions.',
-    prompt: 'Develop a comprehensive technical roadmap for an AI-driven platform, identifying high-impact features and potential architectural bottlenecks for the 2026 tech landscape.',
-    gradient: 'from-amber-500/20 to-orange-500/20',
-    iconColor: 'text-amber-500',
-  },
-  {
-    icon: Rocket,
-    title: 'System Deployment',
-    description: 'Execute end-to-end implementation of robust, production-ready features.',
-    prompt: 'Implement a secure, multi-tenant authentication microservice using industry-standard protocols, including specialized handling for JWT, OAuth2, and biometrics.',
-    gradient: 'from-emerald-500/20 to-teal-500/20',
-    iconColor: 'text-emerald-500',
-  },
-  {
-    icon: Wand2,
-    title: 'Neural Refactoring',
-    description: 'Elevate code quality through rigorous best practices and performance tuning.',
-    prompt: 'Perform a comprehensive code review and refactoring of this repository, focusing on reducing cyclomatic complexity, improving memory efficiency, and ensuring type safety.',
-    gradient: 'from-rose-500/20 to-red-500/20',
-    iconColor: 'text-rose-500',
-  },
-  {
-    icon: BookOpen,
-    title: 'Technical Mastery',
-    description: 'Accelerate your specialized learning path with expert-level mentorship.',
-    prompt: 'Provide an expert-level tutorial on building low-latency trading systems with WebSockets and Rust, covering everything from memory management to network optimization.',
-    gradient: 'from-indigo-500/20 to-violet-500/20',
-    iconColor: 'text-indigo-500',
+    icon: Shield,
+    title: 'Security Protocol',
+    prompt: 'Perform a security audit of a standard Node.js authentication flow, identifying common vulnerabilities and mitigation strategies.',
+    tag: 'SEC_LEVEL_4',
   },
 ]
 
 export function EmptyState({ onSuggestionClick }: EmptyStateProps) {
   return (
-    <div className="flex h-full flex-col items-center justify-center px-4 py-12">
-      {/* Logo / Hero */}
-      <div className="relative mb-8">
-        {/* Glow effect */}
-        <div className="absolute inset-0 blur-3xl opacity-50">
-          <div className="h-24 w-24 rounded-full bg-primary/50" />
-        </div>
+    <div className="flex flex-col items-center justify-center min-h-[80vh] px-4 py-12 animate-in fade-in zoom-in-95 duration-1000 relative overflow-hidden">
+      {/* Central Diagnostic Hub */}
+      <div className="relative mb-16">
+        {/* Rotating Rings */}
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 border border-primary/10 rounded-full animate-[spin_20s_linear_infinite]" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-48 h-48 border border-dashed border-primary/20 rounded-full animate-[spin_15s_linear_infinite_reverse]" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-80 h-80 border border-primary/5 rounded-full animate-[spin_30s_linear_infinite]" />
         
-        {/* Icon container */}
-        <div className="relative flex h-20 w-20 items-center justify-center rounded-3xl bg-gradient-to-br from-primary/20 via-primary/10 to-transparent border border-primary/20 shadow-2xl">
-          <Sparkles className="h-10 w-10 text-primary animate-pulse" />
+        {/* Core Icon */}
+        <div className="relative flex h-32 w-32 items-center justify-center rounded-3xl bg-black border border-primary/30 shadow-[0_0_50px_-10px_rgba(var(--primary),0.3)] overflow-hidden group">
+          <div className="absolute inset-0 bg-gradient-to-br from-primary/20 via-transparent to-transparent opacity-50" />
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,var(--primary)_0%,transparent_70%)] opacity-10 animate-pulse" />
+          <Sparkles className="h-12 w-12 text-primary relative z-10 filter drop-shadow-[0_0_8px_rgba(var(--primary),0.8)]" />
+          
+          {/* Scanning Effect */}
+          <div className="absolute inset-x-0 top-0 h-[2px] bg-primary/50 blur-[1px] animate-scanline z-20" />
         </div>
-        
-        {/* Floating particles */}
-        <div className="absolute -top-2 -right-2 h-3 w-3 rounded-full bg-primary/60 animate-bounce" style={{ animationDelay: '0s' }} />
-        <div className="absolute -bottom-1 -left-3 h-2 w-2 rounded-full bg-primary/40 animate-bounce" style={{ animationDelay: '0.5s' }} />
-        <div className="absolute top-1/2 -right-4 h-2 w-2 rounded-full bg-primary/50 animate-bounce" style={{ animationDelay: '1s' }} />
-      </div>
-      
-      <h1 className="mb-4 text-center text-4xl font-black tracking-tighter text-foreground sm:text-6xl text-balance bg-clip-text text-transparent bg-gradient-to-b from-foreground to-foreground/40 leading-[0.9]">
-        Neural Core Active.
-      </h1>
-      <p className="mb-12 max-w-xl text-center text-muted-foreground/50 text-balance text-lg font-medium leading-relaxed tracking-tight">
-        I am <span className="text-primary font-black uppercase tracking-widest">Graviton</span>. 
-        Your specialized intelligence layer for high-stakes engineering and architectural synthesis.
-      </p>
 
-      {/* Suggestions Grid */}
-      <div className="grid w-full max-w-4xl gap-3 sm:grid-cols-2 lg:grid-cols-3 stagger-children">
-        {suggestions.map((suggestion) => (
-          <button
-            key={suggestion.title}
-            onClick={() => onSuggestionClick(suggestion.prompt)}
-            className={cn(
-              'group relative flex flex-col items-start gap-3 rounded-2xl p-5 text-left transition-all duration-300',
-              'bg-gradient-to-br border border-border/50 hover:border-primary/30',
-              suggestion.gradient,
-              'hover:shadow-xl hover:shadow-primary/5 hover:-translate-y-1',
-              'focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2'
-            )}
-          >
-            {/* Icon */}
-            <div
+        {/* Floating Technical Tags */}
+        <div className="absolute -top-10 -right-20 flex flex-col items-end gap-1 opacity-40 hover:opacity-100 transition-opacity">
+          <span className="text-[8px] font-black tracking-widest uppercase text-primary">Core_Status: Online</span>
+          <div className="h-1 w-20 bg-primary/10 rounded-full overflow-hidden">
+            <div className="h-full bg-primary w-[85%] animate-pulse" />
+          </div>
+        </div>
+        
+        <div className="absolute -bottom-10 -left-20 flex flex-col items-start gap-1 opacity-40 hover:opacity-100 transition-opacity">
+          <span className="text-[8px] font-black tracking-widest uppercase text-muted-foreground">Neural_Link: Established</span>
+          <div className="flex gap-0.5">
+            {[1,1,1,1,0,1,1].map((v, i) => (
+              <div key={i} className={cn("h-2 w-1 rounded-[1px]", v ? "bg-primary/40" : "bg-primary/5")} />
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Main Title Area */}
+      <div className="text-center mb-16 space-y-4 max-w-2xl">
+        <div className="inline-flex items-center gap-3 px-3 py-1 rounded-full border border-primary/20 bg-primary/5 backdrop-blur-sm mb-4">
+          <Activity className="h-3 w-3 text-primary animate-pulse" />
+          <span className="text-[10px] font-black uppercase tracking-[0.3em] text-primary">System Initialized</span>
+        </div>
+        
+        <h1 className="text-4xl font-black tracking-[0.4em] uppercase text-foreground leading-tight">
+          Graviton
+        </h1>
+        
+        <p className="text-[12px] font-medium text-muted-foreground/60 tracking-wider max-w-lg mx-auto leading-relaxed">
+          The next generation neural interface for high-frequency engineering, system architecture, and strategic deconstruction.
+        </p>
+      </div>
+
+      {/* Structured Suggestion Area */}
+      <div className="w-full max-w-3xl space-y-3">
+        <div className="flex items-center gap-4 px-4 mb-4">
+          <div className="h-[1px] flex-1 bg-gradient-to-r from-transparent to-border/20" />
+          <span className="text-[9px] font-black uppercase tracking-[0.4em] text-muted-foreground/30">Select Protocol</span>
+          <div className="h-[1px] flex-1 bg-gradient-to-l from-transparent to-border/20" />
+        </div>
+
+        <div className="grid gap-3 sm:grid-cols-3">
+          {suggestions.map((suggestion) => (
+            <button
+              key={suggestion.title}
+              onClick={() => onSuggestionClick(suggestion.prompt)}
               className={cn(
-                'flex h-11 w-11 items-center justify-center rounded-xl',
-                'bg-background/80 backdrop-blur-sm',
-                'transition-transform duration-300 group-hover:scale-110',
-                'shadow-lg'
+                'group relative flex flex-col p-4 text-left transition-all duration-500',
+                'bg-black/20 border border-border/10 hover:border-primary/40 hover:bg-primary/5',
+                'rounded-xl overflow-hidden'
               )}
             >
-              <suggestion.icon className={cn('h-5 w-5', suggestion.iconColor)} />
-            </div>
-            
-            {/* Content */}
-            <div className="space-y-1">
-              <h3 className="font-semibold text-foreground group-hover:text-primary transition-colors">
+              <div className="flex items-center justify-between mb-3">
+                <div className="p-2 rounded-lg bg-background border border-border/10 group-hover:scale-110 group-hover:border-primary/40 transition-all duration-500">
+                  <suggestion.icon className="h-4 w-4 text-primary/60 group-hover:text-primary" />
+                </div>
+                <span className="text-[7px] font-black text-muted-foreground/20 uppercase tracking-widest group-hover:text-primary/40">
+                  {suggestion.tag}
+                </span>
+              </div>
+              <h3 className="text-[11px] font-black text-foreground/80 uppercase tracking-wider mb-2 group-hover:text-primary transition-colors">
                 {suggestion.title}
               </h3>
-              <p className="text-sm text-muted-foreground line-clamp-2">
-                {suggestion.description}
-              </p>
-            </div>
-
-            {/* Hover indicator */}
-            <div className="absolute inset-x-4 bottom-3 h-0.5 scale-x-0 rounded-full bg-primary/50 transition-transform duration-300 group-hover:scale-x-100" />
-          </button>
-        ))}
+              <div className="flex items-center gap-1 mt-auto opacity-0 group-hover:opacity-100 transition-all duration-500 -translate-x-2 group-hover:translate-x-0">
+                <span className="text-[8px] font-black text-primary uppercase tracking-tighter">Execute</span>
+                <ChevronRight className="h-2 w-2 text-primary" />
+              </div>
+              
+              {/* Corner Accents */}
+              <div className="absolute top-0 right-0 p-1 opacity-20 group-hover:opacity-100 transition-opacity">
+                <div className="h-2 w-2 border-t border-r border-primary/40" />
+              </div>
+            </button>
+          ))}
+        </div>
       </div>
 
-      {/* Keyboard hint */}
-      <div className="mt-10 flex items-center gap-2 text-xs text-muted-foreground">
-        <span>Press</span>
-        <kbd className="rounded-md border border-border bg-muted px-2 py-0.5 font-mono text-[10px]">
-          /
-        </kbd>
-        <span>to focus the input</span>
+      {/* Terminal Hint */}
+      <div className="mt-20 flex items-center gap-4 opacity-20 hover:opacity-100 transition-all duration-1000 group">
+        <Terminal className="h-3 w-3 text-muted-foreground group-hover:text-primary transition-colors" />
+        <span className="text-[10px] font-mono tracking-wider text-muted-foreground/60">
+          TYPE <span className="text-primary/60">/help</span> TO VIEW AVAILABLE SYSTEM COMMANDS
+        </span>
       </div>
     </div>
   )

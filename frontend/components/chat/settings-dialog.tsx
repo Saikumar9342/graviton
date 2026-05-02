@@ -385,28 +385,29 @@ export function SettingsDialog({ settings, onSave }: SettingsDialogProps) {
 
           {/* API Tab */}
           <TabsContent value="api" className="space-y-6 pt-4">
-            <div className="rounded-lg border border-amber-500/20 bg-amber-500/10 p-4">
-              <p className="text-sm text-amber-600 dark:text-amber-400">
-                Using the Vercel AI Gateway - no API key required for default models.
-                Add your own key for higher rate limits.
+            <div className="rounded-lg border border-primary/20 bg-primary/5 p-4">
+              <p className="text-sm text-foreground/70">
+                Graviton uses a local Ollama backend. No API key is required — models run
+                entirely on your machine. Manage available models through Ollama directly.
               </p>
             </div>
 
-            <div className="space-y-3">
+            <div className="space-y-3 opacity-40 pointer-events-none select-none">
               <Label htmlFor="apiKey" className="flex items-center gap-2 text-sm font-medium">
                 <Key className="h-4 w-4" />
-                Custom API Key (Optional)
+                External API Key
               </Label>
               <Input
                 id="apiKey"
                 type="password"
-                placeholder="sk-..."
+                placeholder="Not applicable for local models"
                 value={localSettings.apiKey}
                 onChange={(e) => updateSetting('apiKey', e.target.value)}
                 className="h-12 input-glow"
+                disabled
               />
               <p className="text-xs text-muted-foreground">
-                Your key is stored locally and never sent to our servers.
+                Reserved for future cloud model support.
               </p>
             </div>
           </TabsContent>

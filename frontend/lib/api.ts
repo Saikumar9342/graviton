@@ -51,13 +51,25 @@ export async function fetchMessages(chatId: string): Promise<ChatMessage[]> {
   }));
 }
 
-export async function fetchModels(): Promise<string[]> {
+export interface ModelInfo {
+  id: string
+  name: string
+  provider: string
+  badge?: string
+}
+
+export async function fetchModels(): Promise<ModelInfo[]> {
   try {
     const response = await fetch(`${API_BASE}/models`);
-    if (!response.ok) return ['llama3.1', 'phi4', 'deepseek-r1:8b'];
+    if (!response.ok) return [];
     const data = await response.json();
-    return data.models || ['llama3.1', 'phi4', 'deepseek-r1:8b'];
+    const names: string[] = data.models || [];
+    return names.map((id) => ({
+      id,
+      name: id,
+      provider: 'Ollama',
+    }));
   } catch {
-    return ['llama3.1', 'phi4', 'deepseek-r1:8b'];
+    return [];
   }
 }

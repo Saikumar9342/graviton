@@ -24,7 +24,7 @@ export type AccentColor =
 
 export type ChatBubbleStyle = 'modern' | 'classic' | 'minimal' | 'glass'
 export type FontSize = 'small' | 'medium' | 'large'
-export type BackgroundStyle = 'solid' | 'gradient' | 'mesh' | 'aurora' | 'particles'
+export type BackgroundStyle = 'solid' | 'gradient' | 'mesh' | 'aurora'
 
 export interface Settings {
   model: string
@@ -61,6 +61,12 @@ export const ACCENT_COLORS: { id: AccentColor; name: string; class: string; hex:
   { id: 'rose', name: 'Rose', class: 'bg-rose-500', hex: '#f43f5e' },
   { id: 'orange', name: 'Orange', class: 'bg-orange-500', hex: '#f97316' },
 ]
+
+export const MODE_SYSTEM_PROMPTS: Record<string, string> = {
+  chat: '',
+  code: 'You are an expert software engineer. Provide precise, production-quality code with brief explanations.',
+  research: 'You are a research analyst. Synthesize information thoroughly, cite reasoning, and structure answers clearly.',
+}
 
 export const AVAILABLE_MODELS = [
   { id: 'llama3.1', name: 'Llama 3.1', provider: 'Ollama', badge: 'Latest' },

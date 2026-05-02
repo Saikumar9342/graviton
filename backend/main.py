@@ -4,7 +4,7 @@ from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 from typing import List, Optional
 from datetime import datetime
-import json
+import os
 
 import models, database, ollama_client
 from pydantic import BaseModel
@@ -19,10 +19,11 @@ except Exception as e:
     print(f"Warning: Could not connect to database. {e}")
     print("Backend will continue to run, but database features will be unavailable.")
 
-# Configure CORS
+frontend_url = os.getenv("FRONTEND_URL", "http://localhost:3000")
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"], # In production, restrict this to your frontend URL
+    allow_origins=[frontend_url],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -75,10 +76,11 @@ async def chat_endpoint(
     messages_data = body.get("messages", [])
     model = body.get("model", "llama3")
     chat_id = body.get("chatId")
-    
+    system_prompt = body.get("systemPrompt", "")
+
     if not messages_data:
         raise HTTPException(status_code=400, detail="No messages provided")
-    
+
     # Save user message if chat_id is provided
     if chat_id:
         user_msg = messages_data[-1]
@@ -92,8 +94,11 @@ async def chat_endpoint(
 
     async def generate():
         full_response = ""
-        # Format messages for Ollama (it expects {role, content})
         ollama_messages = []
+
+        if system_prompt:
+            ollama_messages.append({"role": "system", "content": system_prompt})
+
         for m in messages_data:
             content = m.get("content", "")
             if not content and "parts" in m:
@@ -103,10 +108,8 @@ async def chat_endpoint(
         async for chunk in ollama_client.chat_with_ollama(model, ollama_messages):
             full_response += chunk
             yield chunk
-        
-        # Save assistant message after streaming completes
+
         if chat_id and full_response:
-            # We need a new session here because the generator runs outside the initial request context
             with database.SessionLocal() as session:
                 assistant_msg = models.Message(
                     chat_id=chat_id,
@@ -114,12 +117,11 @@ async def chat_endpoint(
                     content=full_response
                 )
                 session.add(assistant_msg)
-                # Update chat timestamp
                 db_chat = session.query(models.Chat).filter(models.Chat.id == chat_id).first()
                 if db_chat:
                     db_chat.updated_at = datetime.utcnow()
                 session.commit()
-    
+
     return StreamingResponse(generate(), media_type="text/plain")
 
 @app.get("/api/chats/{chat_id}/messages", response_model=List[MessageResponse])
