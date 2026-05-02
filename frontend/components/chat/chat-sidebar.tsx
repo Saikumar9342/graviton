@@ -44,9 +44,7 @@ export function ChatSidebar({
         <div className="flex h-14 items-center justify-between px-3 border-b border-border/50">
           {!isCollapsed && (
             <div className="flex items-center gap-2.5 animate-in fade-in slide-in-from-left-2 duration-300">
-              <div className="h-7 w-7 rounded-lg bg-primary flex items-center justify-center shadow-md shadow-primary/20 shrink-0">
-                <Sparkles className="h-3.5 w-3.5 text-primary-foreground" />
-              </div>
+              
               <span className="text-sm font-semibold text-foreground">Graviton</span>
             </div>
           )}

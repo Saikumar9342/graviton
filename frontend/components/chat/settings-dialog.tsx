@@ -97,7 +97,6 @@ export function SettingsDialog({ settings, onSave }: SettingsDialogProps) {
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-[600px] glass-strong">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-xl">
-            <Sparkles className="h-5 w-5 text-primary" />
             Customize Your Experience
           </DialogTitle>
           <DialogDescription>

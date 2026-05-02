@@ -101,9 +101,7 @@ export function ChatMessage({
         /* ── Assistant message ────────────────────────────────── */
         <div className="flex gap-3 max-w-3xl mx-auto">
           {/* Graviton avatar */}
-          <div className="shrink-0 h-8 w-8 rounded-lg bg-primary/15 border border-primary/20 flex items-center justify-center mt-0.5">
-            <Sparkles className={cn('h-3.5 w-3.5 text-primary', isStreaming && 'animate-pulse')} />
-          </div>
+        
 
           <div className="flex-1 min-w-0 space-y-1">
             {/* Streaming indicator */}

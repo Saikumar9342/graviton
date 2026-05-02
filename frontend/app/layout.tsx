@@ -15,7 +15,7 @@ const jetbrainsMono = JetBrains_Mono({
 })
 
 export const metadata: Metadata = {
-  title: 'Graviton AI - Your Intelligent Coding Companion',
+  title: 'Graviton AI',
   description:
     'Experience the future of AI chat with Graviton. Beautiful UI, markdown support, code highlighting, and intelligent conversations powered by cutting-edge AI models.',
   generator: 'v0.app',
@@ -39,7 +39,7 @@ export const metadata: Metadata = {
     apple: '/apple-icon.png',
   },
   openGraph: {
-    title: 'Graviton AI - Your Intelligent Coding Companion',
+    title: 'Graviton AI',
     description:
       'Experience the future of AI chat with Graviton. Beautiful UI, markdown support, and intelligent conversations.',
     type: 'website',
