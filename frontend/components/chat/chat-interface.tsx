@@ -39,7 +39,12 @@ export function ChatInterface() {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
   const [isDetailsCollapsed, setIsDetailsCollapsed] = useState(true)
   const [chats, setChats] = useState<Chat[]>([])
-  const [currentChatId, setCurrentChatId] = useState<string | null>(null)
+  const [currentChatId, setCurrentChatIdState] = useState<string | null>(null)
+  const currentChatIdRef = useRef<string | null>(null)
+  const setCurrentChatId = useCallback((id: string | null) => {
+    currentChatIdRef.current = id
+    setCurrentChatIdState(id)
+  }, [])
   const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS)
   const [availableModels, setAvailableModels] = useState<ModelInfo[]>(AVAILABLE_MODELS)
   const scrollRef = useRef<HTMLDivElement>(null)
@@ -95,7 +100,7 @@ export function ChatInterface() {
         body: {
           messages,
           model: settings.model,
-          chatId: currentChatId,
+          chatId: currentChatIdRef.current,
           systemPrompt: (body as { systemPrompt?: string })?.systemPrompt ?? '',
         },
       }),

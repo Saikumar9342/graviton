@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
-import { ArrowUp, Square, Paperclip, Sparkles, ChevronDown, Cpu, Search, Globe, MessageSquare, Terminal } from 'lucide-react'
+import { ArrowUp, Square, Paperclip, Globe, ChevronDown, Cpu, Search, MessageSquare, Terminal } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import {
@@ -74,31 +74,25 @@ export function ChatInput({
 
   return (
     <div className="relative w-full">
-      {/* Focus glow */}
+      {/* Single container — no outer wrapper div that caused double border */}
       <div className={cn(
-        'absolute -inset-px rounded-2xl transition-opacity duration-500 pointer-events-none',
+        'relative rounded-2xl border bg-card transition-all duration-200 overflow-hidden',
         isFocused
-          ? 'opacity-100 shadow-[0_0_0_1px_var(--primary),0_0_30px_-8px_var(--glow-primary)]'
-          : 'opacity-0'
-      )} />
-
-      <div className={cn(
-        'relative rounded-2xl border bg-card transition-all duration-300 overflow-hidden',
-        isFocused ? 'border-primary/60' : 'border-border/60 hover:border-border',
-        isLoading && 'border-primary/30'
+          ? 'border-primary/40 ring-[3px] ring-primary/[0.07] shadow-xl shadow-black/15'
+          : 'border-border/50 hover:border-border/80 shadow-md shadow-black/10',
+        isLoading && !isFocused && 'border-primary/25',
       )}>
 
-        {/* Top toolbar */}
-        <div className="flex items-center gap-2 px-3 pt-3 pb-1">
-          {/* Model selector */}
+        {/* Toolbar */}
+        <div className="flex items-center gap-1.5 px-3 pt-3 pb-1.5">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button
                 variant="ghost"
                 size="sm"
-                className="h-7 gap-1.5 px-2.5 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted/60 rounded-lg"
+                className="h-7 gap-1.5 px-2.5 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted/60 rounded-lg shrink-0"
               >
-                <Cpu className="h-3 w-3 text-primary/60" />
+                <Cpu className="h-3 w-3 text-primary/70" />
                 {currentModel?.name ?? settings.model}
                 <ChevronDown className="h-3 w-3 opacity-40" />
               </Button>
@@ -130,20 +124,22 @@ export function ChatInput({
             </DropdownMenuContent>
           </DropdownMenu>
 
+          <div className="h-3.5 w-px bg-border/40 mx-0.5" />
+
           {/* Mode tabs */}
-          <div className="flex items-center gap-0.5 bg-muted/40 p-0.5 rounded-lg border border-border/40">
+          <div className="flex items-center gap-0.5">
             {MODES.map((m) => (
               <button
                 key={m.id}
                 onClick={() => setMode(m.id)}
                 className={cn(
-                  'flex items-center gap-1.5 text-[11px] font-medium h-6 px-2.5 rounded-md transition-all duration-200',
+                  'flex items-center gap-1.5 text-[11px] font-medium h-6 px-2.5 rounded-md transition-all duration-150',
                   mode === m.id
-                    ? 'bg-background text-foreground shadow-sm border border-border/60'
-                    : 'text-muted-foreground/60 hover:text-muted-foreground'
+                    ? 'bg-primary/15 text-primary'
+                    : 'text-muted-foreground/45 hover:text-muted-foreground hover:bg-muted/40'
                 )}
               >
-                <m.icon className="h-3 w-3" />
+                <m.icon className="h-2.5 w-2.5" />
                 {m.label}
               </button>
             ))}
@@ -151,7 +147,7 @@ export function ChatInput({
         </div>
 
         {/* Textarea */}
-        <div className="px-3 py-2">
+        <div className="px-3 py-1">
           <Textarea
             ref={textareaRef}
             value={input}
@@ -166,17 +162,21 @@ export function ChatInput({
                   ? 'Describe what you want to build or debug…'
                   : 'What would you like to research?'
             }
-            className="w-full resize-none bg-transparent border-none focus-visible:ring-0 p-0 text-sm leading-relaxed placeholder:text-muted-foreground/40 scrollbar-none min-h-[44px]"
+            className="w-full resize-none bg-transparent border-none focus-visible:ring-0 p-0 text-sm leading-relaxed placeholder:text-muted-foreground/35 scrollbar-none min-h-[44px]"
           />
         </div>
 
         {/* Bottom bar */}
-        <div className="flex items-center justify-between px-3 pb-3">
-          <div className="flex items-center gap-1">
+        <div className="flex items-center justify-between px-3 pb-3 pt-1">
+          <div className="flex items-center gap-0.5">
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-8 w-8 rounded-xl text-muted-foreground/40 hover:text-muted-foreground">
-                  <Paperclip className="h-4 w-4" />
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7 rounded-lg text-muted-foreground/35 hover:text-muted-foreground/70 hover:bg-muted/40"
+                >
+                  <Paperclip className="h-3.5 w-3.5" />
                 </Button>
               </TooltipTrigger>
               <TooltipContent side="top" className="text-xs">Attach file</TooltipContent>
@@ -184,8 +184,12 @@ export function ChatInput({
 
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-8 w-8 rounded-xl text-muted-foreground/40 hover:text-muted-foreground hidden sm:flex">
-                  <Globe className="h-4 w-4" />
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7 rounded-lg text-muted-foreground/35 hover:text-muted-foreground/70 hover:bg-muted/40 hidden sm:flex"
+                >
+                  <Globe className="h-3.5 w-3.5" />
                 </Button>
               </TooltipTrigger>
               <TooltipContent side="top" className="text-xs">Web search</TooltipContent>
@@ -194,14 +198,16 @@ export function ChatInput({
 
           <div className="flex items-center gap-2">
             {input.length > 0 && (
-              <span className="text-[11px] text-muted-foreground/40 tabular-nums">{input.length}</span>
+              <span className="text-[11px] text-muted-foreground/25 tabular-nums select-none">
+                {input.length}
+              </span>
             )}
 
             {isLoading ? (
               <Button
                 size="icon"
                 onClick={onStop}
-                className="h-9 w-9 rounded-xl bg-foreground/10 hover:bg-destructive hover:text-white text-foreground/60 transition-all"
+                className="h-8 w-8 rounded-xl bg-muted/50 hover:bg-destructive/10 hover:text-destructive text-muted-foreground/50 transition-all duration-150"
               >
                 <Square className="h-3.5 w-3.5 fill-current" />
               </Button>
@@ -211,23 +217,20 @@ export function ChatInput({
                 onClick={handleSubmit}
                 disabled={!hasContent || disabled}
                 className={cn(
-                  'h-9 w-9 rounded-xl transition-all duration-300',
+                  'h-8 w-8 rounded-xl transition-all duration-200',
                   hasContent
-                    ? 'bg-primary text-primary-foreground hover:opacity-90 shadow-lg shadow-primary/20 hover:shadow-primary/30 active:scale-95'
-                    : 'bg-muted/50 text-muted-foreground/30 cursor-not-allowed'
+                    ? 'bg-primary text-primary-foreground hover:opacity-90 shadow-md shadow-primary/25 active:scale-95'
+                    : 'bg-muted/40 text-muted-foreground/20 cursor-not-allowed'
                 )}
               >
-                {hasContent
-                  ? <ArrowUp className="h-4 w-4 stroke-[2.5px]" />
-                  : <Sparkles className="h-3.5 w-3.5" />
-                }
+                <ArrowUp className={cn('h-3.5 w-3.5', hasContent && 'stroke-[2.5px]')} />
               </Button>
             )}
           </div>
         </div>
       </div>
 
-      <p className="mt-2 text-center text-[11px] text-muted-foreground/30">
+      <p className="mt-2 text-center text-[11px] text-muted-foreground/25 select-none">
         Graviton can make mistakes. Verify important information.
       </p>
     </div>
