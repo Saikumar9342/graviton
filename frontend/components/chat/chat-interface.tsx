@@ -152,14 +152,14 @@ export function ChatInterface() {
 
     // Start streaming directly — NOT inside setState or setTimeout
     startStream(allMsgs, assistantId, chatId, mode)
-  }, [isLoading, messages, setCurrentChatId, startStream])
+  }, [isLoading, messages, setCurrentChatId, settings.model])
 
-  const startStream = useCallback(async (
+  async function startStream(
     allMessages: Message[],
     assistantId: string,
     chatId: string,
     mode: string
-  ) => {
+  ) {
     const controller = new AbortController()
     abortRef.current = controller
 
@@ -203,7 +203,7 @@ export function ChatInterface() {
       setIsLoading(false)
       setStreamingId(null)
     }
-  }, [settings.model])
+  }
 
   // Edit-and-resend via pending ref
   useEffect(() => {
