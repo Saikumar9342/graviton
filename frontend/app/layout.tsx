@@ -71,6 +71,7 @@ export default function RootLayout({
       data-font-size="medium"
     >
       <body
+        suppressHydrationWarning
         className={`${inter.variable} ${jetbrainsMono.variable} font-sans antialiased`}
       >
         <ThemeProvider
