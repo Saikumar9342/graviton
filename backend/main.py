@@ -1,16 +1,18 @@
-from fastapi import FastAPI, Depends, HTTPException, Body
+from fastapi import FastAPI, Depends, HTTPException, Body, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 from sqlalchemy import text, create_engine
-from typing import List, Optional
+from typing import List, Optional, AsyncGenerator
 from datetime import datetime
 import os
 import httpx
 import json
+import uuid
+from pathlib import Path
 
 import models, database, ollama_client
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 app = FastAPI(title="Graviton AI API")
 
@@ -30,6 +32,12 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+UPLOAD_DIR = Path("uploads")
+UPLOAD_DIR.mkdir(exist_ok=True)
+
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
+ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "")
+
 # ── Pydantic schemas ────────────────────────────────────────────────────────
 
 class MessageSchema(BaseModel):
@@ -43,20 +51,18 @@ class ChatUpdate(BaseModel):
     title: Optional[str] = None
 
 class MessageResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
     id: str
     role: str
     content: str
     created_at: datetime
-    class Config:
-        from_attributes = True
 
 class ChatResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
     id: str
     title: str
     created_at: datetime
     updated_at: datetime
-    class Config:
-        from_attributes = True
 
 # ── Health ──────────────────────────────────────────────────────────────────
 
@@ -110,6 +116,115 @@ async def delete_model(model_name: str):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+# ── File Upload ─────────────────────────────────────────────────────────────
+
+@app.post("/api/upload")
+async def upload_file(file: UploadFile = File(...)):
+    MAX_SIZE = 10 * 1024 * 1024  # 10 MB
+    contents = await file.read()
+    if len(contents) > MAX_SIZE:
+        raise HTTPException(status_code=400, detail="File too large (max 10 MB)")
+
+    file_id = str(uuid.uuid4())
+    suffix = Path(file.filename or "file").suffix or ".txt"
+    dest = UPLOAD_DIR / f"{file_id}{suffix}"
+    dest.write_bytes(contents)
+
+    return {"file_id": file_id, "filename": file.filename, "size": len(contents)}
+
+# ── Web Search ──────────────────────────────────────────────────────────────
+
+async def _ddg_search(query: str) -> str:
+    try:
+        async with httpx.AsyncClient(timeout=8.0) as client:
+            r = await client.get(
+                "https://api.duckduckgo.com/",
+                params={"q": query, "format": "json", "no_html": 1, "skip_disambig": 1},
+                headers={"User-Agent": "Graviton/1.0"},
+            )
+            data = r.json()
+
+        parts: list[str] = []
+        if data.get("AbstractText"):
+            parts.append(f"**{data.get('Heading', 'Summary')}**\n{data['AbstractText']}")
+            if data.get("AbstractURL"):
+                parts.append(f"Source: {data['AbstractURL']}")
+
+        for topic in data.get("RelatedTopics", [])[:5]:
+            if isinstance(topic, dict) and topic.get("Text"):
+                parts.append(f"• {topic['Text'][:200]}")
+
+        for result in data.get("Results", [])[:3]:
+            if isinstance(result, dict) and result.get("Text"):
+                parts.append(f"• {result['Text'][:200]}")
+
+        return "\n\n".join(parts)
+    except Exception:
+        return ""
+
+# ── Provider streaming ──────────────────────────────────────────────────────
+
+async def _stream_openai(model: str, messages: list, api_key: str) -> AsyncGenerator[str, None]:
+    async with httpx.AsyncClient(timeout=None) as client:
+        async with client.stream(
+            "POST",
+            "https://api.openai.com/v1/chat/completions",
+            headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
+            json={"model": model, "messages": messages, "stream": True},
+        ) as r:
+            if r.status_code != 200:
+                err = await r.aread()
+                raise Exception(f"OpenAI error: {err.decode()}")
+            async for line in r.aiter_lines():
+                if line.startswith("data: ") and "[DONE]" not in line:
+                    try:
+                        delta = json.loads(line[6:])["choices"][0]["delta"].get("content", "")
+                        if delta:
+                            yield delta
+                    except Exception:
+                        pass
+
+async def _stream_anthropic(model: str, messages: list, api_key: str) -> AsyncGenerator[str, None]:
+    system = ""
+    msg_list = []
+    for m in messages:
+        if m["role"] == "system":
+            system = m["content"]
+        else:
+            msg_list.append(m)
+
+    payload: dict = {
+        "model": model,
+        "messages": msg_list,
+        "max_tokens": 4096,
+        "stream": True,
+    }
+    if system:
+        payload["system"] = system
+
+    async with httpx.AsyncClient(timeout=None) as client:
+        async with client.stream(
+            "POST",
+            "https://api.anthropic.com/v1/messages",
+            headers={
+                "x-api-key": api_key,
+                "anthropic-version": "2023-06-01",
+                "content-type": "application/json",
+            },
+            json=payload,
+        ) as r:
+            if r.status_code != 200:
+                err = await r.aread()
+                raise Exception(f"Anthropic error: {err.decode()}")
+            async for line in r.aiter_lines():
+                if line.startswith("data: "):
+                    try:
+                        data = json.loads(line[6:])
+                        if data.get("type") == "content_block_delta":
+                            yield data["delta"].get("text", "")
+                    except Exception:
+                        pass
+
 # ── Chat ────────────────────────────────────────────────────────────────────
 
 @app.post("/api/chat")
@@ -121,6 +236,10 @@ async def chat_endpoint(
     model = body.get("model", "llama3")
     chat_id = body.get("chatId")
     system_prompt = body.get("systemPrompt", "")
+    file_ids = body.get("fileIds", [])
+    web_search = body.get("webSearch", False)
+    openai_key = body.get("openaiApiKey") or OPENAI_API_KEY
+    anthropic_key = body.get("anthropicApiKey") or ANTHROPIC_API_KEY
 
     if not messages_data:
         raise HTTPException(status_code=400, detail="No messages provided")
@@ -141,11 +260,34 @@ async def chat_endpoint(
             print(f"Warning: Could not save user message: {e}")
 
     async def generate():
-        full_response = ""
-        ollama_messages = []
+        combined_system = system_prompt
 
-        if system_prompt:
-            ollama_messages.append({"role": "system", "content": system_prompt})
+        # Inject uploaded file contents
+        for fid in file_ids:
+            matches = list(UPLOAD_DIR.glob(f"{fid}.*"))
+            if matches:
+                try:
+                    text = matches[0].read_text(encoding="utf-8", errors="replace")
+                    combined_system += f"\n\n[Attached file: {matches[0].name}]\n{text[:8000]}"
+                except Exception:
+                    pass
+
+        # Inject web search results
+        if web_search and messages_data:
+            last_user = next((m for m in reversed(messages_data) if m.get("role") == "user"), None)
+            if last_user:
+                query = (last_user.get("content", "") or "")[:200]
+                search_result = await _ddg_search(query)
+                if search_result:
+                    combined_system += (
+                        f'\n\n[Web search results for: "{query}"]\n'
+                        f"{search_result}\n\n"
+                        "Use these results to answer accurately with current information."
+                    )
+
+        ollama_messages = []
+        if combined_system:
+            ollama_messages.append({"role": "system", "content": combined_system})
 
         for m in messages_data:
             content = m.get("content", "")
@@ -153,9 +295,37 @@ async def chat_endpoint(
                 content = next((p["text"] for p in m["parts"] if p["type"] == "text"), "")
             ollama_messages.append({"role": m["role"], "content": content})
 
-        async for chunk in ollama_client.chat_with_ollama(model, ollama_messages):
-            full_response += chunk
-            yield chunk
+        full_response = ""
+        error_msg = None
+
+        try:
+            if model.startswith("gpt-") or model.startswith("o1") or model.startswith("o3"):
+                if not openai_key:
+                    raise Exception("OpenAI API key not configured. Go to Settings → Providers.")
+                async for chunk in _stream_openai(model, ollama_messages, openai_key):
+                    full_response += chunk
+                    yield chunk
+            elif model.startswith("claude-"):
+                if not anthropic_key:
+                    raise Exception("Anthropic API key not configured. Go to Settings → Providers.")
+                async for chunk in _stream_anthropic(model, ollama_messages, anthropic_key):
+                    full_response += chunk
+                    yield chunk
+            else:
+                async for chunk in ollama_client.chat_with_ollama(model, ollama_messages):
+                    full_response += chunk
+                    yield chunk
+        except Exception as e:
+            err = str(e)
+            error_msg = (
+                f"\n\n⚠️ Model '{model}' is not installed. Go to Settings → Models and pull it first."
+                if "not found" in err.lower()
+                else f"\n\n⚠️ {err}"
+            )
+
+        if error_msg is not None:
+            yield error_msg
+            return
 
         if chat_id and full_response:
             try:

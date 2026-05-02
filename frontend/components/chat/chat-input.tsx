@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
-import { ArrowUp, Square, Paperclip, Globe, ChevronDown, Cpu, Search, MessageSquare, Terminal } from 'lucide-react'
+import { ArrowUp, Square, Paperclip, Globe, ChevronDown, Cpu, Search, MessageSquare, Terminal, X, FileText, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import {
@@ -9,14 +9,17 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuSeparator,
+  DropdownMenuLabel,
 } from '@/components/ui/dropdown-menu'
 import { Textarea } from '@/components/ui/textarea'
 import { cn } from '@/lib/utils'
 import { Settings, AVAILABLE_MODELS } from '@/lib/types'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
+import { uploadFile, UploadedFile } from '@/lib/api'
 
 interface ChatInputProps {
-  onSend: (message: string, mode: string) => void
+  onSend: (message: string, mode: string, fileIds: string[], webSearch: boolean) => void
   onStop?: () => void
   isLoading?: boolean
   disabled?: boolean
@@ -31,6 +34,16 @@ const MODES = [
   { id: 'research', label: 'Research', icon: Search },
 ]
 
+const ALLOWED_TYPES = [
+  'text/', 'application/json', 'application/xml',
+  'application/javascript', 'application/typescript',
+  'application/pdf',
+]
+
+function isAllowedFile(file: File) {
+  return ALLOWED_TYPES.some((t) => file.type.startsWith(t)) || file.name.match(/\.(txt|md|csv|json|xml|js|ts|tsx|jsx|py|go|rs|java|c|cpp|h|css|html|yaml|yml|toml|sh|sql)$/i)
+}
+
 export function ChatInput({
   onSend,
   onStop,
@@ -43,8 +56,22 @@ export function ChatInput({
   const [input, setInput] = useState('')
   const [isFocused, setIsFocused] = useState(false)
   const [mode, setMode] = useState('chat')
+  const [attachments, setAttachments] = useState<UploadedFile[]>([])
+  const [isUploading, setIsUploading] = useState(false)
+  const [uploadError, setUploadError] = useState<string | null>(null)
+  const [webSearch, setWebSearch] = useState(false)
+
   const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
   const models = availableModels ?? AVAILABLE_MODELS
+
+  // Group models by provider for the dropdown
+  const modelsByProvider = models.reduce<Record<string, typeof models>>((acc, m) => {
+    if (!acc[m.provider]) acc[m.provider] = []
+    acc[m.provider].push(m)
+    return acc
+  }, {})
+
   const currentModel = models.find((m) => m.id === settings.model) ?? models[0]
 
   useEffect(() => {
@@ -56,9 +83,12 @@ export function ChatInput({
   }, [input])
 
   const handleSubmit = () => {
-    if (!input.trim() || disabled) return
-    onSend(input.trim(), mode)
+    if (!input.trim() || disabled || isUploading) return
+    onSend(input.trim(), mode, attachments.map((a) => a.file_id), webSearch)
     setInput('')
+    setAttachments([])
+    setWebSearch(false)
+    setUploadError(null)
     if (textareaRef.current) textareaRef.current.style.height = 'auto'
   }
 
@@ -70,11 +100,37 @@ export function ChatInput({
     }
   }
 
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files ?? [])
+    if (!files.length) return
+    e.target.value = ''
+
+    setUploadError(null)
+    setIsUploading(true)
+    try {
+      for (const file of files) {
+        if (!isAllowedFile(file)) {
+          setUploadError(`"${file.name}" is not a supported file type`)
+          continue
+        }
+        const uploaded = await uploadFile(file)
+        setAttachments((prev) => [...prev, uploaded])
+      }
+    } catch (err: any) {
+      setUploadError(err.message ?? 'Upload failed')
+    } finally {
+      setIsUploading(false)
+    }
+  }
+
+  const removeAttachment = (fileId: string) => {
+    setAttachments((prev) => prev.filter((a) => a.file_id !== fileId))
+  }
+
   const hasContent = input.trim().length > 0
 
   return (
     <div className="relative w-full">
-      {/* Single container — no outer wrapper div that caused double border */}
       <div className={cn(
         'relative rounded-2xl border bg-muted/20 transition-all duration-200 overflow-hidden',
         isFocused
@@ -97,29 +153,34 @@ export function ChatInput({
                 <ChevronDown className="h-3 w-3 opacity-40" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="w-60 rounded-2xl p-1.5">
-              <div className="px-2 py-1.5 mb-1">
-                <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">Models</p>
-              </div>
-              {models.map((model) => (
-                <DropdownMenuItem
-                  key={model.id}
-                  onClick={() => onSettingsChange({ ...settings, model: model.id })}
-                  className={cn(
-                    'flex items-center justify-between py-2 px-2.5 rounded-xl cursor-pointer',
-                    settings.model === model.id && 'bg-primary/10 text-primary'
-                  )}
-                >
-                  <div>
-                    <p className="text-sm font-medium leading-none mb-0.5">{model.name}</p>
-                    <p className="text-[11px] text-muted-foreground/60">{model.provider}</p>
-                  </div>
-                  {model.badge && (
-                    <Badge variant="outline" className="text-[10px] h-4 px-1.5 font-medium">
-                      {model.badge}
-                    </Badge>
-                  )}
-                </DropdownMenuItem>
+            <DropdownMenuContent align="start" className="w-64 rounded-2xl p-1.5">
+              {Object.entries(modelsByProvider).map(([provider, providerModels], i) => (
+                <div key={provider}>
+                  {i > 0 && <DropdownMenuSeparator className="my-1" />}
+                  <DropdownMenuLabel className="px-2 py-1 text-[11px] font-semibold text-muted-foreground/50 uppercase tracking-wider">
+                    {provider}
+                  </DropdownMenuLabel>
+                  {providerModels.map((model) => (
+                    <DropdownMenuItem
+                      key={model.id}
+                      onClick={() => onSettingsChange({ ...settings, model: model.id })}
+                      className={cn(
+                        'flex items-center justify-between py-2 px-2.5 rounded-xl cursor-pointer',
+                        settings.model === model.id && 'bg-primary/10 text-primary'
+                      )}
+                    >
+                      <div>
+                        <p className="text-sm font-medium leading-none mb-0.5">{model.name}</p>
+                        <p className="text-[11px] text-muted-foreground/60">{model.provider}</p>
+                      </div>
+                      {model.badge && (
+                        <Badge variant="outline" className="text-[10px] h-4 px-1.5 font-medium">
+                          {model.badge}
+                        </Badge>
+                      )}
+                    </DropdownMenuItem>
+                  ))}
+                </div>
               ))}
             </DropdownMenuContent>
           </DropdownMenu>
@@ -146,6 +207,27 @@ export function ChatInput({
           </div>
         </div>
 
+        {/* Attachment chips */}
+        {attachments.length > 0 && (
+          <div className="flex flex-wrap gap-1.5 px-4 pb-1">
+            {attachments.map((a) => (
+              <div
+                key={a.file_id}
+                className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-primary/10 border border-primary/20 text-primary text-[11px] font-medium"
+              >
+                <FileText className="h-3 w-3 shrink-0" />
+                <span className="truncate max-w-[140px]">{a.filename}</span>
+                <button
+                  onClick={() => removeAttachment(a.file_id)}
+                  className="ml-0.5 text-primary/60 hover:text-primary transition-colors"
+                >
+                  <X className="h-2.5 w-2.5" />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+
         {/* Textarea */}
         <div className="px-4 py-1">
           <Textarea
@@ -169,17 +251,38 @@ export function ChatInput({
         {/* Bottom bar */}
         <div className="flex items-center justify-between px-4 pb-3 pt-1">
           <div className="flex items-center gap-0.5">
+            {/* Hidden file input */}
+            <input
+              ref={fileInputRef}
+              type="file"
+              multiple
+              className="hidden"
+              accept=".txt,.md,.csv,.json,.xml,.js,.ts,.tsx,.jsx,.py,.go,.rs,.java,.c,.cpp,.h,.css,.html,.yaml,.yml,.toml,.sh,.sql,.pdf"
+              onChange={handleFileChange}
+            />
+
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-7 w-7 rounded-2xl text-muted-foreground/35 hover:text-muted-foreground/70 hover:bg-muted/40"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={isUploading}
+                  className={cn(
+                    'h-7 w-7 rounded-2xl transition-colors',
+                    attachments.length > 0
+                      ? 'text-primary bg-primary/10 hover:bg-primary/15'
+                      : 'text-muted-foreground/35 hover:text-muted-foreground/70 hover:bg-muted/40'
+                  )}
                 >
-                  <Paperclip className="h-3.5 w-3.5" />
+                  {isUploading
+                    ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    : <Paperclip className="h-3.5 w-3.5" />}
                 </Button>
               </TooltipTrigger>
-              <TooltipContent side="top" className="text-xs">Attach file</TooltipContent>
+              <TooltipContent side="top" className="text-xs">
+                {isUploading ? 'Uploading…' : 'Attach file'}
+              </TooltipContent>
             </Tooltip>
 
             <Tooltip>
@@ -187,17 +290,32 @@ export function ChatInput({
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-7 w-7 rounded-2xl text-muted-foreground/35 hover:text-muted-foreground/70 hover:bg-muted/40 hidden sm:flex"
+                  onClick={() => setWebSearch((v) => !v)}
+                  className={cn(
+                    'h-7 w-7 rounded-2xl transition-colors hidden sm:flex',
+                    webSearch
+                      ? 'text-sky-400 bg-sky-400/10 hover:bg-sky-400/15'
+                      : 'text-muted-foreground/35 hover:text-muted-foreground/70 hover:bg-muted/40'
+                  )}
                 >
                   <Globe className="h-3.5 w-3.5" />
                 </Button>
               </TooltipTrigger>
-              <TooltipContent side="top" className="text-xs">Web search</TooltipContent>
+              <TooltipContent side="top" className="text-xs">
+                {webSearch ? 'Web search on — click to disable' : 'Enable web search'}
+              </TooltipContent>
             </Tooltip>
+
+            {webSearch && (
+              <span className="text-[10px] text-sky-400/80 ml-1 hidden sm:block">Web</span>
+            )}
           </div>
 
           <div className="flex items-center gap-2">
-            {input.length > 0 && (
+            {uploadError && (
+              <span className="text-[11px] text-destructive/80 max-w-[160px] truncate">{uploadError}</span>
+            )}
+            {input.length > 0 && !uploadError && (
               <span className="text-[11px] text-muted-foreground/25 tabular-nums select-none">
                 {input.length}
               </span>
@@ -215,10 +333,10 @@ export function ChatInput({
               <Button
                 size="icon"
                 onClick={handleSubmit}
-                disabled={!hasContent || disabled}
+                disabled={!hasContent || disabled || isUploading}
                 className={cn(
                   'h-8 w-8 rounded-2xl transition-all duration-200',
-                  hasContent
+                  hasContent && !isUploading
                     ? 'bg-primary text-primary-foreground hover:opacity-90 shadow-md shadow-primary/25 active:scale-95'
                     : 'bg-muted/40 text-muted-foreground/20 cursor-not-allowed'
                 )}

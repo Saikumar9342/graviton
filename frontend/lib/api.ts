@@ -123,6 +123,25 @@ export async function deleteModel(name: string): Promise<void> {
   if (!response.ok) throw new Error('Failed to delete model')
 }
 
+// ── File Upload ──────────────────────────────────────────────────────────────
+
+export interface UploadedFile {
+  file_id: string
+  filename: string
+  size: number
+}
+
+export async function uploadFile(file: File): Promise<UploadedFile> {
+  const formData = new FormData()
+  formData.append('file', file)
+  const response = await fetch('/api/upload', { method: 'POST', body: formData })
+  if (!response.ok) {
+    const data = await response.json().catch(() => ({}))
+    throw new Error(data.detail || data.error || 'Upload failed')
+  }
+  return response.json()
+}
+
 // ── Admin ────────────────────────────────────────────────────────────────────
 
 export interface AdminStatus {

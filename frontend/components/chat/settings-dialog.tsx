@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import {
   Palette, MessageSquare, Cpu, Database, Shield, Sun, Moon, Monitor,
   Check, Zap, Minimize2, Volume2, Plus, Trash2, RefreshCw,
-  Lock, Unlock, Server, HardDrive, Activity, Settings, X, BarChart2,
+  Lock, Unlock, Server, HardDrive, Activity, Settings, X, BarChart2, KeyRound, Eye, EyeOff,
 } from 'lucide-react'
 import { useTheme } from '@/components/theme-provider'
 import {
@@ -20,6 +20,8 @@ import { Switch } from '@/components/ui/switch'
 import { cn } from '@/lib/utils'
 import {
   ACCENT_COLORS,
+  OPENAI_MODELS,
+  ANTHROPIC_MODELS,
   Settings as SettingsType,
   FontSize,
   BackgroundStyle,
@@ -34,7 +36,7 @@ import {
   deleteModel,
 } from '@/lib/api'
 
-type Section = 'appearance' | 'chat' | 'models' | 'session' | 'database' | 'admin'
+type Section = 'appearance' | 'chat' | 'models' | 'providers' | 'session' | 'database' | 'admin'
 
 export interface SessionStats {
   model?: string
@@ -137,6 +139,10 @@ export function SettingsDialog({ settings, onSave, session }: SettingsDialogProp
   const [newPin, setNewPin] = useState('')
   const [confirmPin, setConfirmPin] = useState('')
   const [pinMsg, setPinMsg] = useState('')
+
+  // Providers tab
+  const [showOpenAiKey, setShowOpenAiKey] = useState(false)
+  const [showAnthropicKey, setShowAnthropicKey] = useState(false)
 
   // Models tab
   const [models, setModels] = useState<ModelInfo[]>([])
@@ -259,6 +265,7 @@ export function SettingsDialog({ settings, onSave, session }: SettingsDialogProp
     { id: 'appearance', label: 'Appearance', icon: Palette },
     { id: 'chat', label: 'Chat', icon: MessageSquare },
     { id: 'models', label: 'Models', icon: Cpu },
+    { id: 'providers', label: 'Providers', icon: KeyRound },
     { id: 'session', label: 'Session', icon: BarChart2 },
   ]
   const adminNav: { id: Section; label: string; icon: React.ElementType }[] = [
@@ -464,6 +471,95 @@ export function SettingsDialog({ settings, onSave, session }: SettingsDialogProp
             </div>
           </div>
         )
+
+      // ── Providers ────────────────────────────────────────────────────
+      case 'providers': {
+        const providerConfig = [
+          {
+            id: 'openai' as const,
+            name: 'OpenAI',
+            keyField: 'openaiApiKey' as const,
+            placeholder: 'sk-…',
+            show: showOpenAiKey,
+            onToggle: () => setShowOpenAiKey((v) => !v),
+            models: OPENAI_MODELS,
+            docsHref: 'https://platform.openai.com/api-keys',
+            color: 'text-emerald-400',
+          },
+          {
+            id: 'anthropic' as const,
+            name: 'Anthropic',
+            keyField: 'anthropicApiKey' as const,
+            placeholder: 'sk-ant-…',
+            show: showAnthropicKey,
+            onToggle: () => setShowAnthropicKey((v) => !v),
+            models: ANTHROPIC_MODELS,
+            docsHref: 'https://console.anthropic.com/account/keys',
+            color: 'text-amber-400',
+          },
+        ]
+        return (
+          <div className="space-y-6">
+            <div className="rounded-xl border border-blue-500/20 bg-blue-500/5 px-4 py-3">
+              <p className="text-xs text-blue-400/80 leading-relaxed">
+                API keys are stored locally in your browser and sent only to the respective provider. Ollama models work without any key.
+              </p>
+            </div>
+
+            {providerConfig.map((p) => (
+              <div key={p.id}>
+                <SLabel>{p.name}</SLabel>
+                <div className="space-y-2">
+                  <div className="relative">
+                    <Input
+                      type={p.show ? 'text' : 'password'}
+                      placeholder={p.placeholder}
+                      value={local[p.keyField]}
+                      onChange={(e) => update(p.keyField, e.target.value)}
+                      className="h-9 text-sm font-mono pr-9"
+                    />
+                    <button
+                      type="button"
+                      onClick={p.onToggle}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground/40 hover:text-muted-foreground transition-colors"
+                    >
+                      {p.show ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                    </button>
+                  </div>
+
+                  {local[p.keyField] ? (
+                    <div className="rounded-lg border border-emerald-500/20 bg-emerald-500/5 px-3 py-2">
+                      <p className="text-[11px] text-emerald-400/80 font-medium mb-1">Unlocked models:</p>
+                      <div className="flex flex-wrap gap-1">
+                        {p.models.map((m) => (
+                          <span key={m.id} className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400/80 font-medium">
+                            {m.name}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="text-[11px] text-muted-foreground/40">
+                      No key set. Models: {p.models.map((m) => m.name).join(', ')}
+                    </p>
+                  )}
+                </div>
+              </div>
+            ))}
+
+            <div>
+              <SLabel>Ollama (Local)</SLabel>
+              <div className="rounded-xl border border-border/40 bg-card/20 px-4 py-3 flex items-center gap-3">
+                <div className="h-2 w-2 rounded-full bg-emerald-500 shadow-sm shadow-emerald-500/50 shrink-0" />
+                <div>
+                  <p className="text-sm font-medium">Always available</p>
+                  <p className="text-[11px] text-muted-foreground/50 mt-0.5">No API key required — runs on your machine</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        )
+      }
 
       // ── Session ───────────────────────────────────────────────────────
       case 'session': {

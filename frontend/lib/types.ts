@@ -13,7 +13,7 @@ export interface ChatMessage {
   createdAt: Date
 }
 
-export type AccentColor = 
+export type AccentColor =
   | 'violet'
   | 'blue'
   | 'cyan'
@@ -28,7 +28,8 @@ export type BackgroundStyle = 'solid' | 'gradient' | 'mesh' | 'aurora'
 
 export interface Settings {
   model: string
-  apiKey: string
+  openaiApiKey: string
+  anthropicApiKey: string
   theme: 'light' | 'dark' | 'system'
   accentColor: AccentColor
   bubbleStyle: ChatBubbleStyle
@@ -40,8 +41,9 @@ export interface Settings {
 }
 
 export const DEFAULT_SETTINGS: Settings = {
-  model: 'llama3.1',
-  apiKey: '',
+  model: 'llama3:latest',
+  openaiApiKey: '',
+  anthropicApiKey: '',
   theme: 'dark',
   accentColor: 'violet',
   bubbleStyle: 'modern',
@@ -68,10 +70,21 @@ export const MODE_SYSTEM_PROMPTS: Record<string, string> = {
   research: 'You are a research analyst. Synthesize information thoroughly, cite reasoning, and structure answers clearly.',
 }
 
+// Static fallback list — overridden at runtime by live Ollama models + provider keys
 export const AVAILABLE_MODELS = [
-  { id: 'llama3.1', name: 'Llama 3.1', provider: 'Ollama', badge: 'Latest' },
-  { id: 'deepseek-r1:8b', name: 'DeepSeek R1 (8B)', provider: 'Ollama', badge: 'Powerful' },
-  { id: 'mistral', name: 'Mistral', provider: 'Ollama', badge: 'Balanced' },
-  { id: 'deepseek-coder-v2', name: 'DeepSeek Coder V2', provider: 'Ollama', badge: 'Pro Coding' },
+  { id: 'llama3:latest', name: 'Llama 3', provider: 'Ollama', badge: 'Latest' },
+  { id: 'mistral:latest', name: 'Mistral', provider: 'Ollama', badge: 'Balanced' },
+  { id: 'deepseek-coder:latest', name: 'DeepSeek Coder', provider: 'Ollama', badge: 'Coding' },
+  { id: 'phi3:latest', name: 'Phi-3', provider: 'Ollama', badge: 'Fast' },
 ]
 
+export const OPENAI_MODELS = [
+  { id: 'gpt-4o', name: 'GPT-4o', provider: 'OpenAI', badge: 'Latest' },
+  { id: 'gpt-4o-mini', name: 'GPT-4o Mini', provider: 'OpenAI', badge: 'Fast' },
+  { id: 'o1-mini', name: 'o1 Mini', provider: 'OpenAI', badge: 'Reasoning' },
+]
+
+export const ANTHROPIC_MODELS = [
+  { id: 'claude-sonnet-4-6', name: 'Claude Sonnet 4.6', provider: 'Anthropic', badge: 'Latest' },
+  { id: 'claude-haiku-4-5-20251001', name: 'Claude Haiku 4.5', provider: 'Anthropic', badge: 'Fast' },
+]

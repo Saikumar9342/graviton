@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { AlertCircle, RefreshCw, Sparkles } from 'lucide-react'
+import { AlertCircle, RefreshCw } from 'lucide-react'
 import { ChatHeader } from './chat-header'
 import { ChatSidebar } from './chat-sidebar'
 import { ChatMessage } from './chat-message'
@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/button'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { getSettings, saveSettings, generateId, generateTitle } from '@/lib/chat-store'
 import { fetchChats, createChat, deleteChat as apiDeleteChat, fetchMessages, fetchModels, ModelInfo } from '@/lib/api'
-import { Chat, Settings, DEFAULT_SETTINGS, AVAILABLE_MODELS, MODE_SYSTEM_PROMPTS } from '@/lib/types'
+import { Chat, Settings, DEFAULT_SETTINGS, AVAILABLE_MODELS, OPENAI_MODELS, ANTHROPIC_MODELS, MODE_SYSTEM_PROMPTS } from '@/lib/types'
 import { cn } from '@/lib/utils'
 
 type Message = {
@@ -54,17 +54,48 @@ export function ChatInterface() {
   // Init
   useEffect(() => {
     setMounted(true)
-    fetchChats().then(setChats).catch(console.error)
-    fetchModels().then((m) => { if (m.length > 0) setAvailableModels(m) }).catch(console.error)
+
     const saved = getSettings()
     setSettings(saved)
+
+    fetchChats().then(setChats).catch(console.error)
+
+    fetchModels().then((ollamaModels) => {
+      if (ollamaModels.length === 0) return
+
+      // Build full model list: Ollama + any configured external providers
+      const allModels: ModelInfo[] = [...ollamaModels]
+      const current = getSettings()
+      if (current.openaiApiKey) allModels.push(...OPENAI_MODELS)
+      if (current.anthropicApiKey) allModels.push(...ANTHROPIC_MODELS)
+      setAvailableModels(allModels)
+
+      // Auto-select first available if saved model isn't installed
+      if (!allModels.find((m) => m.id === current.model)) {
+        const updated = { ...current, model: allModels[0].id }
+        saveSettings(updated)
+        setSettings(updated)
+      }
+    }).catch(console.error)
+
     const sc = localStorage.getItem('sidebar-collapsed')
     if (sc) setIsSidebarCollapsed(sc === 'true')
     const dc = localStorage.getItem('details-collapsed')
     if (dc) setIsDetailsCollapsed(dc === 'true')
+
     document.documentElement.setAttribute('data-accent', saved.accentColor)
     document.documentElement.setAttribute('data-font-size', saved.fontSize)
   }, [])
+
+  // When settings change (e.g. new API key added), rebuild model list
+  useEffect(() => {
+    if (!mounted) return
+    const base = availableModels.filter((m) => m.provider === 'Ollama')
+    const next: ModelInfo[] = [...base]
+    if (settings.openaiApiKey) next.push(...OPENAI_MODELS)
+    if (settings.anthropicApiKey) next.push(...ANTHROPIC_MODELS)
+    setAvailableModels(next)
+  }, [settings.openaiApiKey, settings.anthropicApiKey]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (mounted) {
@@ -121,7 +152,12 @@ export function ChatInterface() {
     }
   }, [handleNewChat])
 
-  const handleSend = useCallback(async (content: string, mode = 'chat') => {
+  const handleSend = useCallback(async (
+    content: string,
+    mode = 'chat',
+    fileIds: string[] = [],
+    webSearch = false,
+  ) => {
     if (isLoading || !content.trim()) return
 
     let chatId = currentChatIdRef.current
@@ -142,24 +178,22 @@ export function ChatInterface() {
 
     const userMsg: Message = { id: generateId(), role: 'user', content }
     const assistantId = generateId()
-
-    // Compute the full message list BEFORE updating state
     const allMsgs = [...messages, userMsg]
 
-    // Update state — add user msg + empty assistant placeholder (shows typing dots)
     setMessages([...allMsgs, { id: assistantId, role: 'assistant', content: '' }])
     setIsLoading(true)
     setStreamingId(assistantId)
 
-    // Start streaming directly — NOT inside setState or setTimeout
-    startStream(allMsgs, assistantId, chatId, mode)
+    startStream(allMsgs, assistantId, chatId, mode, fileIds, webSearch)
   }, [isLoading, messages, setCurrentChatId, settings.model])
 
   async function startStream(
     allMessages: Message[],
     assistantId: string,
     chatId: string,
-    mode: string
+    mode: string,
+    fileIds: string[],
+    webSearch: boolean,
   ) {
     const controller = new AbortController()
     abortRef.current = controller
@@ -173,6 +207,10 @@ export function ChatInterface() {
           model: settings.model,
           chatId,
           systemPrompt: MODE_SYSTEM_PROMPTS[mode] ?? '',
+          fileIds,
+          webSearch,
+          ...(settings.openaiApiKey && { openaiApiKey: settings.openaiApiKey }),
+          ...(settings.anthropicApiKey && { anthropicApiKey: settings.anthropicApiKey }),
         }),
         signal: controller.signal,
       })
@@ -204,7 +242,6 @@ export function ChatInterface() {
     } catch (err: unknown) {
       if (err instanceof Error && err.name !== 'AbortError') {
         setError(err)
-        // Remove the empty assistant placeholder on error
         setMessages((prev) => prev.filter((m) => !(m.id === assistantId && m.content === '')))
       }
     } finally {
@@ -246,12 +283,6 @@ export function ChatInterface() {
       setIsSidebarCollapsed(newState)
       localStorage.setItem('sidebar-collapsed', String(newState))
     }
-  }
-
-  const toggleDetails = () => {
-    const newState = !isDetailsCollapsed
-    setIsDetailsCollapsed(newState)
-    localStorage.setItem('details-collapsed', String(newState))
   }
 
   const getBackgroundClass = () => {

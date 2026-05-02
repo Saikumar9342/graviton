@@ -22,12 +22,23 @@ def get_db():
 
 def get_db_optional():
     """Returns a DB session if available, otherwise yields None gracefully."""
+    db = None
     try:
         db = SessionLocal()
-        db.execute(text("SELECT 1"))  # quick connectivity check
-        try:
-            yield db
-        finally:
-            db.close()
+        db.execute(text("SELECT 1"))
     except Exception:
-        yield None
+        if db is not None:
+            try:
+                db.close()
+            except Exception:
+                pass
+        db = None
+
+    try:
+        yield db
+    finally:
+        if db is not None:
+            try:
+                db.close()
+            except Exception:
+                pass
