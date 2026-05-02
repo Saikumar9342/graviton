@@ -44,6 +44,8 @@ export function ChatInterface() {
   const [streamingId, setStreamingId] = useState<string | null>(null)
   const [error, setError] = useState<Error | null>(null)
   const [mounted, setMounted] = useState(false)
+  const [lastResponseMs, setLastResponseMs] = useState<number | null>(null)
+  const [streamSpeed, setStreamSpeed] = useState<number | null>(null)
 
   const scrollRef = useRef<HTMLDivElement>(null)
   const [shouldAutoScroll, setShouldAutoScroll] = useState(true)
@@ -185,6 +187,7 @@ export function ChatInterface() {
       const reader = res.body.getReader()
       const decoder = new TextDecoder()
       let accumulated = ''
+      const streamStart = Date.now()
 
       while (true) {
         const { done, value } = await reader.read()
@@ -192,6 +195,12 @@ export function ChatInterface() {
         accumulated += decoder.decode(value, { stream: true })
         const snap = accumulated
         setMessages((prev) => prev.map((m) => m.id === assistantId ? { ...m, content: snap } : m))
+      }
+
+      const elapsed = Date.now() - streamStart
+      setLastResponseMs(elapsed)
+      if (elapsed > 0 && accumulated.length > 0) {
+        setStreamSpeed(Math.round(accumulated.length / (elapsed / 1000)))
       }
     } catch (err: unknown) {
       if (err instanceof Error && err.name !== 'AbortError') {
@@ -220,6 +229,10 @@ export function ChatInterface() {
     pendingResend.current = { content: newContent, mode: 'chat' }
     setMessages(messages.slice(0, idx))
   }, [messages])
+
+  const handleRenameChat = useCallback((id: string, title: string) => {
+    setChats((prev) => prev.map((c) => c.id === id ? { ...c, title } : c))
+  }, [])
 
   const handleSaveSettings = useCallback((newSettings: Settings) => {
     saveSettings(newSettings)
@@ -274,10 +287,11 @@ export function ChatInterface() {
 
       <ChatSidebar
         chats={chats}
-        currentChatId={currentChatIdRef.current}
+        currentChatId={currentChatId}
         onSelectChat={handleSelectChat}
         onNewChat={handleNewChat}
         onDeleteChat={handleDeleteChat}
+        onRenameChat={handleRenameChat}
         isOpen={sidebarOpen}
         isCollapsed={isSidebarCollapsed}
         onClose={() => setSidebarOpen(false)}
@@ -290,13 +304,21 @@ export function ChatInterface() {
           isSidebarCollapsed={isSidebarCollapsed}
           settings={settings}
           onSaveSettings={handleSaveSettings}
+          session={{
+            model: currentModel?.name,
+            userMessages: messages.filter((m) => m.role === 'user').length,
+            assistantMessages: messages.filter((m) => m.role === 'assistant').length,
+            tokens: totalTokens,
+            lastResponseMs: lastResponseMs ?? undefined,
+            streamSpeed: streamSpeed ?? undefined,
+          }}
         />
 
         <div className="flex-1 overflow-hidden flex">
           <div
             ref={scrollRef}
             onScroll={handleScroll}
-            className="flex-1 overflow-y-auto scrollbar-none scroll-smooth px-4 sm:px-6"
+            className="flex flex-col flex-1 overflow-y-auto scrollbar-none scroll-smooth px-4 sm:px-6"
           >
             {messages.length === 0 ? (
               <EmptyState onSuggestionClick={(text) => handleSend(text)} />
@@ -322,6 +344,10 @@ export function ChatInterface() {
             onToggle={toggleDetails}
             model={currentModel?.name}
             tokens={totalTokens}
+            userMessages={messages.filter((m) => m.role === 'user').length}
+            assistantMessages={messages.filter((m) => m.role === 'assistant').length}
+            lastResponseMs={lastResponseMs ?? undefined}
+            streamSpeed={streamSpeed ?? undefined}
           />
         </div>
 

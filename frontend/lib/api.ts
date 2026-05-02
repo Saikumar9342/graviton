@@ -1,18 +1,20 @@
-import { Chat, ChatMessage } from './types';
+import { Chat, ChatMessage } from './types'
 
-const API_BASE = '/api';
+const API_BASE = '/api'
+
+// ── Chats ────────────────────────────────────────────────────────────────────
 
 export async function fetchChats(): Promise<Chat[]> {
-  const response = await fetch(`${API_BASE}/chats`);
-  if (!response.ok) throw new Error('Failed to fetch chats');
-  const data = await response.json();
+  const response = await fetch(`${API_BASE}/chats`)
+  if (!response.ok) throw new Error('Failed to fetch chats')
+  const data = await response.json()
   return data.map((chat: any) => ({
     id: chat.id,
     title: chat.title,
     createdAt: new Date(chat.created_at),
     updatedAt: new Date(chat.updated_at),
-    messages: [] // We fetch messages per chat if needed
-  }));
+    messages: [],
+  }))
 }
 
 export async function createChat(title: string): Promise<Chat> {
@@ -20,36 +22,45 @@ export async function createChat(title: string): Promise<Chat> {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ title }),
-  });
-  if (!response.ok) throw new Error('Failed to create chat');
-  const chat = await response.json();
+  })
+  if (!response.ok) throw new Error('Failed to create chat')
+  const chat = await response.json()
   return {
     id: chat.id,
     title: chat.title,
     createdAt: new Date(chat.created_at),
     updatedAt: new Date(chat.updated_at),
-    messages: []
-  };
+    messages: [],
+  }
+}
+
+export async function renameChat(id: string, title: string): Promise<void> {
+  const response = await fetch(`${API_BASE}/chats/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ title }),
+  })
+  if (!response.ok) throw new Error('Failed to rename chat')
 }
 
 export async function deleteChat(id: string): Promise<void> {
-  const response = await fetch(`${API_BASE}/chats/${id}`, {
-    method: 'DELETE',
-  });
-  if (!response.ok) throw new Error('Failed to delete chat');
+  const response = await fetch(`${API_BASE}/chats/${id}`, { method: 'DELETE' })
+  if (!response.ok) throw new Error('Failed to delete chat')
 }
 
 export async function fetchMessages(chatId: string): Promise<ChatMessage[]> {
-  const response = await fetch(`${API_BASE}/chats/${chatId}/messages`);
-  if (!response.ok) throw new Error('Failed to fetch messages');
-  const data = await response.json();
+  const response = await fetch(`${API_BASE}/chats/${chatId}/messages`)
+  if (!response.ok) throw new Error('Failed to fetch messages')
+  const data = await response.json()
   return data.map((msg: any) => ({
     id: msg.id,
     role: msg.role,
     content: msg.content,
     createdAt: new Date(msg.created_at),
-  }));
+  }))
 }
+
+// ── Models ───────────────────────────────────────────────────────────────────
 
 export interface ModelInfo {
   id: string
@@ -60,16 +71,79 @@ export interface ModelInfo {
 
 export async function fetchModels(): Promise<ModelInfo[]> {
   try {
-    const response = await fetch(`${API_BASE}/models`);
-    if (!response.ok) return [];
-    const data = await response.json();
-    const names: string[] = data.models || [];
-    return names.map((id) => ({
-      id,
-      name: id,
-      provider: 'Ollama',
-    }));
+    const response = await fetch(`${API_BASE}/models`)
+    if (!response.ok) return []
+    const data = await response.json()
+    const names: string[] = data.models || []
+    return names.map((id) => ({ id, name: id, provider: 'Ollama' }))
   } catch {
-    return [];
+    return []
   }
+}
+
+export async function pullModel(
+  name: string,
+  onProgress: (status: string) => void
+): Promise<void> {
+  const response = await fetch(`${API_BASE}/models/pull`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ model: name }),
+  })
+  if (!response.ok || !response.body) throw new Error('Pull request failed')
+
+  const reader = response.body.getReader()
+  const decoder = new TextDecoder()
+
+  while (true) {
+    const { done, value } = await reader.read()
+    if (done) break
+    const text = decoder.decode(value)
+    for (const line of text.split('\n').filter(Boolean)) {
+      try {
+        const data = JSON.parse(line)
+        if (data.error) throw new Error(data.error)
+        if (data.status) {
+          const pct = data.completed && data.total
+            ? ` (${Math.round((data.completed / data.total) * 100)}%)`
+            : ''
+          onProgress(data.status + pct)
+        }
+      } catch (e: any) {
+        if (e.message && !e.message.startsWith('JSON')) throw e
+      }
+    }
+  }
+}
+
+export async function deleteModel(name: string): Promise<void> {
+  const response = await fetch(`${API_BASE}/models/${encodeURIComponent(name)}`, {
+    method: 'DELETE',
+  })
+  if (!response.ok) throw new Error('Failed to delete model')
+}
+
+// ── Admin ────────────────────────────────────────────────────────────────────
+
+export interface AdminStatus {
+  ollama: { status: string; url: string; models: number }
+  database: { status: string; url: string }
+  version: string
+}
+
+export async function getAdminStatus(): Promise<AdminStatus> {
+  const response = await fetch(`${API_BASE}/admin/status`)
+  if (!response.ok) throw new Error('Failed to get admin status')
+  return response.json()
+}
+
+export async function testDbConnection(url: string): Promise<{ status: string; message: string }> {
+  const response = await fetch(`${API_BASE}/admin/db-test`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ url }),
+  })
+  const data = await response.json()
+  if (!response.ok) throw new Error(data.detail || 'Connection failed')
+  return data
 }

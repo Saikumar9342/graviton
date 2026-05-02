@@ -3,7 +3,7 @@
 import { Menu, Sun, Moon, Sparkles } from 'lucide-react'
 import { useTheme } from '@/components/theme-provider'
 import { Button } from '@/components/ui/button'
-import { SettingsDialog } from './settings-dialog'
+import { SettingsDialog, SessionStats } from './settings-dialog'
 import { Settings } from '@/lib/types'
 import { cn } from '@/lib/utils'
 
@@ -12,6 +12,7 @@ interface ChatHeaderProps {
   isSidebarCollapsed?: boolean
   settings: Settings
   onSaveSettings: (settings: Settings) => void
+  session?: SessionStats
 }
 
 export function ChatHeader({
@@ -19,6 +20,7 @@ export function ChatHeader({
   isSidebarCollapsed = false,
   settings,
   onSaveSettings,
+  session,
 }: ChatHeaderProps) {
   const { theme, setTheme } = useTheme()
 
@@ -63,7 +65,7 @@ export function ChatHeader({
           <Moon className="absolute h-4 w-4 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100 text-primary" />
           <span className="sr-only">Toggle theme</span>
         </Button>
-        <SettingsDialog settings={settings} onSave={onSaveSettings} />
+        <SettingsDialog settings={settings} onSave={onSaveSettings} session={session} />
       </div>
     </header>
   )

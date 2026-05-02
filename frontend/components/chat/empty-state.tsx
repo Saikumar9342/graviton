@@ -36,7 +36,7 @@ interface EmptyStateProps {
 
 export function EmptyState({ onSuggestionClick }: EmptyStateProps) {
   return (
-    <div className="flex flex-col items-center justify-center min-h-[85vh] px-4 select-none">
+    <div className="flex flex-1 flex-col items-center justify-center py-12 px-4 select-none">
 
       {/* Icon mark */}
       <div className="mb-7 relative animate-float">
