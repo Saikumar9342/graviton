@@ -267,7 +267,7 @@ function ChatRow({
         onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && onSelect()}
         className={cn(
           'flex-1 min-w-0 text-[13px] leading-snug truncate',
-          isActive ? 'font-medium text-foreground' : 'font-normal text-foreground/60',
+          isActive ? 'font-medium text-foreground' : 'font-normal text-foreground/80',
         )}
       >
         {shortTitle}
@@ -554,12 +554,12 @@ export function ChatSidebar({
                 <Plus className="h-3.5 w-3.5 shrink-0" /> New chat
               </Button>
               <div className="relative">
-                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground/30 pointer-events-none" />
+                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground/60 pointer-events-none" />
                 <input
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   placeholder="Search chats…"
-                  className="w-full h-8 pl-8 pr-7 text-xs bg-muted/20 border border-border/25 focus:outline-none focus:ring-1 focus:ring-primary/30 rounded-2xl placeholder:text-muted-foreground/25 text-foreground/70"
+                  className="w-full h-8 pl-8 pr-7 text-xs bg-muted/20 border border-border/25 focus:outline-none focus:ring-1 focus:ring-primary/30 rounded-2xl placeholder:text-muted-foreground/60 text-foreground"
                 />
                 {search && (
                   <button
@@ -582,8 +582,8 @@ export function ChatSidebar({
             {!isCollapsed && pinnedChats.length > 0 && (
               <div className="mb-1">
                 <div className="flex items-center gap-1.5 px-3 py-2">
-                  <Pin className="h-2.5 w-2.5 text-muted-foreground/30" />
-                  <p className="text-[10px] font-semibold text-muted-foreground/35 uppercase tracking-widest">Pinned</p>
+                  <Pin className="h-2.5 w-2.5 text-muted-foreground/60" />
+                  <p className="text-[10px] font-semibold text-muted-foreground/60 uppercase tracking-widest">Pinned</p>
                 </div>
                 <div className="space-y-0.5">
                   {pinnedChats.map((chat) => <ChatRow key={chat.id} {...sharedRowProps(chat)} />)}
@@ -595,10 +595,10 @@ export function ChatSidebar({
             {!isCollapsed && (
               <div className="mb-1">
                 <div className="flex items-center justify-between px-3 py-2">
-                  <p className="text-[10px] font-semibold text-muted-foreground/35 uppercase tracking-widest">Projects</p>
+                  <p className="text-[10px] font-semibold text-muted-foreground/60 uppercase tracking-widest">Projects</p>
                   <button
                     onClick={() => setCreateDialogOpen(true)}
-                    className="h-5 w-5 rounded-md flex items-center justify-center text-muted-foreground/25 hover:text-primary hover:bg-primary/10 transition-colors"
+                    className="h-5 w-5 rounded-md flex items-center justify-center text-muted-foreground/60 hover:text-primary hover:bg-primary/10 transition-colors"
                     title="New project"
                   >
                     <Plus className="h-3 w-3" />
@@ -608,7 +608,7 @@ export function ChatSidebar({
                 {projects.length === 0 ? (
                   <button
                     onClick={() => setCreateDialogOpen(true)}
-                    className="flex items-center gap-2 px-3 py-1.5 mx-1 text-[12px] text-muted-foreground/30 hover:text-foreground/60 hover:bg-muted/30 rounded-lg transition-all w-[calc(100%-8px)]"
+                    className="flex items-center gap-2 px-3 py-1.5 mx-1 text-[12px] text-muted-foreground/60 hover:text-foreground hover:bg-muted/30 rounded-lg transition-all w-[calc(100%-8px)]"
                   >
                     <FolderPlus className="h-3.5 w-3.5" /> New project
                   </button>
@@ -624,7 +624,7 @@ export function ChatSidebar({
                             className="group/proj flex items-center gap-1.5 px-2 py-1.5 rounded-lg hover:bg-muted/25 transition-colors cursor-pointer select-none"
                             onClick={() => toggleProjectCollapse(project.id)}
                           >
-                            <ChevronDown className={cn('h-3 w-3 text-muted-foreground/25 shrink-0 transition-transform duration-200', isCollapsedP && '-rotate-90')} />
+                            <ChevronDown className={cn('h-3 w-3 text-muted-foreground/60 shrink-0 transition-transform duration-200', isCollapsedP && '-rotate-90')} />
                             <div className={cn('h-2 w-2 rounded-full shrink-0 transition-colors', COLOR_DOT[project.color] ?? 'bg-primary/50')} />
 
                             {editingProjectId === project.id ? (
@@ -653,7 +653,7 @@ export function ChatSidebar({
                                 </button>
                               </div>
                             ) : (
-                              <span className="flex-1 text-[12px] font-medium text-foreground/55 truncate">{project.name}</span>
+                              <span className="flex-1 text-[12px] font-medium text-foreground/85 truncate">{project.name}</span>
                             )}
 
                             {!editingProjectId && (
@@ -703,7 +703,7 @@ export function ChatSidebar({
             {grouped.map(({ label, chats: groupChats }) => (
               <div key={label} className="mb-1">
                 {!isCollapsed && (
-                  <p className="px-3 py-2 text-[10px] font-semibold text-muted-foreground/35 uppercase tracking-widest">{label}</p>
+                  <p className="px-3 py-2 text-[10px] font-semibold text-muted-foreground/60 uppercase tracking-widest">{label}</p>
                 )}
                 <div className="space-y-0.5">
                   {groupChats.map((chat) =>
