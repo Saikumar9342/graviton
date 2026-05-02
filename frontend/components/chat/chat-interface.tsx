@@ -269,7 +269,6 @@ export function ChatInterface() {
     return (
       <div className="flex h-[100svh] items-center justify-center bg-background">
         <div className="flex flex-col items-center gap-2">
-          <Sparkles className="h-4 w-4 text-primary animate-pulse" />
           <p className="text-xs text-muted-foreground animate-pulse">Loading…</p>
         </div>
       </div>
