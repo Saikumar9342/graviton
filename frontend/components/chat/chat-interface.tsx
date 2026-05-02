@@ -390,7 +390,7 @@ export function ChatInterface() {
               <EmptyState onSuggestionClick={(text) => handleSend(text)} />
             ) : (
               <div 
-                className="pb-36 pt-6 mx-auto w-full flex flex-col"
+                className="pt-6 mx-auto w-full flex flex-col"
                 style={{ 
                   maxWidth: 'var(--chat-max-width)',
                   gap: 'var(--message-spacing)'

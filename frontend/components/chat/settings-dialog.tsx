@@ -727,7 +727,7 @@ export function SettingsDialog({ settings, onSave, session }: SettingsDialogProp
                 <div className="space-y-3">
                   <SLabel className="text-[10px]">UI Density</SLabel>
                   <div className="flex gap-1.5 p-1.5 rounded-xl bg-muted/30 border border-border/40">
-                    {(['compact', 'comfortable', 'spacious'] as const).map((v) => (
+                    {(['compact', 'comfort', 'spacious'] as const).map((v) => (
                       <button
                         key={v}
                         onClick={() => update('uiDensity', v)}

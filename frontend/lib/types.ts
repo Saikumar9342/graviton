@@ -54,7 +54,7 @@ export interface Settings {
   fontWeight: number
   glassTintColor: string
   glassSaturation: number
-  uiDensity: 'compact' | 'comfortable' | 'spacious'
+  uiDensity: 'compact' | 'comfort' | 'spacious'
   glowSpread: number
   borderStyle: 'solid' | 'dashed' | 'dotted'
   gridOpacity: number
@@ -98,7 +98,7 @@ export const DEFAULT_SETTINGS: Settings = {
   fontWeight: 500,
   glassTintColor: '#ffffff',
   glassSaturation: 100,
-  uiDensity: 'comfortable',
+  uiDensity: 'comfort',
   glowSpread: 0,
   borderStyle: 'solid',
   gridOpacity: 0,
