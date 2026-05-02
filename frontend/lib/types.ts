@@ -51,6 +51,14 @@ export interface Settings {
   lineHeight: number
   letterSpacing: number
   backgroundOpacity: number
+  fontWeight: number
+  glassTintColor: string
+  glassSaturation: number
+  uiDensity: 'compact' | 'comfortable' | 'spacious'
+  glowSpread: number
+  borderStyle: 'solid' | 'dashed' | 'dotted'
+  gridOpacity: number
+  backgroundPattern: 'none' | 'grid' | 'dots' | 'mesh'
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -87,6 +95,14 @@ export const DEFAULT_SETTINGS: Settings = {
   lineHeight: 160,
   letterSpacing: 0,
   backgroundOpacity: 100,
+  fontWeight: 500,
+  glassTintColor: '#ffffff',
+  glassSaturation: 100,
+  uiDensity: 'comfortable',
+  glowSpread: 0,
+  borderStyle: 'solid',
+  gridOpacity: 0,
+  backgroundPattern: 'none',
 }
 
 export const ACCENT_COLORS: { id: string; name: string; class: string; hex: string }[] = [
@@ -122,4 +138,12 @@ export const OPENAI_MODELS = [
 export const ANTHROPIC_MODELS = [
   { id: 'claude-sonnet-4-6', name: 'Claude Sonnet 4.6', provider: 'Anthropic', badge: 'Latest' },
   { id: 'claude-haiku-4-5-20251001', name: 'Claude Haiku 4.5', provider: 'Anthropic', badge: 'Fast' },
+]
+
+export const FONT_FAMILIES = [
+  { name: 'Inter', value: 'Inter' },
+  { name: 'JetBrains Mono', value: "'JetBrains Mono'" },
+  { name: 'Outfit', value: "'Outfit'" },
+  { name: 'Roboto', value: "'Roboto'" },
+  { name: 'System UI', value: 'system-ui' },
 ]

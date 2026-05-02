@@ -62,6 +62,7 @@ import {
   ACCENT_COLORS,
   OPENAI_MODELS,
   ANTHROPIC_MODELS,
+  FONT_FAMILIES,
 } from '@/lib/types'
 import { cn } from '@/lib/utils'
 
@@ -295,6 +296,33 @@ export function SettingsDialog({ settings, onSave, session }: SettingsDialogProp
     if (key === 'fontSize') {
       root.setAttribute('data-font-size', value as string)
     }
+    if (key === 'fontWeight') {
+      root.style.setProperty('--font-weight', String(value))
+    }
+    if (key === 'animationsEnabled') {
+      root.setAttribute('data-animations', value ? 'true' : 'false')
+    }
+    if (key === 'glassTintColor') {
+      root.style.setProperty('--glass-tint', value as string)
+    }
+    if (key === 'glassSaturation') {
+      root.style.setProperty('--glass-saturation', `${value}%`)
+    }
+    if (key === 'uiDensity') {
+      root.setAttribute('data-density', value as string)
+    }
+    if (key === 'glowSpread') {
+      root.style.setProperty('--glow-spread', `${value}px`)
+    }
+    if (key === 'borderStyle') {
+      root.style.setProperty('--border-style', value as string)
+    }
+    if (key === 'gridOpacity') {
+      root.style.setProperty('--grid-opacity', String((value as number) / 100))
+    }
+    if (key === 'backgroundPattern') {
+      root.setAttribute('data-pattern', value as string)
+    }
   }
 
   const handleSave = () => {
@@ -333,6 +361,15 @@ export function SettingsDialog({ settings, onSave, session }: SettingsDialogProp
     root.style.setProperty('--chat-max-width', `${settings.chatMaxWidth}px`)
     root.style.setProperty('--message-spacing', `${settings.messageSpacing}px`)
     root.style.setProperty('--accent-saturation', `${settings.accentSaturation}%`)
+    root.style.setProperty('--font-weight', String(settings.fontWeight))
+    root.setAttribute('data-animations', settings.animationsEnabled ? 'true' : 'false')
+    root.style.setProperty('--glass-tint', settings.glassTintColor)
+    root.style.setProperty('--glass-saturation', `${settings.glassSaturation}%`)
+    root.setAttribute('data-density', settings.uiDensity)
+    root.style.setProperty('--glow-spread', `${settings.glowSpread}px`)
+    root.style.setProperty('--border-style', settings.borderStyle)
+    root.style.setProperty('--grid-opacity', String(settings.gridOpacity / 100))
+    root.setAttribute('data-pattern', settings.backgroundPattern)
     setTheme(settings.theme)
   }
 
@@ -479,28 +516,29 @@ export function SettingsDialog({ settings, onSave, session }: SettingsDialogProp
               <div className="space-y-4 pt-2">
                 <div className="flex items-center justify-between">
                   <SLabel className="mb-0">Accent Color</SLabel>
-                  <div className="flex items-center gap-2 px-2 py-1 rounded-lg bg-muted/30 border border-border/40">
-                    <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: local.accentColor }} />
-                    <code className="text-[10px] font-mono text-muted-foreground uppercase">{local.accentColor}</code>
+                  <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-primary/5 border border-primary/20">
+                    <div className="w-2.5 h-2.5 rounded-full shadow-[0_0_8px_var(--primary)]" style={{ backgroundColor: local.accentColor }} />
+                    <code className="text-[11px] font-mono font-bold text-primary uppercase">{local.accentColor}</code>
                   </div>
                 </div>
                 
-                <div className="flex flex-wrap gap-3">
+                <div className="flex flex-wrap gap-2.5">
                   {ACCENT_COLORS.map((c) => (
                     <button
                       key={c.id}
                       onClick={() => update('accentColor', c.hex)}
                       className={cn(
-                        'h-8 w-8 rounded-full transition-all hover:scale-110 flex items-center justify-center relative shadow-md ring-offset-2 ring-offset-background',
-                        local.accentColor === c.hex && 'ring-2 ring-primary scale-110',
+                        'h-10 w-10 rounded-2xl transition-all hover:scale-110 flex items-center justify-center relative shadow-sm ring-offset-2 ring-offset-background group',
+                        local.accentColor === c.hex && 'ring-2 ring-primary scale-105',
                       )}
                       style={{ backgroundColor: c.hex }}
                     >
-                      {local.accentColor === c.hex && <Check className="h-3.5 w-3.5 text-white drop-shadow-md" />}
+                      <div className="absolute inset-0 opacity-0 group-hover:opacity-20 bg-white transition-opacity rounded-2xl" />
+                      {local.accentColor === c.hex && <Check className="h-4 w-4 text-white drop-shadow-md" />}
                     </button>
                   ))}
                   
-                  <div className="relative group">
+                  <div className="relative h-10 w-10 group">
                     <input
                       type="color"
                       value={local.accentColor}
@@ -508,17 +546,20 @@ export function SettingsDialog({ settings, onSave, session }: SettingsDialogProp
                       className="absolute inset-0 opacity-0 cursor-pointer w-full h-full z-10"
                     />
                     <div className={cn(
-                      'h-8 w-8 rounded-full border-2 border-dashed flex items-center justify-center transition-all bg-muted/20 group-hover:bg-muted/40 ring-offset-2 ring-offset-background',
+                      'h-full w-full rounded-2xl border-2 border-dashed flex items-center justify-center transition-all bg-muted/20 group-hover:bg-muted/40 ring-offset-2 ring-offset-background overflow-hidden relative',
                       !ACCENT_COLORS.some(c => c.hex === local.accentColor)
-                        ? 'border-primary ring-2 ring-primary scale-110'
+                        ? 'border-primary ring-2 ring-primary scale-105 shadow-[0_0_12px_var(--primary)]'
                         : 'border-border/40 text-muted-foreground/40'
                     )}
                     style={{ backgroundColor: !ACCENT_COLORS.some(c => c.hex === local.accentColor) ? local.accentColor : undefined }}
                     >
                       {!ACCENT_COLORS.some(c => c.hex === local.accentColor) ? (
-                        <Check className="h-3.5 w-3.5 text-white drop-shadow-md" />
+                        <Check className="h-4 w-4 text-white drop-shadow-md" />
                       ) : (
-                        <Plus className="h-3.5 w-3.5" />
+                        <div className="flex flex-col items-center gap-0.5">
+                          <Plus className="h-3 w-3" />
+                          <span className="text-[7px] font-bold uppercase tracking-tighter">HEX</span>
+                        </div>
                       )}
                     </div>
                   </div>
@@ -629,17 +670,126 @@ export function SettingsDialog({ settings, onSave, session }: SettingsDialogProp
                     onValueChange={([v]) => update('noiseOpacity', v)}
                   />
                 </div>
+
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <SLabel className="mb-0 text-[10px]">Glow Spread</SLabel>
+                    <span className="text-[10px] font-mono text-primary/60">{local.glowSpread}px</span>
+                  </div>
+                  <Slider
+                    value={[local.glowSpread]}
+                    min={0}
+                    max={100}
+                    step={1}
+                    onValueChange={([v]) => update('glowSpread', v)}
+                  />
+                </div>
+
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <SLabel className="mb-0 text-[10px]">Glow Radius</SLabel>
+                    <span className="text-[10px] font-mono text-primary/60">{local.glowRadius}px</span>
+                  </div>
+                  <Slider
+                    value={[local.glowRadius]}
+                    min={0}
+                    max={100}
+                    step={1}
+                    onValueChange={([v]) => update('glowRadius', v)}
+                  />
+                </div>
+
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <SLabel className="mb-0 text-[10px]">Glass Tint</SLabel>
+                    <div className="relative h-6 w-12 rounded-lg border border-border/40 overflow-hidden">
+                      <input
+                        type="color"
+                        value={local.glassTintColor}
+                        onChange={(e) => update('glassTintColor', e.target.value)}
+                        className="absolute inset-0 opacity-0 cursor-pointer w-full h-full z-10"
+                      />
+                      <div className="h-full w-full" style={{ backgroundColor: local.glassTintColor }} />
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] text-muted-foreground/60">Tint Saturation</span>
+                    <span className="text-[10px] font-mono text-primary/60">{local.glassSaturation}%</span>
+                  </div>
+                  <Slider
+                    value={[local.glassSaturation]}
+                    min={0}
+                    max={200}
+                    step={5}
+                    onValueChange={([v]) => update('glassSaturation', v)}
+                  />
+                </div>
+
+                <div className="space-y-3">
+                  <SLabel className="text-[10px]">UI Density</SLabel>
+                  <div className="flex gap-1.5 p-1 rounded-xl bg-muted/30 border border-border/40">
+                    {(['compact', 'comfortable', 'spacious'] as const).map((v) => (
+                      <button
+                        key={v}
+                        onClick={() => update('uiDensity', v)}
+                        className={cn(
+                          'flex-1 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all',
+                          local.uiDensity === v
+                            ? 'bg-primary text-primary-foreground shadow-sm'
+                            : 'text-muted-foreground hover:bg-muted/50'
+                        )}
+                      >
+                        {v}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  <SLabel className="text-[10px]">Background Pattern</SLabel>
+                  <div className="flex gap-1.5 p-1 rounded-xl bg-muted/30 border border-border/40">
+                    {(['none', 'grid', 'dots', 'mesh'] as const).map((v) => (
+                      <button
+                        key={v}
+                        onClick={() => update('backgroundPattern', v)}
+                        className={cn(
+                          'flex-1 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all',
+                          local.backgroundPattern === v
+                            ? 'bg-primary text-primary-foreground shadow-sm'
+                            : 'text-muted-foreground hover:bg-muted/50'
+                        )}
+                      >
+                        {v}
+                      </button>
+                    ))}
+                  </div>
+                </div>
               </div>
 
-              <div className="space-y-3 pt-2">
-                <SLabel className="text-[10px]">Background Brightness</SLabel>
-                <Slider
-                  value={[local.backgroundOpacity]}
-                  min={0}
-                  max={100}
-                  step={1}
-                  onValueChange={([v]) => update('backgroundOpacity', v)}
-                />
+              <div className="grid grid-cols-2 gap-x-8 gap-y-6 pt-2">
+                <div className="space-y-3">
+                  <SLabel className="text-[10px]">Background Brightness</SLabel>
+                  <Slider
+                    value={[local.backgroundOpacity]}
+                    min={0}
+                    max={100}
+                    step={1}
+                    onValueChange={([v]) => update('backgroundOpacity', v)}
+                  />
+                </div>
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <SLabel className="mb-0 text-[10px]">Pattern Intensity</SLabel>
+                    <span className="text-[10px] font-mono text-primary/60">{local.gridOpacity}%</span>
+                  </div>
+                  <Slider
+                    value={[local.gridOpacity]}
+                    min={0}
+                    max={100}
+                    step={1}
+                    onValueChange={([v]) => update('gridOpacity', v)}
+                  />
+                </div>
               </div>
             </div>
 
@@ -740,11 +890,11 @@ export function SettingsDialog({ settings, onSave, session }: SettingsDialogProp
                       <SelectValue placeholder="Select font" />
                     </SelectTrigger>
                     <SelectContent className="rounded-xl border-border/40">
-                      <SelectItem value="Inter" className="rounded-lg text-xs">Inter (Default)</SelectItem>
-                      <SelectItem value="'JetBrains Mono'" className="rounded-lg text-xs font-mono">JetBrains Mono</SelectItem>
-                      <SelectItem value="'Outfit'" className="rounded-lg text-xs font-outfit">Outfit</SelectItem>
-                      <SelectItem value="'Roboto'" className="rounded-lg text-xs">Roboto</SelectItem>
-                      <SelectItem value="system-ui" className="rounded-lg text-xs">System UI</SelectItem>
+                      {FONT_FAMILIES.map((f) => (
+                        <SelectItem key={f.value} value={f.value} className="rounded-lg text-xs">
+                          {f.name}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
@@ -764,6 +914,37 @@ export function SettingsDialog({ settings, onSave, session }: SettingsDialogProp
               </div>
 
               <div className="grid grid-cols-2 gap-x-8 gap-y-6">
+                <div className="space-y-3">
+                  <SLabel className="text-[10px]">Animations</SLabel>
+                  <div className="flex items-center justify-between p-2.5 rounded-xl bg-muted/20 border border-border/40">
+                    <span className="text-[11px] font-medium">Motion Effects</span>
+                    <Switch
+                      checked={local.animationsEnabled}
+                      onCheckedChange={(v) => update('animationsEnabled', v)}
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  <SLabel className="text-[10px]">Layout Style</SLabel>
+                  <div className="flex gap-1.5 p-1 rounded-xl bg-muted/30 border border-border/40">
+                    {(['centered', 'full'] as const).map((v) => (
+                      <button
+                        key={v}
+                        onClick={() => update('contentWidth', v)}
+                        className={cn(
+                          'flex-1 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all',
+                          local.contentWidth === v
+                            ? 'bg-primary text-primary-foreground shadow-sm'
+                            : 'text-muted-foreground hover:bg-muted/50'
+                        )}
+                      >
+                        {v}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
                     <SLabel className="mb-0 text-[10px]">Line Height</SLabel>
@@ -792,7 +973,21 @@ export function SettingsDialog({ settings, onSave, session }: SettingsDialogProp
                   />
                 </div>
               </div>
-            </div>
+
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <SLabel className="mb-0 text-[10px]">Font Weight</SLabel>
+                    <span className="text-[10px] font-mono text-primary/60">{local.fontWeight}</span>
+                  </div>
+                  <Slider
+                    value={[local.fontWeight]}
+                    min={100}
+                    max={900}
+                    step={100}
+                    onValueChange={([v]) => update('fontWeight', v)}
+                  />
+                </div>
+              </div>
 
             {/* ── 05. STRUCTURE ──────────────────────────────────────────── */}
             <div className="space-y-6 pt-2">
@@ -833,6 +1028,26 @@ export function SettingsDialog({ settings, onSave, session }: SettingsDialogProp
                     step={0.5}
                     onValueChange={([v]) => update('borderWidth', v)}
                   />
+                </div>
+
+                <div className="space-y-3">
+                  <SLabel className="text-[10px]">Border Style</SLabel>
+                  <div className="flex gap-1.5 p-1 rounded-xl bg-muted/30 border border-border/40">
+                    {(['solid', 'dashed', 'dotted'] as const).map((v) => (
+                      <button
+                        key={v}
+                        onClick={() => update('borderStyle', v)}
+                        className={cn(
+                          'flex-1 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all',
+                          local.borderStyle === v
+                            ? 'bg-primary text-primary-foreground shadow-sm'
+                            : 'text-muted-foreground hover:bg-muted/50'
+                        )}
+                      >
+                        {v}
+                      </button>
+                    ))}
+                  </div>
                 </div>
 
                 <div className="space-y-3">
