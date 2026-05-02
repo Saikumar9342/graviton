@@ -257,8 +257,7 @@ function ChatRow({
         isActive ? 'bg-muted/50' : 'hover:bg-muted/30',
       )}
     >
-      {/* Active stripe */}
-      {isActive && <div className="absolute left-1 top-[6px] bottom-[6px] w-[3px] bg-primary rounded-full pointer-events-none" />}
+      {/* Active stripe removed as per user request */}
 
       {/* Title */}
       <span
@@ -576,7 +575,7 @@ export function ChatSidebar({
         </div>
 
         {/* Chat list */}
-        <ScrollArea className="flex-1 min-h-0">
+        <ScrollArea className="flex-1 min-h-0 [&>[data-slot=scroll-area-scrollbar]]:hidden">
           <div className="pb-4">
 
             {/* Pinned section */}
