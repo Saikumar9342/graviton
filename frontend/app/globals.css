@@ -405,6 +405,54 @@
   backdrop-filter: blur(var(--sidebar-blur));
 }
 
+/* ── Background styles ──────────────────────────────────────────────────── */
+.bg-aurora {
+  background:
+    radial-gradient(ellipse 120% 80% at 10% 20%, oklch(from var(--primary) l c h / 0.12) 0%, transparent 50%),
+    radial-gradient(ellipse 80% 60% at 90% 80%, oklch(from var(--primary) l c h / 0.08) 0%, transparent 50%),
+    radial-gradient(ellipse 60% 80% at 50% 50%, oklch(from var(--primary) l c h / 0.04) 0%, transparent 70%),
+    var(--background);
+  background-attachment: fixed;
+}
+
+.bg-mesh {
+  background-color: var(--background);
+}
+
+.bg-aurora-animated {
+  background:
+    radial-gradient(ellipse 120% 80% at 10% 20%, oklch(from var(--primary) l c h / 0.12) 0%, transparent 50%),
+    radial-gradient(ellipse 80% 60% at 90% 80%, oklch(from var(--primary) l c h / 0.08) 0%, transparent 50%),
+    var(--background);
+  animation: aurora-shift 12s ease-in-out infinite alternate;
+}
+
+@keyframes aurora-shift {
+  0%   { background-position: 0% 0%, 100% 100%; }
+  100% { background-position: 20% 20%, 80% 80%; }
+}
+
+/* ── Background patterns (body::after) ──────────────────────────────────── */
+/* Default: grid pattern, controlled by --grid-opacity */
+[data-pattern="dots"] body::after {
+  background-image: radial-gradient(circle, var(--primary) 1px, transparent 1px) !important;
+  background-size: 28px 28px !important;
+  opacity: calc(var(--grid-opacity) * 0.5) !important;
+}
+
+[data-pattern="mesh"] body::after {
+  background-image:
+    linear-gradient(to right, var(--primary) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--primary) 1px, transparent 1px),
+    radial-gradient(circle, var(--primary) 1px, transparent 1px) !important;
+  background-size: 60px 60px, 60px 60px, 30px 30px !important;
+  opacity: calc(var(--grid-opacity) * 0.25) !important;
+}
+
+[data-pattern="none"] body::after {
+  opacity: 0 !important;
+}
+
 /* Fix visibility for specific parts */
 .sidebar-search-input {
   @apply placeholder:text-muted-foreground/80 text-foreground font-bold;

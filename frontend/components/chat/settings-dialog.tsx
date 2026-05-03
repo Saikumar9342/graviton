@@ -422,6 +422,8 @@ export function SettingsDialog({
     }
     if (key === "fontFamily") {
       root.style.setProperty("--font-sans", value as string);
+      root.style.setProperty("--font-family", value as string);
+      document.body.style.fontFamily = value as string;
     }
     if (key === "theme") {
       setTheme(value as "light" | "dark" | "system");
@@ -546,6 +548,8 @@ export function SettingsDialog({
     root.style.setProperty("--glow-primary", `${settings.accentColor}4d`);
     root.style.setProperty("--radius", `${settings.borderRadius}px`);
     root.style.setProperty("--font-sans", settings.fontFamily);
+    root.style.setProperty("--font-family", settings.fontFamily);
+    document.body.style.fontFamily = settings.fontFamily;
     root.style.setProperty("--contrast", `${settings.contrast / 100}`);
     root.setAttribute("data-sidebar", settings.sidebarPosition);
     root.setAttribute("data-content", settings.contentWidth);
@@ -1088,6 +1092,26 @@ export function SettingsDialog({
                         className={cn(
                           "flex-1 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all",
                           local.uiDensity === v
+                            ? "bg-primary text-primary-foreground shadow-sm"
+                            : "text-muted-foreground hover:bg-muted/50",
+                        )}
+                      >
+                        {v}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  <SLabel className="text-[10px]">Background Style</SLabel>
+                  <div className="flex gap-1.5 p-1 rounded-xl bg-muted/30 border border-border/40">
+                    {(["solid", "gradient", "aurora", "mesh"] as const).map((v) => (
+                      <button
+                        key={v}
+                        onClick={() => update("backgroundStyle", v)}
+                        className={cn(
+                          "flex-1 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all",
+                          local.backgroundStyle === v
                             ? "bg-primary text-primary-foreground shadow-sm"
                             : "text-muted-foreground hover:bg-muted/50",
                         )}

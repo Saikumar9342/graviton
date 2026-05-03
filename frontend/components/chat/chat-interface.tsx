@@ -109,6 +109,8 @@ export function ChatInterface() {
     root.style.setProperty('--glow-primary', `${s.accentColor}4d`)
     root.style.setProperty('--radius', `${s.borderRadius}px`)
     root.style.setProperty('--font-sans', s.fontFamily)
+    root.style.setProperty('--font-family', s.fontFamily)
+    document.body.style.fontFamily = s.fontFamily
     root.style.setProperty('--glass-opacity', String(s.glassOpacity / 100))
     root.style.setProperty('--glow-intensity', String(s.glowIntensity / 100))
     root.style.setProperty('--glass-blur', `${s.glassBlur}px`)
@@ -124,7 +126,7 @@ export function ChatInterface() {
     root.style.setProperty('--contrast', String(s.contrast / 100))
     root.style.setProperty('--noise-opacity', String(s.noiseOpacity / 100))
     root.style.setProperty('--line-height', String(s.lineHeight / 100))
-    root.style.setProperty('--letter-spacing', `${s.letterSpacing}px`)
+    root.style.setProperty('--letter-spacing', `${s.letterSpacing}em`)
     root.style.setProperty('--bg-opacity', String(s.backgroundOpacity / 100))
     root.style.setProperty('--font-weight', String(s.fontWeight))
     root.style.setProperty('--glass-tint', s.glassTintColor)
@@ -509,11 +511,10 @@ setMessages((prev) => prev.map((m) => m.id === assistantId ? { ...m, content: da
   }
 
   const getBackgroundClass = () => {
-    if (!settings.animationsEnabled) return 'bg-background'
     switch (settings.backgroundStyle) {
-      case 'aurora': return 'bg-aurora'
-      case 'mesh': return 'bg-mesh'
+      case 'aurora': return settings.animationsEnabled ? 'bg-aurora-animated' : 'bg-aurora'
       case 'gradient': return 'bg-gradient-to-br from-background via-background to-primary/5'
+      case 'mesh': return 'bg-mesh'
       default: return 'bg-background'
     }
   }
