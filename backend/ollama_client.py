@@ -25,7 +25,15 @@ async def chat_with_ollama(model: str, messages: List[Dict[str, str]]) -> AsyncG
                     data = json.loads(line)
                     if "message" in data and "content" in data["message"]:
                         yield data["message"]["content"]
+                    
                     if data.get("done"):
+                        usage = {
+                            "prompt_tokens": data.get("prompt_eval_count", 0),
+                            "completion_tokens": data.get("eval_count", 0),
+                            "total_tokens": data.get("prompt_eval_count", 0) + data.get("eval_count", 0)
+                        }
+                        if usage["total_tokens"] > 0:
+                            yield f"__USAGE__:{json.dumps(usage)}"
                         break
                 except json.JSONDecodeError:
                     continue

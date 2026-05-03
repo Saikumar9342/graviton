@@ -11,6 +11,9 @@ export interface ChatMessage {
   role: 'user' | 'assistant'
   content: string
   createdAt: Date
+  prompt_tokens?: number
+  completion_tokens?: number
+  total_tokens?: number
 }
 
 export type ChatBubbleStyle = 'modern' | 'glass' | 'minimal'
@@ -119,10 +122,19 @@ export const MODE_SYSTEM_PROMPTS: Record<string, string> = {
 
 // Static fallback list — overridden at runtime by live Ollama models + provider keys
 export const AVAILABLE_MODELS = [
-  { id: 'llama3:latest', name: 'Llama 3', provider: 'Ollama', badge: 'Latest' },
-  { id: 'mistral:latest', name: 'Mistral', provider: 'Ollama', badge: 'Balanced' },
-  { id: 'deepseek-coder:latest', name: 'DeepSeek Coder', provider: 'Ollama', badge: 'Coding' },
-  { id: 'phi3:latest', name: 'Phi-3', provider: 'Ollama', badge: 'Fast' },
+  { id: 'llama3.1:latest', name: 'Llama 3.1', provider: 'Ollama', badge: 'Latest', category: 'General' },
+  { id: 'llama3:latest', name: 'Llama 3', provider: 'Ollama', badge: 'Stable', category: 'General' },
+  { id: 'mistral:latest', name: 'Mistral', provider: 'Ollama', badge: 'Balanced', category: 'Fast' },
+  { id: 'deepseek-coder-v2:latest', name: 'DeepSeek Coder V2', provider: 'Ollama', badge: 'Coding', category: 'Coding' },
+  { id: 'phi3:latest', name: 'Phi-3', provider: 'Ollama', badge: 'Small', category: 'Fast' },
+  { id: 'qwen2.5:latest', name: 'Qwen 2.5', provider: 'Ollama', badge: 'Smart', category: 'Reasoning' },
+]
+
+export const MODEL_CATEGORIES = [
+  { id: 'General', name: 'General Purpose', desc: 'Balanced for conversation and knowledge.' },
+  { id: 'Coding', name: 'Coding & Technical', desc: 'Optimized for software development and logic.' },
+  { id: 'Reasoning', name: 'Advanced Reasoning', desc: 'Best for complex logic and step-by-step thinking.' },
+  { id: 'Fast', name: 'High Speed', desc: 'Optimized for low-latency, quick responses.' },
 ]
 
 export const OPENAI_MODELS = [

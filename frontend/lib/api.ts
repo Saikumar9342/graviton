@@ -68,6 +68,9 @@ export async function fetchMessages(chatId: string): Promise<ChatMessage[]> {
     role: msg.role,
     content: msg.content,
     createdAt: new Date(msg.created_at),
+    prompt_tokens: msg.prompt_tokens,
+    completion_tokens: msg.completion_tokens,
+    total_tokens: msg.total_tokens,
   }))
 }
 
@@ -255,4 +258,32 @@ export async function testDbConnection(url: string): Promise<{ status: string; m
   const data = await response.json()
   if (!response.ok) throw new Error(data.detail || 'Connection failed')
   return data
+}
+
+export async function fetchGlobalUsage(): Promise<{ prompt_tokens: number; completion_tokens: number; total_tokens: number }> {
+  const response = await fetch(`${API_BASE}/admin/usage`)
+  if (!response.ok) throw new Error('Failed to fetch usage')
+  return response.json()
+}
+
+export interface ModelUsage {
+  model: string
+  display_name: string
+  provider: string
+  requests: number
+  prompt_tokens: number
+  completion_tokens: number
+  total_tokens: number
+  credits?: {
+    limit: number
+    usage: number
+    remaining: number
+    is_free: boolean
+  }
+}
+
+export async function fetchModelUsage(): Promise<ModelUsage[]> {
+  const response = await fetch(`${API_BASE}/admin/model-usage`)
+  if (!response.ok) throw new Error('Failed to fetch model usage')
+  return response.json()
 }

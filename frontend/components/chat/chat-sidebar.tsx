@@ -140,7 +140,7 @@ function SearchChatsDialog({
         className="w-full justify-start gap-3 h-11 text-sm font-medium rounded-2xl border border-border/60 bg-muted/20 hover:bg-muted/40 hover:border-primary/50 text-muted-foreground/40 transition-all"
       >
         <Search className="h-4 w-4 shrink-0 text-muted-foreground/40" />
-        <span className="flex-1 text-left">Search chats…</span>
+        <span className="flex-1 text-left text-muted-foreground/25">Search chats…</span>
       </Button>
 
       <Dialog open={open} onOpenChange={setOpen}>
@@ -155,7 +155,7 @@ function SearchChatsDialog({
               placeholder="Search chats by title…"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="flex-1 bg-transparent text-sm focus:outline-none placeholder:text-muted-foreground/40 text-foreground"
+              className="flex-1 bg-transparent text-sm focus:outline-none placeholder:text-muted-foreground/25 text-foreground"
             />
             {searchTerm && (
               <button
@@ -259,7 +259,7 @@ function CreateProjectDialog({
               value={name}
               onChange={(e) => setName(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleCreate()}
-              className="h-10 text-sm rounded-xl bg-muted/20 border-border/60 focus:border-primary/50"
+              className="h-10 text-sm rounded-xl bg-muted/20 border-border/60 focus:border-primary/50 placeholder:text-muted-foreground/25"
             />
           </div>
 
@@ -855,8 +855,8 @@ export function ChatSidebar({
               This will permanently delete the conversation and all its messages. This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter className="gap-2 sm:gap-0">
-            <AlertDialogCancel className="rounded-xl h-10 text-[13px] border-border/40 hover:bg-muted/50">Cancel</AlertDialogCancel>
+          <AlertDialogFooter className="gap-3">
+            <AlertDialogCancel className="rounded-xl h-10 text-[13px] border-border/40 hover:bg-muted/50 px-5">Cancel</AlertDialogCancel>
             <AlertDialogAction 
               onClick={() => {
                 if (deletingChatId) {
@@ -864,7 +864,7 @@ export function ChatSidebar({
                   setDeletingChatId(null)
                 }
               }}
-              className="rounded-xl h-10 text-[13px] bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              className="rounded-xl h-10 text-[13px] bg-destructive text-destructive-foreground hover:bg-destructive/90 px-5"
             >
               Delete
             </AlertDialogAction>

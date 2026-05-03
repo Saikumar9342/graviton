@@ -1,3 +1,4 @@
+from contextlib import asynccontextmanager
 from fastapi import FastAPI, Depends, HTTPException, Body, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
@@ -15,46 +16,66 @@ from datetime import datetime, timezone
 import models, database, ollama_client
 from pydantic import BaseModel, ConfigDict
 
-app = FastAPI(title="Graviton AI API")
-
-try:
-    models.Base.metadata.create_all(bind=database.engine)
-    print("Database tables created successfully.")
-except Exception as e:
-    print(f"Warning: Could not connect to database. {e}")
-
-@app.on_event("startup")
-async def startup():
-    # Migrate: add new columns to registered_models if they don't exist
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Startup logic
     try:
+        models.Base.metadata.create_all(bind=database.engine)
+        print("Database tables created successfully.")
+    except Exception as e:
+        print(f"Warning: Could not connect to database. {e}")
+
+    # Migrate: add new columns if they don't exist
+    try:
+        from sqlalchemy import inspect
+        inspector = inspect(database.engine)
+        
+        # Check registered_models
+        rm_cols = [c["name"] for c in inspector.get_columns("registered_models")]
+        # Check messages
+        msg_cols = [c["name"] for c in inspector.get_columns("messages")]
+
         with database.engine.connect() as conn:
+            # registered_models migrations
             for col, ddl in [
                 ("provider",     "ALTER TABLE registered_models ADD COLUMN provider VARCHAR DEFAULT 'ollama' NOT NULL"),
                 ("api_base_url", "ALTER TABLE registered_models ADD COLUMN api_base_url VARCHAR"),
                 ("api_key",      "ALTER TABLE registered_models ADD COLUMN api_key VARCHAR"),
             ]:
-                try:
-                    conn.execute(text(f"SELECT {col} FROM registered_models LIMIT 1"))
-                except Exception:
+                if col not in rm_cols:
+                    conn.execute(text(ddl))
+                    conn.commit()
+
+            # messages migrations
+            for col, ddl in [
+                ("prompt_tokens",     "ALTER TABLE messages ADD COLUMN prompt_tokens INTEGER"),
+                ("completion_tokens", "ALTER TABLE messages ADD COLUMN completion_tokens INTEGER"),
+                ("total_tokens",      "ALTER TABLE messages ADD COLUMN total_tokens INTEGER"),
+                ("model",             "ALTER TABLE messages ADD COLUMN model VARCHAR"),
+            ]:
+                if col not in msg_cols:
                     conn.execute(text(ddl))
                     conn.commit()
     except Exception as e:
         print(f"Warning: Migration check failed: {e}")
 
-    # Seed registered_models from Ollama on startup
+    # Seed registered_models from Ollama on startup if empty
     try:
-        installed = await ollama_client.get_ollama_models()
         with database.SessionLocal() as db:
-            for name in installed:
-                exists = db.query(models.RegisteredModel).filter(
-                    models.RegisteredModel.ollama_name == name
-                ).first()
-                if not exists:
+            count = db.query(models.RegisteredModel).count()
+            if count == 0:
+                installed = await ollama_client.get_ollama_models()
+                for name in installed:
                     display = name.split(":")[0].replace("-", " ").title()
                     db.add(models.RegisteredModel(ollama_name=name, display_name=display, provider='ollama'))
-            db.commit()
+                db.commit()
+                print(f"Initial model seed completed. Added {len(installed)} models.")
     except Exception as e:
-        print(f"Warning: Auto-sync models failed: {e}")
+        print(f"Warning: Auto-seed models failed: {e}")
+    
+    yield
+
+app = FastAPI(title="Graviton AI API", lifespan=lifespan)
 
 frontend_url = os.getenv("FRONTEND_URL", "http://localhost:3000")
 
@@ -115,6 +136,9 @@ class MessageResponse(BaseModel):
     role: str
     content: str
     created_at: datetime
+    prompt_tokens: Optional[int] = None
+    completion_tokens: Optional[int] = None
+    total_tokens: Optional[int] = None
 
 class ChatResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
@@ -327,6 +351,7 @@ async def _stream_openai_compat(model: str, messages: list, api_key: str, base_u
         "model": model,
         "messages": messages,
         "stream": True,
+        "stream_options": {"include_usage": True}
     }
     async with httpx.AsyncClient(timeout=120.0) as client:
         async with client.stream(
@@ -346,9 +371,14 @@ async def _stream_openai_compat(model: str, messages: list, api_key: str, base_u
                     break
                 try:
                     chunk = json.loads(data)
-                    delta = chunk["choices"][0]["delta"].get("content", "")
-                    if delta:
-                        yield delta
+                    # Check for usage info (usually in the last chunk when include_usage is True)
+                    if "usage" in chunk and chunk["usage"]:
+                        yield f"__USAGE__:{json.dumps(chunk['usage'])}"
+                    
+                    if "choices" in chunk and len(chunk["choices"]) > 0:
+                        delta = chunk["choices"][0]["delta"].get("content", "")
+                        if delta:
+                            yield delta
                 except Exception:
                     continue
 
@@ -377,6 +407,7 @@ async def chat_endpoint(
                 content=user_msg.get("content", "") or next(
                     (p["text"] for p in user_msg.get("parts", []) if p["type"] == "text"), ""
                 ),
+                model=model,
             )
             db.add(db_msg)
             db.commit()
@@ -421,6 +452,7 @@ async def chat_endpoint(
 
         full_response = ""
         error_msg = None
+        usage_data = {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}
 
         # Look up the registered model to determine provider
         db_model = None
@@ -444,11 +476,21 @@ async def chat_endpoint(
                     api_key=db_model.api_key or "",
                     base_url=db_model.api_base_url,
                 ):
+                    if chunk.startswith("__USAGE__:"):
+                        try:
+                            usage_data.update(json.loads(chunk[10:]))
+                        except Exception: pass
+                        continue
                     full_response += chunk
                     yield chunk
             else:
                 # Default to Ollama
                 async for chunk in ollama_client.chat_with_ollama(model, ollama_messages):
+                    if chunk.startswith("__USAGE__:"):
+                        try:
+                            usage_data.update(json.loads(chunk[10:]))
+                        except Exception: pass
+                        continue
                     full_response += chunk
                     yield chunk
         except Exception as e:
@@ -473,6 +515,10 @@ async def chat_endpoint(
                         chat_id=chat_id,
                         role="assistant",
                         content=full_response,
+                        model=model,
+                        prompt_tokens=usage_data.get("prompt_tokens"),
+                        completion_tokens=usage_data.get("completion_tokens"),
+                        total_tokens=usage_data.get("total_tokens"),
                     )
                     session.add(assistant_msg)
                     db_chat = session.query(models.Chat).filter(models.Chat.id == chat_id).first()
@@ -623,6 +669,79 @@ async def admin_status():
         },
         "version": "1.0.0",
     }
+
+@app.get("/api/admin/usage")
+async def get_global_usage(db: Session = Depends(database.get_db)):
+    from sqlalchemy import func
+    usage = db.query(
+        func.sum(models.Message.prompt_tokens).label("prompt"),
+        func.sum(models.Message.completion_tokens).label("completion"),
+        func.sum(models.Message.total_tokens).label("total")
+    ).first()
+    
+    return {
+        "prompt_tokens": usage.prompt or 0,
+        "completion_tokens": usage.completion or 0,
+        "total_tokens": usage.total or 0
+    }
+
+@app.get("/api/admin/model-usage")
+async def get_model_usage(db: Session = Depends(database.get_db)):
+    from sqlalchemy import func
+    
+    # Get local database stats grouped by model
+    # We use func.count for requests and func.sum for tokens
+    stats = db.query(
+        models.Message.model,
+        func.count(models.Message.id).label("requests"),
+        func.sum(models.Message.prompt_tokens).label("prompt"),
+        func.sum(models.Message.completion_tokens).label("completion"),
+        func.sum(models.Message.total_tokens).label("total")
+    ).group_by(models.Message.model).all()
+    
+    model_stats = []
+    for s in stats:
+        # Get provider info for this model
+        reg = db.query(models.RegisteredModel).filter(
+            models.RegisteredModel.ollama_name == s.model
+        ).first()
+        
+        provider_name = reg.provider if reg else "ollama"
+        display_name = reg.display_name if reg else s.model
+        
+        stat_item = {
+            "model": s.model,
+            "display_name": display_name,
+            "provider": provider_name,
+            "requests": s.requests or 0,
+            "prompt_tokens": s.prompt or 0,
+            "completion_tokens": s.completion or 0,
+            "total_tokens": s.total or 0,
+            "credits": None
+        }
+        
+        # If OpenRouter, try to fetch credits
+        if reg and reg.provider == "openai-compat" and reg.api_key and "openrouter.ai" in (reg.api_base_url or ""):
+            try:
+                async with httpx.AsyncClient(timeout=3.0) as client:
+                    r = await client.get(
+                        "https://openrouter.ai/api/v1/key",
+                        headers={"Authorization": f"Bearer {reg.api_key}"}
+                    )
+                    if r.status_code == 200:
+                        data = r.json().get("data", {})
+                        stat_item["credits"] = {
+                            "limit": data.get("limit"),
+                            "usage": data.get("usage"),
+                            "remaining": (data.get("limit") or 0) - (data.get("usage") or 0),
+                            "is_free": data.get("is_free")
+                        }
+            except Exception:
+                pass
+                
+        model_stats.append(stat_item)
+        
+    return model_stats
 
 @app.post("/api/admin/db-test")
 async def test_db_connection(body: dict = Body(...)):

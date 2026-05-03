@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, DateTime, ForeignKey, Text, Boolean, JSON
+from sqlalchemy import Column, String, DateTime, ForeignKey, Text, Boolean, JSON, Integer
 from sqlalchemy.orm import relationship
 from database import Base
 import uuid
@@ -21,7 +21,13 @@ class Message(Base):
     chat_id = Column(String, ForeignKey("chats.id", ondelete="CASCADE"), nullable=False)
     role = Column(String, nullable=False) # 'user' or 'assistant'
     content = Column(Text, nullable=False)
+    model = Column(String, nullable=True) # The model that generated this (or user message model context)
     created_at = Column(DateTime, default=datetime.utcnow)
+    
+    # Token usage tracking
+    prompt_tokens = Column(Integer, nullable=True)
+    completion_tokens = Column(Integer, nullable=True)
+    total_tokens = Column(Integer, nullable=True)
 
     chat = relationship("Chat", back_populates="messages")
 

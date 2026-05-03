@@ -28,6 +28,9 @@ type Message = {
   id: string
   role: 'user' | 'assistant'
   content: string
+  prompt_tokens?: number
+  completion_tokens?: number
+  total_tokens?: number
 }
 
 function estimateTokens(text: string): number {
@@ -60,7 +63,14 @@ export function ChatInterface() {
         else if (m.api_base_url?.includes('together')) { provider = 'Together AI'; badge = 'Cloud'; }
         else if (m.api_base_url?.includes('nvidia')) { provider = 'NVIDIA'; badge = 'H100'; }
       }
-      return { id: m.ollama_name, name: m.display_name, provider, badge }
+
+      let category = 'General'
+      const lowName = m.ollama_name.toLowerCase()
+      if (lowName.includes('coder') || lowName.includes('code')) category = 'Coding'
+      else if (lowName.includes('qwen') || lowName.includes('reasoning') || lowName.includes('phi')) category = 'Reasoning'
+      else if (lowName.includes('mistral') || lowName.includes('haiku')) category = 'Fast'
+      
+      return { id: m.ollama_name, name: m.display_name, provider, badge, category }
     })
 
   const [messages, setMessages] = useState<Message[]>([])
@@ -164,7 +174,14 @@ export function ChatInterface() {
     setIsFetchingMessages(true)
     try {
       const backendMessages = await fetchMessages(id)
-      setMessages(backendMessages.map((m) => ({ id: m.id, role: m.role, content: m.content })))
+      setMessages(backendMessages.map((m) => ({ 
+        id: m.id, 
+        role: m.role, 
+        content: m.content,
+        prompt_tokens: m.prompt_tokens,
+        completion_tokens: m.completion_tokens,
+        total_tokens: m.total_tokens
+      })))
     } catch (err) {
       console.error('Failed to fetch messages:', err)
       setMessages([])
@@ -274,7 +291,30 @@ export function ChatInterface() {
       while (true) {
         const { done, value } = await reader.read()
         if (done) break
-        accumulated += decoder.decode(value, { stream: true })
+        const chunk = decoder.decode(value, { stream: true })
+        
+        if (chunk.includes('__USAGE__:')) {
+          const [content, usageStr] = chunk.split('__USAGE__:')
+          if (content) {
+            accumulated += content
+            const snap = accumulated
+            setMessages((prev) => prev.map((m) => m.id === assistantId ? { ...m, content: snap } : m))
+          }
+          try {
+            const usage = JSON.parse(usageStr)
+            setMessages((prev) => prev.map((m) => m.id === assistantId ? { 
+              ...m, 
+              prompt_tokens: usage.prompt_tokens,
+              completion_tokens: usage.completion_tokens,
+              total_tokens: usage.total_tokens
+            } : m))
+          } catch (e) {
+            console.warn('Failed to parse usage data:', e)
+          }
+          continue
+        }
+
+        accumulated += chunk
         const snap = accumulated
         setMessages((prev) => prev.map((m) => m.id === assistantId ? { ...m, content: snap } : m))
       }
@@ -360,7 +400,10 @@ export function ChatInterface() {
   }
 
   const currentModel = availableModels.find((m) => m.id === settings.model) ?? availableModels[0]
-  const totalTokens = messages.reduce((acc, m) => acc + estimateTokens(m.content), 0)
+  const totalTokens = messages.reduce((acc, m) => {
+    if (m.total_tokens) return acc + m.total_tokens
+    return acc + estimateTokens(m.content)
+  }, 0)
 
   return (
     <div className={cn('relative flex h-[100svh] overflow-hidden bg-background', getBackgroundClass())}>
@@ -396,6 +439,7 @@ export function ChatInterface() {
             lastResponseMs: lastResponseMs ?? undefined,
             streamSpeed: streamSpeed ?? undefined,
           }}
+          availableModels={availableModels}
         />
 
         <div className="flex-1 overflow-hidden flex">

@@ -52,6 +52,9 @@ import {
   createRegisteredModel,
   updateRegisteredModel,
   deleteRegisteredModel,
+  fetchGlobalUsage,
+  fetchModelUsage,
+  type ModelUsage,
   type AdminStatus,
 } from '@/lib/api'
 import {
@@ -61,6 +64,7 @@ import {
   type BackgroundStyle,
   ACCENT_COLORS,
   FONT_FAMILIES,
+  MODEL_CATEGORIES,
 } from '@/lib/types'
 import { useModelsStore } from '@/lib/store'
 import { cn } from '@/lib/utils'
@@ -78,6 +82,7 @@ interface SettingsDialogProps {
   settings: Settings
   onSave: (settings: Settings) => void
   session?: SessionStats
+  children?: React.ReactNode
 }
 
 function SLabel({ children, className }: { children: React.ReactNode; className?: string }) {
@@ -185,9 +190,9 @@ const CLOUD_PROVIDERS = [
   },
 ] as const
 
-type Section = 'appearance' | 'chat' | 'models' | 'session' | 'database' | 'admin'
+type Section = 'appearance' | 'chat' | 'models' | 'lab' | 'session' | 'database' | 'admin'
 
-export function SettingsDialog({ settings, onSave, session }: SettingsDialogProps) {
+export function SettingsDialog({ settings, onSave, session, children }: SettingsDialogProps) {
   const [open, setOpen] = useState(false)
   const [section, setSection] = useState<Section>('appearance')
   const [local, setLocal] = useState<Settings>(settings)
@@ -230,6 +235,10 @@ export function SettingsDialog({ settings, onSave, session }: SettingsDialogProp
   const [cloudError, setCloudError] = useState('')
   const [cloudAdding, setCloudAdding] = useState(false)
 
+  const [globalUsage, setGlobalUsage] = useState<{ prompt_tokens: number; completion_tokens: number; total_tokens: number } | null>(null)
+  const [modelUsage, setModelUsage] = useState<ModelUsage[]>([])
+  const [usageLoading, setUsageLoading] = useState(false)
+
   useEffect(() => {
     if (open) {
       setLocal(settings)
@@ -241,6 +250,13 @@ export function SettingsDialog({ settings, onSave, session }: SettingsDialogProp
   useEffect(() => {
     if (section === 'models' && open) { setModelsLoading(true); reloadModels().finally(() => setModelsLoading(false)) }
     if (section === 'admin' && open) loadStatus()
+    if (section === 'session' && open) {
+      setUsageLoading(true)
+      Promise.all([
+        fetchGlobalUsage().then(setGlobalUsage),
+        fetchModelUsage().then(setModelUsage)
+      ]).finally(() => setUsageLoading(false))
+    }
   }, [section, open]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const update = <K extends keyof Settings>(key: K, value: Settings[K]) => {
@@ -539,6 +555,7 @@ export function SettingsDialog({ settings, onSave, session }: SettingsDialogProp
     { id: 'appearance', label: 'Appearance', icon: Sun },
     { id: 'chat', label: 'Chat Settings', icon: Sparkles },
     { id: 'models', label: 'Local Models', icon: Server },
+    { id: 'lab', label: 'Model Lab', icon: Sparkles },
     { id: 'session', label: 'Session Info', icon: Activity },
   ] as const
 
@@ -1439,7 +1456,114 @@ export function SettingsDialog({ settings, onSave, session }: SettingsDialogProp
           </div>
         )
 
-      // ── Session ───────────────────────────────────────────────────────
+      // ── Model Lab ───────────────────────────────────────────────────
+      case 'lab':
+        return (
+          <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <div>
+              <div className="flex items-center gap-3 mb-4">
+                 <div className="p-2 rounded-xl bg-primary/10 border border-primary/20">
+                    <Sparkles className="h-4 w-4 text-primary" />
+                 </div>
+                 <div>
+                    <h3 className="text-sm font-bold">Model Intelligence Lab</h3>
+                    <p className="text-[11px] text-muted-foreground/50">Compare capabilities and select the best intelligence for your task.</p>
+                 </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                {MODEL_CATEGORIES.map((cat) => (
+                  <div key={cat.id} className="p-4 rounded-2xl border border-border/40 bg-card/20 hover:border-primary/30 transition-all group">
+                    <div className="flex items-center justify-between mb-2">
+                       <span className="text-[10px] font-bold uppercase tracking-widest text-primary/60">{cat.id}</span>
+                       <div className="h-1.5 w-1.5 rounded-full bg-primary/20 group-hover:bg-primary/60 transition-colors" />
+                    </div>
+                    <h4 className="text-sm font-bold mb-1">{cat.name}</h4>
+                    <p className="text-xs text-muted-foreground/50 leading-relaxed">{cat.desc}</p>
+                    
+                    <div className="mt-4 flex flex-wrap gap-1.5">
+                       {models.filter(m => {
+                          const lowName = m.ollama_name.toLowerCase()
+                          if (cat.id === 'Coding') return lowName.includes('coder') || lowName.includes('code')
+                          if (cat.id === 'Reasoning') return lowName.includes('qwen') || lowName.includes('reasoning') || lowName.includes('phi')
+                          if (cat.id === 'Fast') return lowName.includes('mistral') || lowName.includes('haiku')
+                          return !lowName.includes('coder') && !lowName.includes('code') && !lowName.includes('qwen') && !lowName.includes('reasoning') && !lowName.includes('phi') && !lowName.includes('mistral') && !lowName.includes('haiku')
+                       }).map(m => (
+                         <span key={m.id} className="px-2 py-0.5 rounded-lg bg-background/50 border border-border/40 text-[10px] font-medium opacity-60">
+                            {m.display_name}
+                         </span>
+                       ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <SLabel>Performance Comparison</SLabel>
+              <div className="rounded-2xl border border-border/40 bg-card/20 overflow-hidden">
+                 <table className="w-full text-left border-collapse">
+                    <thead>
+                       <tr className="bg-muted/30 border-b border-border/20">
+                          <th className="px-4 py-3 text-[10px] uppercase font-bold text-muted-foreground/50">Model</th>
+                          <th className="px-4 py-3 text-[10px] uppercase font-bold text-muted-foreground/50 text-center">Category</th>
+                          <th className="px-4 py-3 text-[10px] uppercase font-bold text-muted-foreground/50 text-center">Speed</th>
+                          <th className="px-4 py-3 text-[10px] uppercase font-bold text-muted-foreground/50 text-center">Reasoning</th>
+                          <th className="px-4 py-3 text-[10px] uppercase font-bold text-muted-foreground/50 text-right">Action</th>
+                       </tr>
+                    </thead>
+                    <tbody className="divide-y divide-border/10">
+                       {models.map(m => {
+                          const lowName = m.ollama_name.toLowerCase()
+                          let speed = 'Medium'; let reasoning = 'Balanced'
+                          if (lowName.includes('mistral') || lowName.includes('haiku') || lowName.includes('phi')) speed = 'High'
+                          if (lowName.includes('qwen') || lowName.includes('llama3.1') || lowName.includes('gpt-4o')) reasoning = 'Expert'
+                          
+                          return (
+                            <tr key={m.id} className="hover:bg-primary/5 transition-colors group">
+                               <td className="px-4 py-4">
+                                  <div className="flex flex-col">
+                                     <span className="text-sm font-bold">{m.display_name}</span>
+                                     <span className="text-[10px] font-mono opacity-30">{m.ollama_name}</span>
+                                  </div>
+                               </td>
+                               <td className="px-4 py-4 text-center">
+                                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-muted/30 border border-border/40">
+                                     {lowName.includes('coder') ? 'Coding' : lowName.includes('phi') || lowName.includes('qwen') ? 'Reasoning' : 'General'}
+                                  </span>
+                               </td>
+                               <td className="px-4 py-4 text-center">
+                                  <div className="flex items-center justify-center gap-1">
+                                     <div className={cn("h-1 w-4 rounded-full", speed === 'High' ? 'bg-emerald-500' : 'bg-muted-foreground/30')} />
+                                     <div className={cn("h-1 w-4 rounded-full", speed === 'High' ? 'bg-emerald-500' : 'bg-muted-foreground/30')} />
+                                     <div className={cn("h-1 w-4 rounded-full", speed === 'High' ? 'bg-emerald-500' : 'bg-muted-foreground/30')} />
+                                  </div>
+                               </td>
+                               <td className="px-4 py-4 text-center">
+                                  <span className={cn("text-[11px] font-medium", reasoning === 'Expert' ? 'text-primary' : 'text-muted-foreground/60')}>
+                                     {reasoning}
+                                  </span>
+                               </td>
+                               <td className="px-4 py-4 text-right">
+                                  <Button 
+                                    size="sm" 
+                                    variant={local.model === m.ollama_name ? 'secondary' : 'outline'}
+                                    disabled={local.model === m.ollama_name}
+                                    onClick={() => update('model', m.ollama_name)}
+                                    className="h-7 text-[10px] rounded-lg px-3 uppercase tracking-wider font-bold"
+                                  >
+                                     {local.model === m.ollama_name ? 'Active' : 'Switch'}
+                                  </Button>
+                               </td>
+                            </tr>
+                          )
+                       })}
+                    </tbody>
+                 </table>
+              </div>
+            </div>
+          </div>
+        )
       case 'session': {
         const totalMsgs = (session?.userMessages ?? 0) + (session?.assistantMessages ?? 0)
         const rows: { label: string; value: string; sub?: string }[] = [
@@ -1463,7 +1587,10 @@ export function SettingsDialog({ settings, onSave, session }: SettingsDialogProp
         return (
           <div className="space-y-6">
             <div>
-              <SLabel>Current Session</SLabel>
+              <div className="flex items-center justify-between mb-3">
+                <SLabel className="mb-0">Current Session</SLabel>
+                {usageLoading && <RefreshCw className="h-3 w-3 animate-spin text-muted-foreground/30" />}
+              </div>
               <div className="rounded-xl border border-border/40 bg-card/20 divide-y divide-border/20">
                 {rows.map(({ label, value, sub }) => (
                   <div key={label} className="flex items-center justify-between px-4 py-3">
@@ -1475,7 +1602,91 @@ export function SettingsDialog({ settings, onSave, session }: SettingsDialogProp
                 ))}
               </div>
             </div>
-            {totalMsgs === 0 && (
+
+            <div>
+              <SLabel>Global Usage (Lifetime)</SLabel>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="p-4 rounded-xl border border-border/40 bg-card/20 space-y-1">
+                  <p className="text-[10px] text-muted-foreground/50 uppercase tracking-widest font-bold">Total Tokens</p>
+                  <p className="text-xl font-bold tracking-tight">
+                    {globalUsage?.total_tokens ? globalUsage.total_tokens.toLocaleString() : '0'}
+                  </p>
+                </div>
+                <div className="p-4 rounded-xl border border-border/40 bg-card/20 space-y-1">
+                  <p className="text-[10px] text-muted-foreground/50 uppercase tracking-widest font-bold">Messages</p>
+                  <p className="text-xl font-bold tracking-tight">
+                    {globalUsage ? '—' : '0'}
+                  </p>
+                  <p className="text-[10px] text-muted-foreground/30 italic">Aggregate data</p>
+                </div>
+              </div>
+              <div className="mt-3 rounded-xl border border-border/40 bg-card/20 divide-y divide-border/20">
+                 <div className="flex items-center justify-between px-4 py-3">
+                    <span className="text-[12px] text-muted-foreground/60">Input (Prompt)</span>
+                    <span className="text-[12px] font-mono text-primary/80">{globalUsage?.prompt_tokens?.toLocaleString() ?? 0}</span>
+                 </div>
+                 <div className="flex items-center justify-between px-4 py-3">
+                    <span className="text-[12px] text-muted-foreground/60">Output (Completion)</span>
+                    <span className="text-[12px] font-mono text-emerald-500/80">{globalUsage?.completion_tokens?.toLocaleString() ?? 0}</span>
+                 </div>
+              </div>
+            </div>
+
+            <div>
+              <SLabel>Model Activity (Lifetime)</SLabel>
+              <div className="space-y-3">
+                {modelUsage.length === 0 ? (
+                   <div className="p-8 rounded-2xl border border-dashed border-border/40 text-center">
+                      <p className="text-xs text-muted-foreground/40 italic">No model activity tracked yet</p>
+                   </div>
+                ) : (
+                  modelUsage.map((m) => (
+                    <div key={m.model} className="p-4 rounded-2xl border border-border/40 bg-card/20 space-y-4">
+                      <div className="flex items-start justify-between">
+                        <div className="space-y-1">
+                          <h4 className="text-sm font-semibold">{m.display_name}</h4>
+                          <div className="flex items-center gap-2">
+                             <span className="px-1.5 py-0.5 rounded bg-primary/10 text-[9px] font-bold text-primary uppercase tracking-wider border border-primary/20">
+                                {m.provider}
+                             </span>
+                             <span className="text-[10px] text-muted-foreground/40 font-medium">
+                                {m.requests} requests
+                             </span>
+                          </div>
+                        </div>
+                        
+                        {m.credits && (
+                           <div className="text-right">
+                              <p className="text-[10px] text-muted-foreground/50 uppercase tracking-widest font-bold">Credits</p>
+                              <p className="text-xs font-mono font-bold text-primary">
+                                 ${(m.credits.remaining * 1).toFixed(4)}
+                              </p>
+                              <p className="text-[9px] text-muted-foreground/30 italic">Provider Balance</p>
+                           </div>
+                        )}
+                      </div>
+
+                      <div className="grid grid-cols-3 gap-2">
+                        <div className="space-y-1">
+                           <p className="text-[9px] text-muted-foreground/40 uppercase font-bold tracking-tighter">Tokens</p>
+                           <p className="text-sm font-mono font-bold">{(m.total_tokens / 1000).toFixed(1)}k</p>
+                        </div>
+                        <div className="space-y-1">
+                           <p className="text-[9px] text-muted-foreground/40 uppercase font-bold tracking-tighter">Input</p>
+                           <p className="text-sm font-mono text-muted-foreground/60">{(m.prompt_tokens / 1000).toFixed(1)}k</p>
+                        </div>
+                        <div className="space-y-1">
+                           <p className="text-[9px] text-muted-foreground/40 uppercase font-bold tracking-tighter">Output</p>
+                           <p className="text-sm font-mono text-emerald-500/60">{(m.completion_tokens / 1000).toFixed(1)}k</p>
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+
+            {totalMsgs === 0 && modelUsage.length === 0 && (
               <p className="text-[12px] text-muted-foreground/40 text-center py-4">
                 No active conversation. Start a chat to see live stats.
               </p>
@@ -1663,13 +1874,15 @@ export function SettingsDialog({ settings, onSave, session }: SettingsDialogProp
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!o) handleClose(); else setOpen(true) }}>
       <DialogTrigger asChild>
-        <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg text-muted-foreground hover:text-foreground">
-          <SettingsIcon className="h-4 w-4" />
-          <span className="sr-only">Settings</span>
-        </Button>
+        {children || (
+          <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg text-muted-foreground hover:text-foreground">
+            <SettingsIcon className="h-4 w-4" />
+            <span className="sr-only">Settings</span>
+          </Button>
+        )}
       </DialogTrigger>
 
-      <DialogContent className="p-0 gap-0 w-full max-w-[800px] sm:max-w-[800px] rounded-2xl overflow-hidden [&>button]:hidden">
+      <DialogContent className="p-0 gap-0 w-full max-w-[1000px] sm:max-w-[1000px] rounded-2xl overflow-hidden [&>button]:hidden">
         <DialogTitle className="sr-only">Settings</DialogTitle>
         <DialogDescription className="sr-only">Customize your Graviton experience</DialogDescription>
         {/* Header */}
