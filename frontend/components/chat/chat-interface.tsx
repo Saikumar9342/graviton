@@ -70,7 +70,7 @@ export function ChatInterface() {
       else if (lowName.includes('qwen') || lowName.includes('reasoning') || lowName.includes('phi')) category = 'Reasoning'
       else if (lowName.includes('mistral') || lowName.includes('haiku')) category = 'Fast'
       
-      return { id: m.ollama_name, name: m.display_name, provider, badge, category }
+      return { id: m.ollama_name, name: m.display_name, provider, badge, category, model_type: m.model_type }
     })
 
   const [messages, setMessages] = useState<Message[]>([])
