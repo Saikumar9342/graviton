@@ -19,8 +19,6 @@ export type BackgroundStyle = 'solid' | 'gradient' | 'aurora' | 'mesh'
 
 export interface Settings {
   model: string
-  openaiApiKey: string
-  anthropicApiKey: string
   theme: 'light' | 'dark' | 'system'
   accentColor: string
   bubbleStyle: ChatBubbleStyle
@@ -63,8 +61,6 @@ export interface Settings {
 
 export const DEFAULT_SETTINGS: Settings = {
   model: 'llama3:latest',
-  openaiApiKey: '',
-  anthropicApiKey: '',
   theme: 'dark',
   accentColor: '#8b5cf6',
   bubbleStyle: 'modern',

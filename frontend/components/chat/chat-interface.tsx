@@ -9,9 +9,10 @@ import { ChatInput } from './chat-input'
 import { EmptyState } from './empty-state'
 import { Button } from '@/components/ui/button'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { getSettings, saveSettings, generateId, generateTitle } from '@/lib/chat-store'
-import { fetchChats, createChat, deleteChat as apiDeleteChat, fetchMessages, fetchModels, ModelInfo } from '@/lib/api'
-import { Chat, Settings, DEFAULT_SETTINGS, AVAILABLE_MODELS, OPENAI_MODELS, ANTHROPIC_MODELS, MODE_SYSTEM_PROMPTS } from '@/lib/types'
+import { generateId, generateTitle } from '@/lib/chat-store'
+import { fetchChats, createChat, deleteChat as apiDeleteChat, fetchMessages } from '@/lib/api'
+import { Chat, Settings, MODE_SYSTEM_PROMPTS } from '@/lib/types'
+import { useSettingsStore, useModelsStore } from '@/lib/store'
 import { cn } from '@/lib/utils'
 
 type Message = {
@@ -27,7 +28,6 @@ function estimateTokens(text: string): number {
 export function ChatInterface() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
-  const [isDetailsCollapsed, setIsDetailsCollapsed] = useState(true)
   const [chats, setChats] = useState<Chat[]>([])
   const [currentChatId, setCurrentChatIdState] = useState<string | null>(null)
   const currentChatIdRef = useRef<string | null>(null)
@@ -36,8 +36,13 @@ export function ChatInterface() {
     setCurrentChatIdState(id)
   }, [])
 
-  const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS)
-  const [availableModels, setAvailableModels] = useState<ModelInfo[]>(AVAILABLE_MODELS)
+  const { settings, save: saveSettings, load: loadSettings } = useSettingsStore()
+  const { models: registeredModels, load: loadModels } = useModelsStore()
+
+  const availableModels = registeredModels
+    .filter((m) => m.is_active)
+    .map((m) => ({ id: m.ollama_name, name: m.display_name, provider: 'Ollama' as const }))
+
   const [messages, setMessages] = useState<Message[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [streamingId, setStreamingId] = useState<string | null>(null)
@@ -53,50 +58,14 @@ export function ChatInterface() {
 
   // Init
   useEffect(() => {
-    setMounted(true)
-
-    const saved = getSettings()
-    setSettings(saved)
-
-    fetchChats().then(setChats).catch(console.error)
-
-    fetchModels().then((ollamaModels) => {
-      if (ollamaModels.length === 0) return
-
-      // Build full model list: Ollama + any configured external providers
-      const allModels: ModelInfo[] = [...ollamaModels]
-      const current = getSettings()
-      if (current.openaiApiKey) allModels.push(...OPENAI_MODELS)
-      if (current.anthropicApiKey) allModels.push(...ANTHROPIC_MODELS)
-      setAvailableModels(allModels)
-
-      // Auto-select first available if saved model isn't installed
-      if (!allModels.find((m) => m.id === current.model)) {
-        const updated = { ...current, model: allModels[0].id }
-        saveSettings(updated)
-        setSettings(updated)
-      }
-    }).catch(console.error)
-
     const sc = localStorage.getItem('sidebar-collapsed')
     if (sc) setIsSidebarCollapsed(sc === 'true')
-    const dc = localStorage.getItem('details-collapsed')
-    if (dc) setIsDetailsCollapsed(dc === 'true')
 
-    document.documentElement.setAttribute('data-accent', saved.accentColor)
-    document.documentElement.setAttribute('data-font-size', saved.fontSize)
-    document.documentElement.style.setProperty('--contrast', String(saved.contrast / 100))
-  }, [])
-
-  // When settings change (e.g. new API key added), rebuild model list
-  useEffect(() => {
-    if (!mounted) return
-    const base = availableModels.filter((m) => m.provider === 'Ollama')
-    const next: ModelInfo[] = [...base]
-    if (settings.openaiApiKey) next.push(...OPENAI_MODELS)
-    if (settings.anthropicApiKey) next.push(...ANTHROPIC_MODELS)
-    setAvailableModels(next)
-  }, [settings.openaiApiKey, settings.anthropicApiKey]) // eslint-disable-line react-hooks/exhaustive-deps
+    Promise.all([loadSettings(), loadModels(), fetchChats()])
+      .then(([, , chats]) => setChats(chats))
+      .catch(console.error)
+      .finally(() => setMounted(true))
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (mounted) {
@@ -246,8 +215,6 @@ export function ChatInterface() {
           systemPrompt: MODE_SYSTEM_PROMPTS[mode] ?? '',
           fileIds,
           webSearch,
-          ...(settings.openaiApiKey && { openaiApiKey: settings.openaiApiKey }),
-          ...(settings.anthropicApiKey && { anthropicApiKey: settings.anthropicApiKey }),
         }),
         signal: controller.signal,
       })
@@ -309,8 +276,7 @@ export function ChatInterface() {
 
   const handleSaveSettings = useCallback((newSettings: Settings) => {
     saveSettings(newSettings)
-    setSettings(newSettings)
-  }, [])
+  }, [saveSettings])
 
   const toggleSidebar = () => {
     if (window.innerWidth < 768) {

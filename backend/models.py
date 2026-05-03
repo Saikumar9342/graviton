@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, DateTime, ForeignKey, Text
+from sqlalchemy import Column, String, DateTime, ForeignKey, Text, Boolean, JSON
 from sqlalchemy.orm import relationship
 from database import Base
 import uuid
@@ -24,3 +24,24 @@ class Message(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
 
     chat = relationship("Chat", back_populates="messages")
+
+
+class AppSettings(Base):
+    __tablename__ = "app_settings"
+
+    id = Column(String, primary_key=True, default="default")
+    data = Column(JSON, nullable=False, default=dict)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class RegisteredModel(Base):
+    __tablename__ = "registered_models"
+
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    ollama_name = Column(String, nullable=False, unique=True)  # model identifier sent to the API
+    display_name = Column(String, nullable=False)
+    is_active = Column(Boolean, default=True, nullable=False)
+    provider = Column(String, default='ollama', nullable=False)  # 'ollama' | 'openai-compat'
+    api_base_url = Column(String, nullable=True)                 # for openai-compat providers
+    api_key = Column(String, nullable=True)                      # stored server-side only
+    created_at = Column(DateTime, default=datetime.utcnow)

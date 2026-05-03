@@ -142,6 +142,84 @@ export async function uploadFile(file: File): Promise<UploadedFile> {
   return response.json()
 }
 
+// ── Settings ─────────────────────────────────────────────────────────────────
+
+export async function fetchSettings(): Promise<Record<string, unknown>> {
+  const res = await fetch(`${API_BASE}/settings`)
+  if (!res.ok) throw new Error('Failed to fetch settings')
+  const { data } = await res.json()
+  return data
+}
+
+export async function saveSettingsToDb(data: Record<string, unknown>): Promise<void> {
+  const res = await fetch(`${API_BASE}/settings`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ data }),
+  })
+  if (!res.ok) throw new Error('Failed to save settings')
+}
+
+// ── Registered Models ─────────────────────────────────────────────────────────
+
+export interface RegisteredModel {
+  id: string
+  ollama_name: string
+  display_name: string
+  is_active: boolean
+  provider: string
+  api_base_url?: string | null
+  created_at: string
+}
+
+export interface CreateModelPayload {
+  ollama_name: string
+  display_name: string
+  provider?: string
+  api_base_url?: string
+  api_key?: string
+}
+
+export async function fetchRegisteredModels(): Promise<RegisteredModel[]> {
+  const res = await fetch(`${API_BASE}/registered-models`)
+  if (!res.ok) throw new Error('Failed to fetch registered models')
+  return res.json()
+}
+
+export async function createRegisteredModel(payload: CreateModelPayload): Promise<RegisteredModel> {
+  const res = await fetch(`${API_BASE}/registered-models`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    throw new Error(err.detail || 'Failed to register model')
+  }
+  return res.json()
+}
+
+export async function updateRegisteredModel(id: string, data: { display_name?: string; is_active?: boolean; api_key?: string }): Promise<RegisteredModel> {
+  const res = await fetch(`${API_BASE}/registered-models/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  })
+  if (!res.ok) throw new Error('Failed to update model')
+  return res.json()
+}
+
+export async function deleteRegisteredModel(id: string): Promise<void> {
+  const res = await fetch(`${API_BASE}/registered-models/${id}`, { method: 'DELETE' })
+  if (!res.ok) throw new Error('Failed to delete model')
+}
+
+export async function syncRegisteredModels(): Promise<{ synced: number; added: string[] }> {
+  const res = await fetch(`${API_BASE}/registered-models/sync`, { method: 'POST' })
+  if (!res.ok) throw new Error('Failed to sync models')
+  return res.json()
+}
+
 // ── Admin ────────────────────────────────────────────────────────────────────
 
 export interface AdminStatus {

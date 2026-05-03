@@ -10,13 +10,10 @@ import {
   Plus,
   RefreshCw,
   Trash2,
-  Eye,
-  EyeOff,
   Activity,
   Server,
   HardDrive,
   Sparkles,
-  Key,
   Lock,
   X,
   Layout,
@@ -46,12 +43,13 @@ import {
 import { Label } from '@/components/ui/label'
 import { useIsMobile } from '@/hooks/use-mobile'
 import {
-  fetchModels,
-  deleteModel,
   pullModel,
   getAdminStatus,
   testDbConnection,
-  type ModelInfo,
+  syncRegisteredModels,
+  createRegisteredModel,
+  updateRegisteredModel,
+  deleteRegisteredModel,
   type AdminStatus,
 } from '@/lib/api'
 import {
@@ -60,10 +58,9 @@ import {
   type FontSize,
   type BackgroundStyle,
   ACCENT_COLORS,
-  OPENAI_MODELS,
-  ANTHROPIC_MODELS,
   FONT_FAMILIES,
 } from '@/lib/types'
+import { useModelsStore } from '@/lib/store'
 import { cn } from '@/lib/utils'
 
 export interface SessionStats {
@@ -112,7 +109,7 @@ function PinGate({
   authenticated: boolean
   pinInput: string
   onPinChange: (v: string) => void
-  onSubmit: () => void
+  onSubmit: (pin?: string) => void
   hasError: boolean
   children: React.ReactNode
 }) {
@@ -127,37 +124,27 @@ function PinGate({
         <h3 className="text-base font-semibold">Admin Area Protected</h3>
         <p className="text-xs text-muted-foreground/60">Enter your PIN to access system configurations</p>
       </div>
-      <div className="flex flex-col items-center gap-3">
-        <div className="flex gap-2">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <div
-              key={i}
-              className={cn(
-                'h-10 w-10 rounded-xl border-2 flex items-center justify-center transition-all',
-                pinInput.length > i ? 'border-primary bg-primary/5' : 'border-border/40 bg-muted/15',
-                hasError && 'border-destructive animate-shake'
-              )}
-            >
-              {pinInput.length > i && <div className="h-2 w-2 rounded-full bg-primary" />}
-            </div>
-          ))}
-        </div>
+      <div className="flex flex-col items-center gap-4">
         <input
           type="password"
+          inputMode="numeric"
           maxLength={4}
+          placeholder="Enter PIN"
           value={pinInput}
+          autoFocus
           onChange={(e) => {
             const v = e.target.value.replace(/\D/g, '')
             onPinChange(v)
-            if (v.length === 4) {
-              // Trigger submit on 4th digit
-              setTimeout(onSubmit, 100)
-            }
+            if (v.length === 4) onSubmit(v)
           }}
-          className="absolute opacity-0 pointer-events-none"
-          autoFocus
+          onKeyDown={(e) => e.key === 'Enter' && onSubmit()}
+          className={cn(
+            'w-32 h-9 text-center text-sm tracking-widest rounded-xl border bg-muted/20 px-3 focus:outline-none focus:ring-2 focus:ring-primary/30 transition-all',
+            hasError ? 'border-destructive text-destructive' : 'border-border/40'
+          )}
         />
-        <Button variant="ghost" size="sm" onClick={onSubmit} className="text-xs font-medium text-primary hover:text-primary hover:bg-primary/5">
+        {hasError && <p className="text-xs text-destructive -mt-2">Incorrect PIN</p>}
+        <Button variant="ghost" size="sm" onClick={() => onSubmit()} className="text-xs font-medium text-primary hover:text-primary hover:bg-primary/5">
           Unlock Panel
         </Button>
       </div>
@@ -165,7 +152,38 @@ function PinGate({
   )
 }
 
-type Section = 'appearance' | 'chat' | 'models' | 'providers' | 'session' | 'database' | 'admin'
+const CLOUD_PROVIDERS = [
+  {
+    id: 'nvidia', label: 'NVIDIA NIM', url: 'https://integrate.api.nvidia.com/v1', needsKey: true,
+    models: ['meta/llama-3.1-8b-instruct', 'meta/llama-3.1-70b-instruct', 'meta/llama-3.3-70b-instruct', 'mistralai/mistral-7b-instruct-v0.3', 'microsoft/phi-3-mini-4k-instruct', 'google/gemma-2-9b-it'],
+  },
+  {
+    id: 'groq', label: 'Groq', url: 'https://api.groq.com/openai/v1', needsKey: true,
+    models: ['llama-3.1-8b-instant', 'llama-3.3-70b-versatile', 'llama3-70b-8192', 'mixtral-8x7b-32768', 'gemma2-9b-it', 'deepseek-r1-distill-llama-70b'],
+  },
+  {
+    id: 'openrouter', label: 'OpenRouter', url: 'https://openrouter.ai/api/v1', needsKey: true,
+    models: ['anthropic/claude-sonnet-4-5', 'anthropic/claude-3-5-haiku', 'openai/gpt-4o', 'openai/gpt-4o-mini', 'google/gemini-2.0-flash-001', 'meta-llama/llama-3.3-70b-instruct', 'deepseek/deepseek-r1'],
+  },
+  {
+    id: 'together', label: 'Together AI', url: 'https://api.together.xyz/v1', needsKey: true,
+    models: ['meta-llama/Meta-Llama-3.1-8B-Instruct-Turbo', 'meta-llama/Meta-Llama-3.1-70B-Instruct-Turbo', 'mistralai/Mixtral-8x7B-Instruct-v0.1', 'deepseek-ai/DeepSeek-R1'],
+  },
+  {
+    id: 'fireworks', label: 'Fireworks AI', url: 'https://api.fireworks.ai/inference/v1', needsKey: true,
+    models: ['accounts/fireworks/models/llama-v3p1-8b-instruct', 'accounts/fireworks/models/llama-v3p1-70b-instruct', 'accounts/fireworks/models/mixtral-8x7b-instruct'],
+  },
+  {
+    id: 'lmstudio', label: 'LM Studio', url: 'http://localhost:1234/v1', needsKey: false,
+    models: [],
+  },
+  {
+    id: 'custom', label: 'Custom', url: '', needsKey: true,
+    models: [],
+  },
+] as const
+
+type Section = 'appearance' | 'chat' | 'models' | 'session' | 'database' | 'admin'
 
 export function SettingsDialog({ settings, onSave, session }: SettingsDialogProps) {
   const [open, setOpen] = useState(false)
@@ -179,8 +197,12 @@ export function SettingsDialog({ settings, onSave, session }: SettingsDialogProp
   const [pinInput, setPinInput] = useState('')
   const [pinError, setPinError] = useState(false)
 
-  const [models, setModels] = useState<ModelInfo[]>([])
+  const { models, load: reloadModels, setModels } = useModelsStore()
   const [modelsLoading, setModelsLoading] = useState(false)
+  const [syncing, setSyncing] = useState(false)
+  const [addName, setAddName] = useState('')
+  const [addDisplay, setAddDisplay] = useState('')
+  const [addError, setAddError] = useState('')
   const [pullName, setPullName] = useState('')
   const [pullStatus, setPullStatus] = useState('')
   const [isPulling, setIsPulling] = useState(false)
@@ -197,19 +219,25 @@ export function SettingsDialog({ settings, onSave, session }: SettingsDialogProp
   const [confirmPin, setConfirmPin] = useState('')
   const [pinMsg, setPinMsg] = useState('')
 
-  const [showOpenAiKey, setShowOpenAiKey] = useState(false)
-  const [showAnthropicKey, setShowAnthropicKey] = useState(false)
+  // Cloud provider state
+  const [cloudProvider, setCloudProvider] = useState('nvidia')
+  const [cloudModelId, setCloudModelId] = useState('')
+  const [cloudDisplayName, setCloudDisplayName] = useState('')
+  const [cloudApiKey, setCloudApiKey] = useState('')
+  const [cloudBaseUrl, setCloudBaseUrl] = useState('')
+  const [cloudError, setCloudError] = useState('')
+  const [cloudAdding, setCloudAdding] = useState(false)
 
   useEffect(() => {
     if (open) {
       setLocal(settings)
-      if (section === 'models') loadModels()
+      if (section === 'models') { setModelsLoading(true); reloadModels().finally(() => setModelsLoading(false)) }
       if (section === 'admin') loadStatus()
     }
   }, [open, settings]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
-    if (section === 'models' && open) loadModels()
+    if (section === 'models' && open) { setModelsLoading(true); reloadModels().finally(() => setModelsLoading(false)) }
     if (section === 'admin' && open) loadStatus()
   }, [section, open]) // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -377,9 +405,9 @@ export function SettingsDialog({ settings, onSave, session }: SettingsDialogProp
     update('theme', t)
   }
 
-  const checkPin = () => {
-    // For demo/simplicity, hardcoded PIN '1234'
-    if (pinInput === '1234' || localStorage.getItem('admin-unlocked') === 'true') {
+  const checkPin = (pin?: string) => {
+    const p = pin ?? pinInput
+    if (p === '1234' || localStorage.getItem('admin-unlocked') === 'true') {
       setAdminOk(true)
       localStorage.setItem('admin-unlocked', 'true')
     } else {
@@ -389,23 +417,70 @@ export function SettingsDialog({ settings, onSave, session }: SettingsDialogProp
     }
   }
 
-  const loadModels = async () => {
-    setModelsLoading(true)
+  const handleSync = async () => {
+    setSyncing(true)
     try {
-      const data = await fetchModels()
-      setModels(data)
+      await syncRegisteredModels()
+      await reloadModels()
     } finally {
-      setModelsLoading(false)
+      setSyncing(false)
     }
   }
 
-  const handleDeleteModel = async (id: string) => {
+  const handleAddModel = async () => {
+    if (!addName.trim()) return
+    setAddError('')
+    try {
+      const display = addDisplay.trim() || addName.split(':')[0].replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
+      const created = await createRegisteredModel({ ollama_name: addName.trim(), display_name: display })
+      setModels([...models, created])
+      setAddName('')
+      setAddDisplay('')
+    } catch (e: any) {
+      setAddError(e.message)
+    }
+  }
+
+  const handleToggleActive = async (id: string, current: boolean) => {
+    const updated = await updateRegisteredModel(id, { is_active: !current })
+    setModels(models.map(m => m.id === id ? updated : m))
+  }
+
+  const handleDeleteRegistered = async (id: string) => {
     setDeletingId(id)
     try {
-      await deleteModel(id)
-      await loadModels()
+      await deleteRegisteredModel(id)
+      setModels(models.filter(m => m.id !== id))
     } finally {
       setDeletingId(null)
+    }
+  }
+
+  const handleAddCloudModel = async () => {
+    if (!cloudModelId.trim()) { setCloudError('Model ID is required'); return }
+    const providerMeta = CLOUD_PROVIDERS.find(p => p.id === cloudProvider)
+    const baseUrl = cloudBaseUrl.trim() || providerMeta?.url || ''
+    if (!baseUrl) { setCloudError('Base URL is required'); return }
+    if (providerMeta?.needsKey && !cloudApiKey.trim()) { setCloudError('API key is required for this provider'); return }
+    setCloudError('')
+    setCloudAdding(true)
+    try {
+      const display = cloudDisplayName.trim() || cloudModelId.split('/').pop()!.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
+      const created = await createRegisteredModel({
+        ollama_name: cloudModelId.trim(),
+        display_name: display,
+        provider: 'openai-compat',
+        api_base_url: baseUrl,
+        api_key: cloudApiKey.trim() || undefined,
+      })
+      setModels([...models, created])
+      setCloudModelId('')
+      setCloudDisplayName('')
+      setCloudApiKey('')
+    } catch (e: any) {
+      setCloudError(e.message)
+    } finally {
+      setCloudAdding(false)
     }
   }
 
@@ -415,9 +490,8 @@ export function SettingsDialog({ settings, onSave, session }: SettingsDialogProp
     setPullStatus('Starting...')
     try {
       await pullModel(pullName, setPullStatus)
-      setPullStatus('✓ Model ready')
+      setPullStatus('✓ Model ready — click Sync to register it')
       setPullName('')
-      await loadModels()
     } catch (e: any) {
       setPullStatus(`Error: ${e.message}`)
     } finally {
@@ -463,7 +537,6 @@ export function SettingsDialog({ settings, onSave, session }: SettingsDialogProp
     { id: 'appearance', label: 'Appearance', icon: Sun },
     { id: 'chat', label: 'Chat Settings', icon: Sparkles },
     { id: 'models', label: 'Local Models', icon: Server },
-    { id: 'providers', label: 'API Keys', icon: Key },
     { id: 'session', label: 'Session Info', icon: Activity },
   ] as const
 
@@ -1132,51 +1205,203 @@ export function SettingsDialog({ settings, onSave, session }: SettingsDialogProp
       case 'models':
         return (
           <div className="space-y-6">
-            <div className="flex items-center justify-between">
-              <SLabel>Installed Models{models.length ? ` (${models.length})` : ''}</SLabel>
-              <button
-                onClick={loadModels}
-                className="h-6 w-6 flex items-center justify-center rounded-md text-muted-foreground/40 hover:text-foreground hover:bg-muted/40 transition-all mb-2"
-              >
-                <RefreshCw className={cn('h-3 w-3', modelsLoading && 'animate-spin')} />
-              </button>
+            {/* Registered models list */}
+            <div>
+              <div className="flex items-center justify-between mb-3">
+                <SLabel className="mb-0">Registered Models{models.length ? ` (${models.length})` : ''}</SLabel>
+                <button
+                  onClick={handleSync}
+                  title="Sync from Ollama"
+                  className="flex items-center gap-1.5 text-[11px] text-muted-foreground/50 hover:text-foreground transition-colors"
+                >
+                  <RefreshCw className={cn('h-3 w-3', (modelsLoading || syncing) && 'animate-spin')} />
+                  Sync
+                </button>
+              </div>
+
+              {modelsLoading ? (
+                <div className="flex items-center gap-2 text-xs text-muted-foreground py-3">
+                  <RefreshCw className="h-3 w-3 animate-spin" /> Loading...
+                </div>
+              ) : models.length === 0 ? (
+                <div className="py-6 text-center text-xs text-muted-foreground/40 rounded-xl border border-dashed border-border/40">
+                  No models registered — click Sync to import from Ollama
+                </div>
+              ) : (
+                <div className="space-y-1">
+                  {models.map((m) => {
+                    const providerLabel = m.provider === 'ollama' ? 'Ollama'
+                      : CLOUD_PROVIDERS.find(p => m.api_base_url?.includes(p.url.replace('https://','').replace('http://','').split('/')[0]))?.label
+                        ?? 'Cloud'
+                    const isCloud = m.provider === 'openai-compat'
+                    return (
+                      <div key={m.id} className="group flex items-center gap-2 px-3 py-2 rounded-xl border border-border/40 bg-card/20 hover:bg-card/40 transition-colors">
+                        <div className={cn('h-1.5 w-1.5 rounded-full shrink-0', m.is_active ? 'bg-emerald-500' : 'bg-muted-foreground/30')} />
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-1.5">
+                            <p className="text-sm font-medium truncate">{m.display_name}</p>
+                            <span className={cn(
+                              'text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-md shrink-0',
+                              isCloud
+                                ? 'bg-violet-500/15 text-violet-400 border border-violet-500/20'
+                                : 'bg-primary/10 text-primary/60 border border-primary/15'
+                            )}>
+                              {providerLabel}
+                            </span>
+                          </div>
+                          <p className="text-[10px] text-muted-foreground/40 truncate">{m.ollama_name}</p>
+                        </div>
+                        <Switch
+                          checked={m.is_active}
+                          onCheckedChange={() => handleToggleActive(m.id, m.is_active)}
+                          className="shrink-0 scale-75"
+                        />
+                        <button
+                          onClick={() => handleDeleteRegistered(m.id)}
+                          disabled={deletingId === m.id}
+                          className="opacity-0 group-hover:opacity-100 h-6 w-6 rounded-md flex items-center justify-center text-muted-foreground/40 hover:text-destructive hover:bg-destructive/10 transition-all shrink-0"
+                        >
+                          {deletingId === m.id ? <RefreshCw className="h-3 w-3 animate-spin" /> : <Trash2 className="h-3 w-3" />}
+                        </button>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
             </div>
 
-            {modelsLoading ? (
-              <div className="flex items-center gap-2 text-xs text-muted-foreground py-3">
-                <RefreshCw className="h-3 w-3 animate-spin" /> Loading...
-              </div>
-            ) : models.length === 0 ? (
-              <div className="py-6 text-center text-xs text-muted-foreground/40 rounded-xl border border-dashed border-border/40">
-                No models found - is Ollama running?
-              </div>
-            ) : (
-              <div className="space-y-1">
-                {models.map((m) => (
-                  <div
-                    key={m.id}
-                    className="group flex items-center justify-between px-3 py-2.5 rounded-xl border border-border/40 bg-card/20 hover:bg-card/40 transition-colors"
-                  >
-                    <div className="flex items-center gap-2.5">
-                      <div className="h-1.5 w-1.5 rounded-full bg-emerald-500 shadow-sm shadow-emerald-500/50 shrink-0" />
-                      <span className="text-sm font-medium">{m.name}</span>
-                    </div>
-                    <button
-                      onClick={() => handleDeleteModel(m.id)}
-                      disabled={deletingId === m.id}
-                      className="opacity-0 group-hover:opacity-100 h-6 w-6 rounded-md flex items-center justify-center text-muted-foreground/40 hover:text-destructive hover:bg-destructive/10 transition-all"
-                    >
-                      {deletingId === m.id
-                        ? <RefreshCw className="h-3 w-3 animate-spin" />
-                        : <Trash2 className="h-3 w-3" />}
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
-
+            {/* Register model manually */}
             <div>
-              <SLabel>Pull New Model</SLabel>
+              <SLabel>Register Model</SLabel>
+              <div className="space-y-2">
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="Ollama name (e.g. llama3:latest)"
+                    value={addName}
+                    onChange={(e) => setAddName(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && handleAddModel()}
+                    className="flex-1 h-9 text-sm font-mono"
+                  />
+                  <Input
+                    placeholder="Display name (optional)"
+                    value={addDisplay}
+                    onChange={(e) => setAddDisplay(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && handleAddModel()}
+                    className="flex-1 h-9 text-sm"
+                  />
+                  <Button size="sm" onClick={handleAddModel} disabled={!addName.trim()} className="h-9 px-3 shrink-0">
+                    <Plus className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+                {addError && <p className="text-xs text-destructive">{addError}</p>}
+              </div>
+            </div>
+
+            {/* Cloud / External Providers */}
+            <div>
+              <SLabel>Add Cloud Provider</SLabel>
+              <div className="space-y-2.5">
+                {/* Provider selector */}
+                <div className="flex gap-1.5 flex-wrap">
+                  {CLOUD_PROVIDERS.map((p) => (
+                    <button
+                      key={p.id}
+                      onClick={() => {
+                        setCloudProvider(p.id)
+                        if (p.id !== 'custom') setCloudBaseUrl(p.url)
+                        else setCloudBaseUrl('')
+                      }}
+                      className={cn(
+                        'px-3 py-1.5 rounded-xl text-[11px] font-medium border transition-all',
+                        cloudProvider === p.id
+                          ? 'bg-primary/15 border-primary/40 text-primary'
+                          : 'border-border/40 text-muted-foreground hover:border-border hover:bg-muted/30'
+                      )}
+                    >
+                      {p.label}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Base URL (editable, pre-filled) */}
+                <Input
+                  placeholder="API base URL"
+                  value={cloudBaseUrl}
+                  onChange={(e) => setCloudBaseUrl(e.target.value)}
+                  className="h-9 text-xs font-mono"
+                />
+
+                {/* Model ID with suggestions */}
+                {(() => {
+                  const suggestions = CLOUD_PROVIDERS.find(p => p.id === cloudProvider)?.models ?? []
+                  return (
+                    <>
+                      <Input
+                        placeholder="Model ID (sent to the API)"
+                        value={cloudModelId}
+                        onChange={(e) => setCloudModelId(e.target.value)}
+                        className="h-9 text-sm font-mono"
+                      />
+                      {suggestions.length > 0 && (
+                        <div className="flex flex-wrap gap-1">
+                          {suggestions.map((s) => (
+                            <button
+                              key={s}
+                              onClick={() => setCloudModelId(s)}
+                              className={cn(
+                                'px-2 py-1 rounded-lg text-[10px] font-mono border transition-all',
+                                cloudModelId === s
+                                  ? 'bg-primary/15 border-primary/40 text-primary'
+                                  : 'border-border/30 text-muted-foreground/50 hover:border-border hover:text-foreground hover:bg-muted/20'
+                              )}
+                            >
+                              {s.split('/').pop()}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </>
+                  )
+                })()}
+
+                {/* Display name */}
+                <Input
+                  placeholder="Display name (optional)"
+                  value={cloudDisplayName}
+                  onChange={(e) => setCloudDisplayName(e.target.value)}
+                  className="h-9 text-sm"
+                />
+
+                {/* API key (hidden if not needed) */}
+                {CLOUD_PROVIDERS.find(p => p.id === cloudProvider)?.needsKey && (
+                  <Input
+                    type="password"
+                    placeholder="API key"
+                    value={cloudApiKey}
+                    onChange={(e) => setCloudApiKey(e.target.value)}
+                    className="h-9 text-sm font-mono"
+                  />
+                )}
+
+                {cloudError && <p className="text-xs text-destructive">{cloudError}</p>}
+
+                <Button
+                  size="sm"
+                  onClick={handleAddCloudModel}
+                  disabled={cloudAdding || !cloudModelId.trim()}
+                  className="w-full h-9 gap-1.5"
+                >
+                  {cloudAdding
+                    ? <><RefreshCw className="h-3.5 w-3.5 animate-spin" /> Adding…</>
+                    : <><Plus className="h-3.5 w-3.5" /> Add Provider Model</>
+                  }
+                </Button>
+              </div>
+            </div>
+
+            {/* Pull from Ollama */}
+            <div>
+              <SLabel>Pull from Ollama</SLabel>
               <div className="flex gap-2">
                 <Input
                   placeholder="e.g. llama3.2, codellama:7b"
@@ -1186,19 +1411,13 @@ export function SettingsDialog({ settings, onSave, session }: SettingsDialogProp
                   className="flex-1 h-9 text-sm"
                   disabled={isPulling}
                 />
-                <Button
-                  size="sm"
-                  onClick={handlePull}
-                  disabled={!pullName.trim() || isPulling}
-                  className="h-9 px-3 gap-1.5 shrink-0"
-                >
+                <Button size="sm" onClick={handlePull} disabled={!pullName.trim() || isPulling} className="h-9 px-3 gap-1.5 shrink-0">
                   {isPulling ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-3.5 w-3.5" />}
                   Pull
                 </Button>
               </div>
               {pullStatus && (
-                <p className={cn(
-                  'mt-2 text-xs px-3 py-2 rounded-xl border',
+                <p className={cn('mt-2 text-xs px-3 py-2 rounded-xl border',
                   pullStatus.startsWith('✓') ? 'text-emerald-500 bg-emerald-500/10 border-emerald-500/20' :
                   pullStatus.startsWith('Error') ? 'text-destructive bg-destructive/10 border-destructive/20' :
                   'text-muted-foreground bg-muted/20 border-border/30',
@@ -1209,95 +1428,6 @@ export function SettingsDialog({ settings, onSave, session }: SettingsDialogProp
             </div>
           </div>
         )
-
-      // ── Providers ────────────────────────────────────────────────────
-      case 'providers': {
-        const providerConfig = [
-          {
-            id: 'openai' as const,
-            name: 'OpenAI',
-            keyField: 'openaiApiKey' as const,
-            placeholder: 'sk-…',
-            show: showOpenAiKey,
-            onToggle: () => setShowOpenAiKey((v) => !v),
-            models: OPENAI_MODELS,
-            docsHref: 'https://platform.openai.com/api-keys',
-            color: 'text-emerald-400',
-          },
-          {
-            id: 'anthropic' as const,
-            name: 'Anthropic',
-            keyField: 'anthropicApiKey' as const,
-            placeholder: 'sk-ant-…',
-            show: showAnthropicKey,
-            onToggle: () => setShowAnthropicKey((v) => !v),
-            models: ANTHROPIC_MODELS,
-            docsHref: 'https://console.anthropic.com/account/keys',
-            color: 'text-amber-400',
-          },
-        ]
-        return (
-          <div className="space-y-6">
-            <div className="rounded-xl border border-blue-500/20 bg-blue-500/5 px-4 py-3">
-              <p className="text-xs text-blue-400/80 leading-relaxed">
-                API keys are stored locally in your browser and sent only to the respective provider. Ollama models work without any key.
-              </p>
-            </div>
-
-            {providerConfig.map((p) => (
-              <div key={p.id}>
-                <SLabel>{p.name}</SLabel>
-                <div className="space-y-2">
-                  <div className="relative">
-                    <Input
-                      type={p.show ? 'text' : 'password'}
-                      placeholder={p.placeholder}
-                      value={local[p.keyField]}
-                      onChange={(e) => update(p.keyField, e.target.value)}
-                      className="h-9 text-sm font-mono pr-9"
-                    />
-                    <button
-                      type="button"
-                      onClick={p.onToggle}
-                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground/40 hover:text-muted-foreground transition-colors"
-                    >
-                      {p.show ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
-                    </button>
-                  </div>
-
-                  {local[p.keyField] ? (
-                    <div className="rounded-lg border border-emerald-500/20 bg-emerald-500/5 px-3 py-2">
-                      <p className="text-[11px] text-emerald-400/80 font-medium mb-1">Unlocked models:</p>
-                      <div className="flex flex-wrap gap-1">
-                        {p.models.map((m) => (
-                          <span key={m.id} className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400/80 font-medium">
-                            {m.name}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  ) : (
-                    <p className="text-[11px] text-muted-foreground/40">
-                      No key set. Models: {p.models.map((m) => m.name).join(', ')}
-                    </p>
-                  )}
-                </div>
-              </div>
-            ))}
-
-            <div>
-              <SLabel>Ollama (Local)</SLabel>
-              <div className="rounded-xl border border-border/40 bg-card/20 px-4 py-3 flex items-center gap-3">
-                <div className="h-2 w-2 rounded-full bg-emerald-500 shadow-sm shadow-emerald-500/50 shrink-0" />
-                <div>
-                  <p className="text-sm font-medium">Always available</p>
-                  <p className="text-[11px] text-muted-foreground/50 mt-0.5">No API key required - runs on your machine</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        )
-      }
 
       // ── Session ───────────────────────────────────────────────────────
       case 'session': {

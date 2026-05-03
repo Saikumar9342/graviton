@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 from sqlalchemy import text, create_engine
-from typing import List, Optional, AsyncGenerator
+from typing import List, Optional
 from datetime import datetime
 import os
 import httpx
@@ -22,6 +22,39 @@ try:
 except Exception as e:
     print(f"Warning: Could not connect to database. {e}")
 
+@app.on_event("startup")
+async def startup():
+    # Migrate: add new columns to registered_models if they don't exist
+    try:
+        with database.engine.connect() as conn:
+            for col, ddl in [
+                ("provider",     "ALTER TABLE registered_models ADD COLUMN provider VARCHAR DEFAULT 'ollama' NOT NULL"),
+                ("api_base_url", "ALTER TABLE registered_models ADD COLUMN api_base_url VARCHAR"),
+                ("api_key",      "ALTER TABLE registered_models ADD COLUMN api_key VARCHAR"),
+            ]:
+                try:
+                    conn.execute(text(f"SELECT {col} FROM registered_models LIMIT 1"))
+                except Exception:
+                    conn.execute(text(ddl))
+                    conn.commit()
+    except Exception as e:
+        print(f"Warning: Migration check failed: {e}")
+
+    # Seed registered_models from Ollama on startup
+    try:
+        installed = await ollama_client.get_ollama_models()
+        with database.SessionLocal() as db:
+            for name in installed:
+                exists = db.query(models.RegisteredModel).filter(
+                    models.RegisteredModel.ollama_name == name
+                ).first()
+                if not exists:
+                    display = name.split(":")[0].replace("-", " ").title()
+                    db.add(models.RegisteredModel(ollama_name=name, display_name=display, provider='ollama'))
+            db.commit()
+    except Exception as e:
+        print(f"Warning: Auto-sync models failed: {e}")
+
 frontend_url = os.getenv("FRONTEND_URL", "http://localhost:3000")
 
 app.add_middleware(
@@ -35,8 +68,6 @@ app.add_middleware(
 UPLOAD_DIR = Path("uploads")
 UPLOAD_DIR.mkdir(exist_ok=True)
 
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
-ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "")
 
 # ── Pydantic schemas ────────────────────────────────────────────────────────
 
@@ -49,6 +80,32 @@ class ChatCreate(BaseModel):
 
 class ChatUpdate(BaseModel):
     title: Optional[str] = None
+
+class SettingsUpdate(BaseModel):
+    data: dict
+
+class RegisteredModelCreate(BaseModel):
+    ollama_name: str
+    display_name: str
+    provider: str = 'ollama'
+    api_base_url: Optional[str] = None
+    api_key: Optional[str] = None
+
+class RegisteredModelUpdate(BaseModel):
+    display_name: Optional[str] = None
+    is_active: Optional[bool] = None
+    api_key: Optional[str] = None
+
+class RegisteredModelResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: str
+    ollama_name: str
+    display_name: str
+    is_active: bool
+    provider: str
+    api_base_url: Optional[str] = None
+    created_at: datetime
+    # api_key intentionally excluded from response
 
 class MessageResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
@@ -70,7 +127,94 @@ class ChatResponse(BaseModel):
 def health_check():
     return {"status": "ok"}
 
-# ── Models ──────────────────────────────────────────────────────────────────
+# ── Settings ────────────────────────────────────────────────────────────────
+
+@app.get("/api/settings")
+def get_settings(db: Session = Depends(database.get_db)):
+    row = db.query(models.AppSettings).filter(models.AppSettings.id == "default").first()
+    if not row:
+        row = models.AppSettings(id="default", data={})
+        db.add(row)
+        db.commit()
+        db.refresh(row)
+    return {"data": row.data}
+
+@app.put("/api/settings")
+def update_settings(body: SettingsUpdate, db: Session = Depends(database.get_db)):
+    row = db.query(models.AppSettings).filter(models.AppSettings.id == "default").first()
+    if not row:
+        row = models.AppSettings(id="default", data=body.data)
+        db.add(row)
+    else:
+        row.data = body.data
+    db.commit()
+    return {"data": row.data}
+
+# ── Registered Models ────────────────────────────────────────────────────────
+
+@app.get("/api/registered-models", response_model=List[RegisteredModelResponse])
+def list_registered_models(db: Session = Depends(database.get_db)):
+    return db.query(models.RegisteredModel).order_by(models.RegisteredModel.created_at.asc()).all()
+
+@app.post("/api/registered-models", response_model=RegisteredModelResponse)
+def create_registered_model(body: RegisteredModelCreate, db: Session = Depends(database.get_db)):
+    existing = db.query(models.RegisteredModel).filter(
+        models.RegisteredModel.ollama_name == body.ollama_name
+    ).first()
+    if existing:
+        raise HTTPException(status_code=409, detail="Model already registered")
+    m = models.RegisteredModel(
+        ollama_name=body.ollama_name,
+        display_name=body.display_name,
+        provider=body.provider,
+        api_base_url=body.api_base_url,
+        api_key=body.api_key,
+    )
+    db.add(m)
+    db.commit()
+    db.refresh(m)
+    return m
+
+@app.put("/api/registered-models/{model_id}", response_model=RegisteredModelResponse)
+def update_registered_model(model_id: str, body: RegisteredModelUpdate, db: Session = Depends(database.get_db)):
+    m = db.query(models.RegisteredModel).filter(models.RegisteredModel.id == model_id).first()
+    if not m:
+        raise HTTPException(status_code=404, detail="Model not found")
+    if body.display_name is not None:
+        m.display_name = body.display_name
+    if body.is_active is not None:
+        m.is_active = body.is_active
+    db.commit()
+    db.refresh(m)
+    return m
+
+@app.delete("/api/registered-models/{model_id}")
+def delete_registered_model(model_id: str, db: Session = Depends(database.get_db)):
+    m = db.query(models.RegisteredModel).filter(models.RegisteredModel.id == model_id).first()
+    if not m:
+        raise HTTPException(status_code=404, detail="Model not found")
+    db.delete(m)
+    db.commit()
+    return {"message": "Deleted"}
+
+@app.post("/api/registered-models/sync")
+async def sync_models_from_ollama(db: Session = Depends(database.get_db)):
+    """Pull installed Ollama models and upsert into registered_models."""
+    installed = await ollama_client.get_ollama_models()
+    added = []
+    for name in installed:
+        existing = db.query(models.RegisteredModel).filter(
+            models.RegisteredModel.ollama_name == name
+        ).first()
+        if not existing:
+            display = name.split(":")[0].replace("-", " ").title()
+            m = models.RegisteredModel(ollama_name=name, display_name=display)
+            db.add(m)
+            added.append(name)
+    db.commit()
+    return {"synced": len(installed), "added": added}
+
+# ── Models (Ollama passthrough) ──────────────────────────────────────────────
 
 @app.get("/api/models")
 async def list_models():
@@ -164,66 +308,40 @@ async def _ddg_search(query: str) -> str:
 
 # ── Provider streaming ──────────────────────────────────────────────────────
 
-async def _stream_openai(model: str, messages: list, api_key: str) -> AsyncGenerator[str, None]:
-    async with httpx.AsyncClient(timeout=None) as client:
-        async with client.stream(
-            "POST",
-            "https://api.openai.com/v1/chat/completions",
-            headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
-            json={"model": model, "messages": messages, "stream": True},
-        ) as r:
-            if r.status_code != 200:
-                err = await r.aread()
-                raise Exception(f"OpenAI error: {err.decode()}")
-            async for line in r.aiter_lines():
-                if line.startswith("data: ") and "[DONE]" not in line:
-                    try:
-                        delta = json.loads(line[6:])["choices"][0]["delta"].get("content", "")
-                        if delta:
-                            yield delta
-                    except Exception:
-                        pass
-
-async def _stream_anthropic(model: str, messages: list, api_key: str) -> AsyncGenerator[str, None]:
-    system = ""
-    msg_list = []
-    for m in messages:
-        if m["role"] == "system":
-            system = m["content"]
-        else:
-            msg_list.append(m)
-
-    payload: dict = {
+async def _stream_openai_compat(model: str, messages: list, api_key: str, base_url: str):
+    """Stream from any OpenAI-compatible API (NVIDIA NIM, Groq, OpenRouter, etc.)."""
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json",
+    }
+    payload = {
         "model": model,
-        "messages": msg_list,
-        "max_tokens": 4096,
+        "messages": messages,
         "stream": True,
     }
-    if system:
-        payload["system"] = system
-
-    async with httpx.AsyncClient(timeout=None) as client:
+    async with httpx.AsyncClient(timeout=120.0) as client:
         async with client.stream(
             "POST",
-            "https://api.anthropic.com/v1/messages",
-            headers={
-                "x-api-key": api_key,
-                "anthropic-version": "2023-06-01",
-                "content-type": "application/json",
-            },
+            f"{base_url.rstrip('/')}/chat/completions",
+            headers=headers,
             json=payload,
         ) as r:
             if r.status_code != 200:
-                err = await r.aread()
-                raise Exception(f"Anthropic error: {err.decode()}")
+                body = await r.aread()
+                raise Exception(f"Provider error {r.status_code}: {body.decode()[:300]}")
             async for line in r.aiter_lines():
-                if line.startswith("data: "):
-                    try:
-                        data = json.loads(line[6:])
-                        if data.get("type") == "content_block_delta":
-                            yield data["delta"].get("text", "")
-                    except Exception:
-                        pass
+                if not line.startswith("data:"):
+                    continue
+                data = line[5:].strip()
+                if data == "[DONE]":
+                    break
+                try:
+                    chunk = json.loads(data)
+                    delta = chunk["choices"][0]["delta"].get("content", "")
+                    if delta:
+                        yield delta
+                except Exception:
+                    continue
 
 # ── Chat ────────────────────────────────────────────────────────────────────
 
@@ -238,9 +356,6 @@ async def chat_endpoint(
     system_prompt = body.get("systemPrompt", "")
     file_ids = body.get("fileIds", [])
     web_search = body.get("webSearch", False)
-    openai_key = body.get("openaiApiKey") or OPENAI_API_KEY
-    anthropic_key = body.get("anthropicApiKey") or ANTHROPIC_API_KEY
-
     if not messages_data:
         raise HTTPException(status_code=400, detail="No messages provided")
 
@@ -298,17 +413,21 @@ async def chat_endpoint(
         full_response = ""
         error_msg = None
 
+        # Look up the registered model to determine provider
+        db_model = None
+        if db:
+            db_model = db.query(models.RegisteredModel).filter(
+                models.RegisteredModel.ollama_name == model
+            ).first()
+
         try:
-            if model.startswith("gpt-") or model.startswith("o1") or model.startswith("o3"):
-                if not openai_key:
-                    raise Exception("OpenAI API key not configured. Go to Settings → Providers.")
-                async for chunk in _stream_openai(model, ollama_messages, openai_key):
-                    full_response += chunk
-                    yield chunk
-            elif model.startswith("claude-"):
-                if not anthropic_key:
-                    raise Exception("Anthropic API key not configured. Go to Settings → Providers.")
-                async for chunk in _stream_anthropic(model, ollama_messages, anthropic_key):
+            if db_model and db_model.provider == 'openai-compat' and db_model.api_base_url and db_model.api_key:
+                async for chunk in _stream_openai_compat(
+                    model=model,
+                    messages=ollama_messages,
+                    api_key=db_model.api_key,
+                    base_url=db_model.api_base_url,
+                ):
                     full_response += chunk
                     yield chunk
             else:
