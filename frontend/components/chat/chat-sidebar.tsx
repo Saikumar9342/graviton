@@ -19,6 +19,17 @@ import { cn } from '@/lib/utils'
 import { Chat } from '@/lib/types'
 import { renameChat } from '@/lib/api'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
+  DropdownMenuPortal,
+} from '@/components/ui/dropdown-menu'
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -378,85 +389,92 @@ function ChatRow({
       </span>
 
       {/* ⋮ button + dropdown */}
-      <div ref={menuRef} className="relative shrink-0">
-        <button
-          onClick={(e) => { e.stopPropagation(); setMenuOpen((v) => !v) }}
-          className={cn(
-            'h-6 w-6 rounded-md flex items-center justify-center transition-colors',
-            menuOpen
-              ? 'bg-muted text-foreground'
-              : 'text-muted-foreground/50 hover:bg-muted hover:text-foreground',
-          )}
-          title="More options"
-        >
-          <MoreHorizontal className="h-3.5 w-3.5" />
-        </button>
-
-        {menuOpen && (
-          <div className="absolute right-0 top-full mt-1 z-[60] w-48 rounded-xl border border-border/40 bg-popover shadow-xl shadow-black/20 overflow-hidden animate-in fade-in slide-in-from-top-1 duration-150">
+      <div className="shrink-0">
+        <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
+          <DropdownMenuTrigger asChild>
+            <button
+              onClick={(e) => e.stopPropagation()}
+              className={cn(
+                'h-6 w-6 rounded-md flex items-center justify-center transition-colors',
+                menuOpen
+                  ? 'bg-muted text-foreground'
+                  : 'text-muted-foreground/50 hover:bg-muted hover:text-foreground',
+              )}
+              title="More options"
+            >
+              <MoreHorizontal className="h-3.5 w-3.5" />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent 
+            side="right" 
+            align="start" 
+            sideOffset={8}
+            className="w-48 rounded-xl border border-border/40 bg-popover shadow-xl shadow-black/20 overflow-hidden animate-in fade-in slide-in-from-left-1 duration-150 z-[100]"
+          >
             <div className="p-1 space-y-0.5">
-              <button
-                onClick={() => { setMenuOpen(false); onStartEdit() }}
-                className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-[12px] text-left text-foreground/70 hover:bg-muted/60 hover:text-foreground transition-colors"
+              <DropdownMenuItem
+                onClick={(e) => { e.stopPropagation(); onStartEdit() }}
+                className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-[12px] cursor-pointer text-foreground/70 focus:bg-muted/60 focus:text-foreground transition-colors"
               >
                 <Pencil className="h-3 w-3 shrink-0 text-muted-foreground/50" />
                 Rename
-              </button>
+              </DropdownMenuItem>
 
-              <div className="relative">
-                <button
-                  onClick={() => setPickerOpen((v) => !v)}
-                  className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-[12px] text-left text-foreground/70 hover:bg-muted/60 hover:text-foreground transition-colors"
+              <DropdownMenuSub open={pickerOpen} onOpenChange={setPickerOpen}>
+                <DropdownMenuSubTrigger
+                  className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-[12px] cursor-pointer text-foreground/70 focus:bg-muted/60 focus:text-foreground transition-colors"
                 >
                   <Folder className="h-3 w-3 shrink-0 text-muted-foreground/50" />
                   Move to project
-                </button>
-                {pickerOpen && (
-                  <div className="absolute right-full top-0 mr-1 z-[70] w-44 rounded-xl border border-border/30 bg-popover shadow-xl shadow-black/20 overflow-hidden animate-in fade-in duration-150">
+                </DropdownMenuSubTrigger>
+                <DropdownMenuPortal>
+                  <DropdownMenuSubContent
+                    className="w-44 rounded-xl border border-border/30 bg-popover shadow-xl shadow-black/20 overflow-hidden animate-in fade-in slide-in-from-left-1 duration-150 z-[110]"
+                  >
                     <div className="p-1 space-y-0.5">
-                      <button
-                        onClick={() => { onAssign(null); setPickerOpen(false); setMenuOpen(false) }}
-                        className={cn('w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg text-[12px] text-left transition-colors', !chatProject[chat.id] ? 'bg-primary/10 text-primary' : 'text-muted-foreground/70 hover:bg-muted/50 hover:text-foreground')}
+                      <DropdownMenuItem
+                        onClick={(e) => { e.stopPropagation(); onAssign(null) }}
+                        className={cn('w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg text-[12px] cursor-pointer transition-colors', !chatProject[chat.id] ? 'bg-primary/10 text-primary' : 'text-muted-foreground/70 focus:bg-muted/50 focus:text-foreground')}
                       >
                         No project
-                      </button>
+                      </DropdownMenuItem>
                       {projects.map((p) => (
-                        <button
+                        <DropdownMenuItem
                           key={p.id}
-                          onClick={() => { onAssign(p.id); setPickerOpen(false); setMenuOpen(false) }}
-                          className={cn('w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg text-[12px] text-left transition-colors', chatProject[chat.id] === p.id ? 'bg-primary/10 text-primary' : 'text-muted-foreground/70 hover:bg-muted/50 hover:text-foreground')}
+                          onClick={(e) => { e.stopPropagation(); onAssign(p.id) }}
+                          className={cn('w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg text-[12px] cursor-pointer transition-colors', chatProject[chat.id] === p.id ? 'bg-primary/10 text-primary' : 'text-muted-foreground/70 focus:bg-muted/50 focus:text-foreground')}
                         >
                           <div className={cn('h-1.5 w-1.5 rounded-full shrink-0', COLOR_DOT[p.color] ?? 'bg-primary')} />
                           <span className="truncate">{p.name}</span>
-                        </button>
+                        </DropdownMenuItem>
                       ))}
                     </div>
-                  </div>
-                )}
-              </div>
+                  </DropdownMenuSubContent>
+                </DropdownMenuPortal>
+              </DropdownMenuSub>
 
-              <div className="my-0.5 mx-2 border-t border-border/25" />
+              <DropdownMenuSeparator className="my-0.5 mx-2 bg-border/25" />
 
-              <button
-                onClick={() => { setMenuOpen(false); onTogglePin() }}
-                className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-[12px] text-left text-foreground/70 hover:bg-muted/60 hover:text-foreground transition-colors"
+              <DropdownMenuItem
+                onClick={(e) => { e.stopPropagation(); onTogglePin() }}
+                className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-[12px] cursor-pointer text-foreground/70 focus:bg-muted/60 focus:text-foreground transition-colors"
               >
                 <Pin className="h-3 w-3 shrink-0 text-muted-foreground/50" />
                 {isPinned ? 'Unpin chat' : 'Pin chat'}
-              </button>
+              </DropdownMenuItem>
 
-              <div className="my-0.5 mx-2 border-t border-border/25" />
+              <DropdownMenuSeparator className="my-0.5 mx-2 bg-border/25" />
 
-              <button
-                onClick={() => { setMenuOpen(false); onRequestDelete() }}
-                className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-[12px] text-left text-destructive/80 hover:bg-destructive/10 hover:text-destructive transition-colors"
+              <DropdownMenuItem
+                onClick={(e) => { e.stopPropagation(); onRequestDelete() }}
+                className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-[12px] cursor-pointer text-destructive/80 focus:bg-destructive/10 focus:text-destructive transition-colors"
               >
                 <Trash2 className="h-3 w-3 shrink-0" />
                 Delete chat
-              </button>
+              </DropdownMenuItem>
             </div>
-          </div>
-        )}
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
     </div>
   )

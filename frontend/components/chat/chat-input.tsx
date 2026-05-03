@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
-import { ArrowUp, Square, Paperclip, Globe, ChevronDown, Cpu, Search, MessageSquare, Terminal, X, FileText, Loader2 } from 'lucide-react'
+import { ArrowUp, Square, Paperclip, Globe, ChevronDown, Cpu, Search, MessageSquare, Terminal, X, FileText, Loader2, Brain, Zap, Bot } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import {
@@ -153,41 +153,66 @@ export function ChatInput({
                 <ChevronDown className="h-3 w-3 opacity-40" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="w-64 rounded-2xl p-1.5">
+            <DropdownMenuContent 
+              align="start" 
+              className="w-48 rounded-md p-1 shadow-[0_15px_50px_rgba(0,0,0,0.25)] border-border/50 bg-background/98 backdrop-blur-2xl animate-in fade-in zoom-in-95 duration-200"
+            >
               {Object.entries(modelsByProvider)
                 .sort(([a], [b]) => {
                   if (a === 'Ollama') return -1
                   if (b === 'Ollama') return 1
                   return a.localeCompare(b)
                 })
-                .map(([provider, providerModels], i) => (
-                <div key={provider}>
-                  {i > 0 && <DropdownMenuSeparator className="my-1" />}
-                  <DropdownMenuLabel className="px-2 py-1 text-[11px] font-semibold text-muted-foreground/50 uppercase tracking-wider">
-                    {provider}
-                  </DropdownMenuLabel>
-                  {providerModels.map((model) => (
-                    <DropdownMenuItem
-                      key={model.id}
-                      onClick={() => onSettingsChange({ ...settings, model: model.id })}
-                      className={cn(
-                        'flex items-center justify-between py-2 px-2.5 rounded-xl cursor-pointer',
-                        settings.model === model.id && 'bg-primary/10 text-primary'
-                      )}
-                    >
-                      <div>
-                        <p className="text-sm font-medium leading-none mb-0.5">{model.name}</p>
-                        <p className="text-[11px] text-muted-foreground/60">{model.provider}</p>
+                .map(([provider, providerModels], i) => {
+                  const ProviderIcon = 
+                    provider === 'Ollama' ? Brain : 
+                    provider === 'Groq' ? Zap : 
+                    provider === 'OpenRouter' ? Globe : 
+                    provider === 'NVIDIA' ? Cpu : Bot
+
+                  return (
+                    <div key={provider}>
+                      {i > 0 && <div className="h-px border-t border-dashed border-border/40 my-1 mx-1" />}
+                      <div className="flex items-center gap-1.5 px-2.5 py-1.5 mb-0.5 opacity-40">
+                        <ProviderIcon className="h-3 w-3 text-primary/70" />
+                        <span className="text-[10px] font-bold uppercase tracking-widest">{provider}</span>
                       </div>
-                      {model.badge && (
-                        <Badge variant="outline" className="text-[10px] h-4 px-1.5 font-medium">
-                          {model.badge}
-                        </Badge>
-                      )}
-                    </DropdownMenuItem>
-                  ))}
-                </div>
-              ))}
+                      
+                      {providerModels.map((model) => (
+                        <DropdownMenuItem
+                          key={model.id}
+                          onClick={() => onSettingsChange({ ...settings, model: model.id })}
+                          className={cn(
+                            'relative flex items-center justify-between py-2 pl-3 pr-2 rounded-sm cursor-pointer transition-all duration-75 group',
+                            settings.model === model.id 
+                              ? 'bg-primary/[0.08] text-primary' 
+                              : 'hover:bg-muted/70 text-muted-foreground hover:text-foreground'
+                          )}
+                        >
+                          {settings.model === model.id && (
+                            <>
+                              <div className="absolute left-0 top-0 bottom-0 w-[2.5px] bg-primary" />
+                              <div className="absolute right-0 top-0 w-1.5 h-1.5 border-t border-r border-primary/30" />
+                              <div className="absolute right-0 bottom-0 w-1.5 h-1.5 border-b border-r border-primary/30" />
+                            </>
+                          )}
+                          <span className="text-xs font-semibold truncate tracking-tight">{model.name}</span>
+                          
+                          {model.badge && (
+                            <span className={cn(
+                              "text-[8px] font-bold px-1.5 py-0.5 border tracking-tight uppercase transition-colors",
+                              settings.model === model.id
+                                ? "bg-primary/10 border-primary/30 text-primary"
+                                : "bg-muted/50 border-border text-muted-foreground/50 group-hover:border-border/80"
+                            )}>
+                              {model.badge}
+                            </span>
+                          )}
+                        </DropdownMenuItem>
+                      ))}
+                    </div>
+                  )
+                })}
             </DropdownMenuContent>
           </DropdownMenu>
 
