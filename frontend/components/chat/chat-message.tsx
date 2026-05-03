@@ -20,6 +20,7 @@ interface ChatMessageProps {
   compactMode?: boolean
   bubbleStyle?: ChatBubbleStyle
   isLoading?: boolean
+  onSelectOption?: (text: string) => void
 }
 
 export function ChatMessage({
@@ -31,6 +32,7 @@ export function ChatMessage({
   compactMode = false,
   bubbleStyle = 'modern',
   isLoading = false,
+  onSelectOption,
 }: ChatMessageProps) {
   const [isEditing, setIsEditing] = useState(false)
   const [editContent, setEditContent] = useState(content)
@@ -159,7 +161,11 @@ export function ChatMessage({
                 bubbleStyle === 'minimal' && "prose-chat py-1"
               )}>
                 <div className="prose-chat">
-                  <MarkdownRenderer content={content} isStreaming={isStreaming} />
+                  <MarkdownRenderer 
+                    content={content} 
+                    isStreaming={isStreaming} 
+                    onSelectOption={onSelectOption}
+                  />
                 </div>
               </div>
             )}

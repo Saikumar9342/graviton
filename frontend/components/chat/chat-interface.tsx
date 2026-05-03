@@ -449,6 +449,7 @@ export function ChatInterface() {
                     isStreaming={message.id === streamingId}
                     canEdit={message.role === 'user' && !isLoading}
                     onEdit={(newContent) => handleEditMessage(message.id, newContent)}
+                    onSelectOption={(text) => handleSend(text)}
                     compactMode={settings.compactMode}
                     bubbleStyle={settings.bubbleStyle}
                   />
