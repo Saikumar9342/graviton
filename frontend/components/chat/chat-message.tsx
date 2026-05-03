@@ -7,6 +7,7 @@ import { MarkdownRenderer } from './markdown-renderer'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
+import { Skeleton } from '@/components/ui/skeleton'
 
 import { ChatBubbleStyle } from '@/lib/types'
 
@@ -18,6 +19,7 @@ interface ChatMessageProps {
   canEdit?: boolean
   compactMode?: boolean
   bubbleStyle?: ChatBubbleStyle
+  isLoading?: boolean
 }
 
 export function ChatMessage({
@@ -28,6 +30,7 @@ export function ChatMessage({
   canEdit = false,
   compactMode = false,
   bubbleStyle = 'modern',
+  isLoading = false,
 }: ChatMessageProps) {
   const [isEditing, setIsEditing] = useState(false)
   const [editContent, setEditContent] = useState(content)
@@ -50,6 +53,31 @@ export function ChatMessage({
   const handleCancelEdit = () => {
     setEditContent(content)
     setIsEditing(false)
+  }
+
+  if (isLoading) {
+    return (
+      <div className={cn('group py-2', compactMode ? 'py-1' : 'py-2')}>
+        {isUser ? (
+          <div className="flex justify-end gap-3 max-w-3xl mx-auto">
+            <div className="max-w-[80%] space-y-1.5 flex flex-col items-end">
+              <Skeleton className="h-4 w-32 rounded-lg opacity-40" />
+              <Skeleton className={cn("h-12 w-48 rounded-[var(--radius)] rounded-br-sm opacity-20", 
+                bubbleStyle === 'modern' ? 'bg-primary/20' : 'bg-muted')} />
+            </div>
+            <Skeleton className="shrink-0 h-8 w-8 rounded-full opacity-30" />
+          </div>
+        ) : (
+          <div className="flex gap-3 max-w-3xl mx-auto">
+            <div className="flex-1 min-w-0 space-y-1.5">
+              <Skeleton className="h-4 w-24 rounded-lg opacity-40" />
+              <Skeleton className={cn("h-24 w-full rounded-[var(--radius)] rounded-tl-sm opacity-20", 
+                bubbleStyle === 'modern' ? 'bg-card' : 'bg-muted')} />
+            </div>
+          </div>
+        )}
+      </div>
+    )
   }
 
   return (

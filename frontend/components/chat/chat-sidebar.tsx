@@ -15,6 +15,16 @@ import {
   DialogTitle,
   DialogDescription,
 } from '@/components/ui/dialog'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import { cn } from '@/lib/utils'
 import { Chat } from '@/lib/types'
 import { renameChat } from '@/lib/api'
@@ -96,6 +106,7 @@ interface ChatSidebarProps {
   isCollapsed: boolean
   onClose: () => void
   onToggleCollapse: () => void
+  activeStreamingIds?: Set<string>
 }
 
 // ── Search Chats Dialog ────────────────────────────────────────────────────────
@@ -293,39 +304,25 @@ interface ChatRowProps {
   chatProject: Record<string, string>
   editingId: string | null
   editValue: string
-  isPendingDelete: boolean
   onSelect: () => void
-  onRequestDelete: () => void
   onConfirmDelete: () => void
-  onCancelDelete: () => void
   onStartEdit: () => void
   onEditChange: (v: string) => void
   onCommitEdit: () => void
   onCancelEdit: () => void
   onAssign: (projectId: string | null) => void
   onTogglePin: () => void
+  isStreaming?: boolean
 }
 
 function ChatRow({
   chat, isActive, isPinned, projects, chatProject, editingId, editValue,
-  isPendingDelete, onSelect, onRequestDelete, onConfirmDelete, onCancelDelete,
+  onSelect, onConfirmDelete,
   onStartEdit, onEditChange, onCommitEdit, onCancelEdit, onAssign, onTogglePin,
+  isStreaming,
 }: ChatRowProps) {
   const [menuOpen, setMenuOpen] = useState(false)
   const [pickerOpen, setPickerOpen] = useState(false)
-  const menuRef = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    if (!menuOpen) return
-    const h = (e: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
-        setMenuOpen(false)
-        setPickerOpen(false)
-      }
-    }
-    document.addEventListener('mousedown', h)
-    return () => document.removeEventListener('mousedown', h)
-  }, [menuOpen])
 
   if (editingId === chat.id) {
     return (
@@ -347,26 +344,11 @@ function ChatRow({
     )
   }
 
-  if (isPendingDelete) {
-    return (
-      <div className="flex items-center gap-2 mx-1 px-2.5 py-2 rounded-xl border border-destructive/20 bg-destructive/5 animate-in fade-in duration-150">
-        <AlertTriangle className="h-3 w-3 text-destructive/70 shrink-0" />
-        <span className="flex-1 text-[11px] text-destructive/90 font-medium truncate">Delete this chat?</span>
-        <button onClick={onConfirmDelete} className="h-6 px-2 rounded-md text-[11px] font-semibold bg-destructive text-destructive-foreground hover:bg-destructive/90 transition-colors shrink-0">
-          Delete
-        </button>
-        <button onClick={onCancelDelete} className="h-6 w-6 rounded-md flex items-center justify-center text-muted-foreground/50 hover:bg-muted/50 shrink-0">
-          <X className="h-3 w-3" />
-        </button>
-      </div>
-    )
-  }
 
   const shortTitle = chat.title.length > 28 ? chat.title.slice(0, 28) + '…' : chat.title
 
   return (
     <div
-      ref={menuRef}
       className={cn(
         'group/row flex items-center gap-1 mx-1 pl-3 pr-1.5 py-1.5 rounded-lg cursor-pointer select-none transition-colors duration-100',
         isActive ? 'bg-muted/50' : 'hover:bg-muted/30',
@@ -381,11 +363,17 @@ function ChatRow({
         onClick={onSelect}
         onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && onSelect()}
         className={cn(
-          'flex-1 min-w-0 text-[13px] leading-snug truncate',
+          'flex-1 min-w-0 text-[13px] leading-snug truncate flex items-center gap-2',
           isActive ? 'font-medium text-foreground' : 'font-normal text-foreground/80',
         )}
       >
         {shortTitle}
+        {isStreaming && (
+          <span className="flex gap-0.5 shrink-0">
+            <span className="h-1 w-1 rounded-full bg-primary animate-pulse" />
+            <span className="h-1 w-1 rounded-full bg-primary animate-pulse [animation-delay:200ms]" />
+          </span>
+        )}
       </span>
 
       {/* ⋮ button + dropdown */}
@@ -466,7 +454,10 @@ function ChatRow({
               <DropdownMenuSeparator className="my-0.5 mx-2 bg-border/25" />
 
               <DropdownMenuItem
-                onClick={(e) => { e.stopPropagation(); onRequestDelete() }}
+                onClick={(e) => { 
+                  e.stopPropagation(); 
+                  onConfirmDelete(); 
+                }}
                 className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-[12px] cursor-pointer text-destructive/80 focus:bg-destructive/10 focus:text-destructive transition-colors"
               >
                 <Trash2 className="h-3 w-3 shrink-0" />
@@ -484,13 +475,12 @@ function ChatRow({
 
 export function ChatSidebar({
   chats, currentChatId, onSelectChat, onNewChat, onDeleteChat, onRenameChat,
-  isOpen, isCollapsed, onClose, onToggleCollapse,
+  isOpen, isCollapsed, onClose, onToggleCollapse, activeStreamingIds,
 }: ChatSidebarProps) {
   const [search, setSearch] = useState('')
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editValue, setEditValue] = useState('')
-  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null)
-
+  const [deletingChatId, setDeletingChatId] = useState<string | null>(null)
   const [projects, setProjects] = useState<Project[]>([])
   const [chatProject, setChatProject] = useState<Record<string, string>>({})
   const [collapsedProjects, setCollapsedProjects] = useState<Set<string>>(new Set())
@@ -614,17 +604,15 @@ export function ChatSidebar({
     chatProject,
     editingId,
     editValue,
-    isPendingDelete: pendingDeleteId === chat.id,
     onSelect: () => onSelectChat(chat.id),
-    onRequestDelete: () => setPendingDeleteId(chat.id),
-    onConfirmDelete: () => { onDeleteChat(chat.id); setPendingDeleteId(null) },
-    onCancelDelete: () => setPendingDeleteId(null),
+    onConfirmDelete: () => setDeletingChatId(chat.id),
     onStartEdit: () => { setEditingId(chat.id); setEditValue(chat.title) },
     onEditChange: setEditValue,
     onCommitEdit: () => commitEdit(chat.id),
     onCancelEdit: () => setEditingId(null),
     onAssign: (pid: string | null) => assignChat(chat.id, pid),
     onTogglePin: () => togglePin(chat.id),
+    isStreaming: activeStreamingIds?.has(chat.id),
   })
 
   return (
@@ -861,6 +849,30 @@ export function ChatSidebar({
       {isOpen && (
         <div className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm md:hidden" onClick={onClose} />
       )}
+      <AlertDialog open={!!deletingChatId} onOpenChange={(open) => !open && setDeletingChatId(null)}>
+        <AlertDialogContent className="max-w-[400px] rounded-2xl border-border/40 shadow-2xl">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-[17px] font-bold tracking-tight">Delete conversation?</AlertDialogTitle>
+            <AlertDialogDescription className="text-[13.5px] leading-relaxed text-muted-foreground/70">
+              This will permanently delete the conversation and all its messages. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="gap-2 sm:gap-0">
+            <AlertDialogCancel className="rounded-xl h-10 text-[13px] border-border/40 hover:bg-muted/50">Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={() => {
+                if (deletingChatId) {
+                  onDeleteChat(deletingChatId)
+                  setDeletingChatId(null)
+                }
+              }}
+              className="rounded-xl h-10 text-[13px] bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </TooltipProvider>
   )
 }

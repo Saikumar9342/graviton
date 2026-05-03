@@ -9,6 +9,8 @@ import { ChatInput } from './chat-input'
 import { EmptyState } from './empty-state'
 import { Button } from '@/components/ui/button'
 import { Alert, AlertDescription } from '@/components/ui/alert'
+import { Skeleton } from '@/components/ui/skeleton'
+import { Spinner } from '@/components/ui/spinner'
 import { generateId, generateTitle } from '@/lib/chat-store'
 import { fetchChats, createChat, deleteChat as apiDeleteChat, fetchMessages } from '@/lib/api'
 import { Chat, Settings, MODE_SYSTEM_PROMPTS } from '@/lib/types'
@@ -56,7 +58,9 @@ export function ChatInterface() {
 
   const [messages, setMessages] = useState<Message[]>([])
   const [isLoading, setIsLoading] = useState(false)
+  const [isFetchingMessages, setIsFetchingMessages] = useState(false)
   const [streamingId, setStreamingId] = useState<string | null>(null)
+  const [activeStreamingIds, setActiveStreamingIds] = useState<Set<string>>(new Set())
   const [error, setError] = useState<Error | null>(null)
   const [mounted, setMounted] = useState(false)
   const [lastResponseMs, setLastResponseMs] = useState<number | null>(null)
@@ -150,24 +154,41 @@ export function ChatInterface() {
   const handleSelectChat = useCallback(async (id: string) => {
     setCurrentChatId(id)
     setError(null)
+    setIsFetchingMessages(true)
     try {
       const backendMessages = await fetchMessages(id)
       setMessages(backendMessages.map((m) => ({ id: m.id, role: m.role, content: m.content })))
     } catch (err) {
       console.error('Failed to fetch messages:', err)
       setMessages([])
+    } finally {
+      setIsFetchingMessages(false)
     }
   }, [setCurrentChatId])
 
   const handleDeleteChat = useCallback(async (id: string) => {
+    // Optimistic update
+    const chatToDelete = chats.find(c => c.id === id)
+    setChats((prev) => prev.filter((c) => c.id !== id))
+    
+    if (currentChatIdRef.current === id) {
+      handleNewChat()
+    }
+
     try {
       await apiDeleteChat(id)
-      setChats((prev) => prev.filter((c) => c.id !== id))
-      if (currentChatIdRef.current === id) handleNewChat()
     } catch (err) {
       console.error('Failed to delete chat:', err)
+      // Revert if failed
+      if (chatToDelete) {
+        setChats(prev => {
+          if (prev.find(c => c.id === id)) return prev
+          return [chatToDelete, ...prev].sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime())
+        })
+      }
+      setError(new Error('Failed to delete chat. Please try again.'))
     }
-  }, [handleNewChat])
+  }, [chats, handleNewChat])
 
   const handleSend = useCallback(async (
     content: string,
@@ -215,6 +236,8 @@ export function ChatInterface() {
     const controller = new AbortController()
     abortRef.current = controller
 
+    setActiveStreamingIds(prev => new Set(prev).add(chatId))
+
     try {
       const res = await fetch('/api/chat', {
         method: 'POST',
@@ -248,6 +271,12 @@ export function ChatInterface() {
         const snap = accumulated
         setMessages((prev) => prev.map((m) => m.id === assistantId ? { ...m, content: snap } : m))
       }
+
+      setActiveStreamingIds(prev => {
+        const next = new Set(prev)
+        next.delete(chatId)
+        return next
+      })
 
       const elapsed = Date.now() - streamStart
       setLastResponseMs(elapsed)
@@ -310,13 +339,7 @@ export function ChatInterface() {
   }
 
   if (!mounted) {
-    return (
-      <div className="flex h-[100svh] items-center justify-center bg-background">
-        <div className="flex flex-col items-center gap-2">
-          <p className="text-xs text-muted-foreground animate-pulse">Loading…</p>
-        </div>
-      </div>
-    )
+    return <LayoutSkeleton />
   }
 
   const currentModel = availableModels.find((m) => m.id === settings.model) ?? availableModels[0]
@@ -331,6 +354,7 @@ export function ChatInterface() {
       <ChatSidebar
         chats={chats}
         currentChatId={currentChatId}
+        activeStreamingIds={activeStreamingIds}
         onSelectChat={handleSelectChat}
         onNewChat={handleNewChat}
         onDeleteChat={handleDeleteChat}
@@ -363,15 +387,30 @@ export function ChatInterface() {
             onScroll={handleScroll}
             className="flex flex-col flex-1 overflow-y-auto scrollbar-none scroll-smooth px-4 sm:px-6"
           >
-            {messages.length === 0 ? (
+            {isFetchingMessages ? (
+              <div className="max-w-3xl mx-auto space-y-6 pt-4">
+                <div className="flex justify-end gap-3 pr-4">
+                  <div className="space-y-2 max-w-[60%]">
+                    <Skeleton className="h-4 w-48 rounded-lg" />
+                    <Skeleton className="h-12 w-64 rounded-2xl" />
+                  </div>
+                </div>
+                <div className="flex gap-3 pl-4">
+                  <div className="space-y-2 flex-1 max-w-[70%]">
+                    <Skeleton className="h-4 w-32 rounded-lg" />
+                    <Skeleton className="h-20 w-full rounded-2xl" />
+                  </div>
+                </div>
+                <div className="flex justify-end gap-3 pr-4">
+                  <Skeleton className="h-10 w-40 rounded-2xl" />
+                </div>
+              </div>
+            ) : messages.length === 0 ? (
               <EmptyState onSuggestionClick={(text) => handleSend(text)} />
             ) : (
               <div 
-                className="pt-6 mx-auto w-full flex flex-col"
-                style={{ 
-                  maxWidth: 'var(--chat-max-width)',
-                  gap: 'var(--message-spacing)'
-                }}
+                className="flex flex-col py-4"
+                style={{ gap: 'var(--message-spacing)' }}
               >
                 {messages.map((message) => (
                   <ChatMessage
@@ -432,6 +471,40 @@ export function ChatInterface() {
           </div>
         </div>
       </main>
+    </div>
+  )
+}
+function LayoutSkeleton() {
+  return (
+    <div className="flex h-[100svh] overflow-hidden bg-background">
+      {/* Sidebar Skeleton */}
+      <div className="w-[var(--sidebar-width)] border-r border-border/40 flex flex-col p-4 space-y-6">
+        <div className="flex items-center justify-between mb-4">
+          <Skeleton className="h-6 w-24" />
+          <Skeleton className="h-6 w-6 rounded-lg" />
+        </div>
+        <Skeleton className="h-11 w-full rounded-2xl" />
+        <Skeleton className="h-11 w-full rounded-2xl" />
+        <div className="space-y-3 pt-6">
+          <Skeleton className="h-4 w-16" />
+          <Skeleton className="h-8 w-full rounded-xl" />
+          <Skeleton className="h-8 w-full rounded-xl" />
+          <Skeleton className="h-8 w-full rounded-xl" />
+        </div>
+      </div>
+      {/* Main Content Skeleton */}
+      <div className="flex-1 flex flex-col relative">
+        <div className="h-14 border-b border-border/40 flex items-center justify-between px-6">
+          <Skeleton className="h-5 w-32" />
+          <Skeleton className="h-8 w-8 rounded-full" />
+        </div>
+        <div className="flex-1 flex flex-col items-center justify-center space-y-4">
+          <Skeleton className="h-4 w-48 opacity-20" />
+        </div>
+        <div className="p-6">
+          <Skeleton className="h-24 w-full max-w-3xl mx-auto rounded-3xl" />
+        </div>
+      </div>
     </div>
   )
 }
