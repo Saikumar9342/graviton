@@ -137,9 +137,9 @@ function SearchChatsDialog({
       <Button
         onClick={() => setOpen(true)}
         variant="outline"
-        className="w-full justify-start gap-3 h-11 text-sm font-medium rounded-2xl border border-border/60 bg-muted/20 hover:bg-muted/40 hover:border-primary/50 text-muted-foreground hover:text-foreground transition-all"
+        className="w-full justify-start gap-3 h-11 text-sm font-medium rounded-2xl border border-border/60 bg-muted/20 hover:bg-muted/40 hover:border-primary/50 text-muted-foreground/40 transition-all"
       >
-        <Search className="h-4 w-4 shrink-0 text-muted-foreground/60" />
+        <Search className="h-4 w-4 shrink-0 text-muted-foreground/40" />
         <span className="flex-1 text-left">Search chats…</span>
       </Button>
 
@@ -149,13 +149,13 @@ function SearchChatsDialog({
           <DialogDescription className="sr-only">Find and open your chats</DialogDescription>
 
           <div className="flex items-center gap-3 px-5 py-4 border-b border-border/40 bg-muted/10">
-            <Search className="h-4 w-4 text-muted-foreground/60 shrink-0" />
+            <Search className="h-4 w-4 text-muted-foreground/40 shrink-0" />
             <input
               autoFocus
               placeholder="Search chats by title…"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="flex-1 bg-transparent text-sm focus:outline-none placeholder:text-muted-foreground/60 text-foreground"
+              className="flex-1 bg-transparent text-sm focus:outline-none placeholder:text-muted-foreground/40 text-foreground"
             />
             {searchTerm && (
               <button
