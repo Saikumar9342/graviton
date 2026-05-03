@@ -5,7 +5,7 @@ import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
 import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism'
-import { Check, Copy } from 'lucide-react'
+import { Check, Copy, Download } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 interface MarkdownRendererProps {
@@ -237,6 +237,40 @@ export function MarkdownRenderer({ content, isStreaming, onSelectOption }: Markd
           },
           ol({ children, ...props }) {
             return <ol className="my-4 ml-6 list-decimal space-y-2" {...props}>{children}</ol>
+          },
+          img({ src, alt }) {
+            if (!src) return null
+            const isGenerated = alt === 'Generated Image'
+            const handleDownload = async () => {
+              const res = await fetch(src as string)
+              const blob = await res.blob()
+              const url = URL.createObjectURL(blob)
+              const a = document.createElement('a')
+              a.href = url
+              a.download = `generated-${Date.now()}.jpg`
+              a.click()
+              URL.revokeObjectURL(url)
+            }
+            return (
+              <span className="block my-3">
+                <span className="relative inline-block group/img" style={{ maxWidth: 520 }}>
+                  <img
+                    src={src}
+                    alt={alt || ''}
+                    className="rounded-xl border border-border/20 shadow-lg w-full block"
+                  />
+                  {isGenerated && (
+                    <button
+                      onClick={handleDownload}
+                      className="absolute top-2 right-2 opacity-0 group-hover/img:opacity-100 transition-opacity flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-black/60 backdrop-blur-sm text-white text-xs font-medium hover:bg-black/80"
+                    >
+                      <Download className="h-3.5 w-3.5" />
+                      Download
+                    </button>
+                  )}
+                </span>
+              </span>
+            )
           },
           blockquote({ children, ...props }) {
             return (

@@ -2,6 +2,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, Depends, HTTPException, Body, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
+from fastapi.staticfiles import StaticFiles
 from sqlalchemy.orm import Session
 from sqlalchemy import text, create_engine
 from typing import List, Optional
@@ -135,6 +136,7 @@ app.include_router(images.routes.router)
 
 UPLOAD_DIR = Path("uploads")
 UPLOAD_DIR.mkdir(exist_ok=True)
+app.mount("/api/uploads", StaticFiles(directory=str(UPLOAD_DIR)), name="uploads")
 
 
 # ── Pydantic schemas ────────────────────────────────────────────────────────
@@ -472,6 +474,73 @@ async def _stream_openai_compat(model: str, messages: list, api_key: str, base_u
                 except Exception:
                     continue
 
+# ── Image generation (non-streaming JSON endpoint) ──────────────────────────
+
+@app.post("/api/chat/image")
+async def image_chat_endpoint(
+    body: dict = Body(...),
+    db: Optional[Session] = Depends(database.get_db_optional)
+):
+    from fastapi.responses import JSONResponse
+    messages_data = body.get("messages", [])
+    model = body.get("model", "")
+    chat_id = body.get("chatId")
+    if not messages_data:
+        raise HTTPException(status_code=400, detail="No messages provided")
+
+    # Save user message
+    if chat_id and db:
+        try:
+            user_msg = messages_data[-1]
+            db.add(models.Message(
+                chat_id=chat_id,
+                role=user_msg["role"],
+                content=user_msg.get("content", ""),
+                model=model,
+            ))
+            db.commit()
+        except Exception as e:
+            print(f"Warning: Could not save user message: {e}")
+
+    # Look up model
+    db_model = None
+    if db:
+        db_model = db.query(models.RegisteredModel).filter(
+            models.RegisteredModel.ollama_name == model
+        ).first()
+
+    if not db_model or not db_model.api_key or not db_model.api_base_url:
+        raise HTTPException(status_code=400, detail=f"Model '{model}' is missing API key or base URL.")
+
+    prompt = messages_data[-1].get("content", "")
+    from images import service as image_service
+    img_data = await image_service.generateImage(
+        prompt=prompt,
+        model=model,
+        api_key=db_model.api_key,
+        api_base_url=db_model.api_base_url,
+    )
+    img_markdown = f"![Generated Image]({img_data})"
+
+    # Save assistant message
+    if chat_id and db:
+        try:
+            db.add(models.Message(
+                chat_id=chat_id,
+                role="assistant",
+                content=img_markdown,
+                model=model,
+            ))
+            db_chat = db.query(models.Chat).filter(models.Chat.id == chat_id).first()
+            if db_chat:
+                db_chat.updated_at = datetime.now(timezone.utc)
+            db.commit()
+        except Exception as e:
+            print(f"Warning: Could not save image message: {e}")
+
+    return JSONResponse({"content": img_markdown})
+
+
 # ── Chat ────────────────────────────────────────────────────────────────────
 
 @app.post("/api/chat")
@@ -590,10 +659,38 @@ async def chat_endpoint(
 
             if is_image_gen:
                 prompt = messages_data[-1].get("content", "")
+                if not db_model.api_key or not db_model.api_base_url:
+                    yield f"⚠️ Model '{db_model.display_name}' is missing API key or base URL. Go to Settings → Local Models and check its configuration."
+                    return
                 if prompt:
                     from images import service as image_service
-                    img_data = await image_service.generateImage(prompt)
-                    yield f"Generating neural image for: **{prompt}**...\n\n![Generated Image]({img_data})"
+                    img_data = await image_service.generateImage(
+                        prompt=prompt,
+                        model=model,
+                        api_key=db_model.api_key,
+                        api_base_url=db_model.api_base_url,
+                    )
+                    img_markdown = f"![Generated Image]({img_data})"
+                    # Save to DB first, then signal frontend with a special marker
+                    if chat_id:
+                        try:
+                            with database.SessionLocal() as session:
+                                session.add(models.Message(
+                                    chat_id=chat_id,
+                                    role="assistant",
+                                    content=img_markdown,
+                                    model=model,
+                                ))
+                                db_chat = session.query(models.Chat).filter(models.Chat.id == chat_id).first()
+                                if db_chat:
+                                    db_chat.updated_at = datetime.now(timezone.utc)
+                                session.commit()
+                        except Exception as e:
+                            print(f"Warning: Could not save image message: {e}")
+                    # Send as a single JSON-encoded marker so the frontend doesn't
+                    # accidentally split the base64 payload through the chunk accumulator
+                    import json as _json
+                    yield f"__IMAGE__:{_json.dumps(img_markdown)}"
                     return
 
             if is_openai_compat:

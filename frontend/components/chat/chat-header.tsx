@@ -69,50 +69,7 @@ export function ChatHeader({
       {/* Controls */}
       <div className="flex items-center gap-4">
         {/* Model Switcher */}
-        <Select
-          value={settings.model}
-          onValueChange={(val) => onSaveSettings({ ...settings, model: val })}
-        >
-          <SelectTrigger className="h-8 w-auto min-w-[140px] bg-muted/5 border-border/20 text-[10px] uppercase tracking-wider font-bold gap-2 px-3 rounded-lg hover:bg-muted/10 transition-all shadow-none ring-0 focus:ring-0">
-            <div className="flex items-center gap-2">
-              <div className="h-1.2 w-1.2 rounded-full bg-emerald-500/80" />
-              <SelectValue placeholder="Model" />
-            </div>
-          </SelectTrigger>
-          <SelectContent className="bg-background border-border/40 rounded-xl min-w-[240px] p-1 shadow-xl">
-             {['General', 'Coding', 'Reasoning', 'Fast'].map((cat) => {
-               const modelsInCat = availableModels.filter(m => m.category === cat)
-               if (modelsInCat.length === 0) return null
-               return (
-                 <SelectGroup key={cat} className="mb-1 last:mb-0">
-                    <div className="flex items-center gap-1.5 px-2.5 py-1.5 text-[8px] uppercase tracking-[0.15em] font-bold text-muted-foreground/40">
-                       {getCategoryIcon(cat)}
-                       {cat}
-                    </div>
-                    {modelsInCat.map((m) => (
-                      <SelectItem 
-                        key={m.id} 
-                        value={m.id}
-                        className="text-[12px] py-2 px-2.5 focus:bg-muted/50 rounded-lg cursor-pointer transition-colors"
-                      >
-                        <div className="flex items-center justify-between w-full gap-3">
-                          <div className="flex flex-col">
-                            <span className="font-medium text-foreground/90">{m.name}</span>
-                            <span className="text-[9px] opacity-30 uppercase tracking-wide font-normal">{m.provider}</span>
-                          </div>
-                          {m.badge && (
-                            <span className="text-[7px] px-1.5 py-0.25 rounded bg-muted text-muted-foreground border border-border/50 font-bold uppercase tracking-tight">
-                              {m.badge}
-                            </span>
-                          )}
-                        </div>
-                      </SelectItem>
-                    ))}
-                 </SelectGroup>
-               )
-             })}
-          </SelectContent>
-        </Select>
+  
 
         <div className="h-4 w-px bg-border/20" />
 

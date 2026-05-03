@@ -246,8 +246,46 @@ export function ChatInterface() {
     setIsLoading(true)
     setStreamingId(assistantId)
 
-    startStream(allMsgs, assistantId, chatId, mode, fileIds, webSearch)
+    let modelType: string | undefined = registeredModels.find(m => m.ollama_name === settings.model)?.model_type
+    if (!modelType) {
+      // Store not loaded yet — fetch directly
+      try {
+        const { fetchRegisteredModels } = await import('@/lib/api')
+        const all = await fetchRegisteredModels()
+        modelType = all.find(m => m.ollama_name === settings.model)?.model_type
+      } catch { /* ignore */ }
+    }
+    if (modelType === 'image-generation') {
+      startImageGen(allMsgs, assistantId, chatId)
+    } else {
+      startStream(allMsgs, assistantId, chatId, mode, fileIds, webSearch)
+    }
   }, [isLoading, messages, setCurrentChatId, settings.model])
+
+  async function startImageGen(allMessages: Message[], assistantId: string, chatId: string) {
+    try {
+      const res = await fetch('/api/chat/image', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ messages: allMessages, model: settings.model, chatId }),
+      })
+      if (!res.ok) {
+        const errText = await res.text().catch(() => `Server error (${res.status})`)
+        throw new Error(errText)
+      }
+      const data = await res.json()
+setMessages((prev) => prev.map((m) => m.id === assistantId ? { ...m, content: data.content } : m))
+    } catch (err: unknown) {
+      if (err instanceof Error && err.name !== 'AbortError') {
+        setError(err)
+        setMessages((prev) => prev.filter((m) => !(m.id === assistantId && m.content === '')))
+      }
+    } finally {
+      setActiveStreamingIds(prev => { const next = new Set(prev); next.delete(chatId); return next })
+      setIsLoading(false)
+      setStreamingId(null)
+    }
+  }
 
   async function startStream(
     allMessages: Message[],
@@ -293,7 +331,7 @@ export function ChatInterface() {
         const { done, value } = await reader.read()
         if (done) {
           // Final flush of anything remaining in accumulated (unless it's a marker)
-          if (accumulated && !accumulated.startsWith('__USAGE')) {
+          if (accumulated && !accumulated.startsWith('__USAGE') && !accumulated.startsWith('__IMAGE')) {
             currentText += accumulated
             setMessages((prev) => prev.map((m) => m.id === assistantId ? { ...m, content: currentText } : m))
           }
@@ -303,6 +341,31 @@ export function ChatInterface() {
         const chunk = decoder.decode(value, { stream: true })
         accumulated += chunk
         
+        // 0. Image generation — detect __IMAGE__: prefix (may arrive across chunks)
+        // If accumulated starts with or contains __IMAGE__, hold everything until parseable
+        if (accumulated.startsWith('__IMAGE__:') || accumulated.includes('__IMAGE__:')) {
+          const imgIdx = accumulated.indexOf('__IMAGE__:')
+          const jsonPart = accumulated.slice(imgIdx + '__IMAGE__:'.length)
+          if (jsonPart.length > 0) {
+            try {
+              const imgMarkdown = JSON.parse(jsonPart)
+              currentText = imgMarkdown
+              setMessages((prev) => prev.map((m) => m.id === assistantId ? { ...m, content: currentText } : m))
+              accumulated = ''
+              reader.cancel().catch(() => {})
+              break
+            } catch {
+              // JSON incomplete, keep accumulating — don't fall through
+            }
+          }
+          // Don't process as regular text — wait for more chunks
+          continue
+        }
+        // Guard: if accumulated might be the start of __IMAGE__ marker, hold it
+        if ('__IMAGE__:'.startsWith(accumulated) && accumulated.startsWith('_')) {
+          continue
+        }
+
         // 1. If we have a full marker, process it
         if (accumulated.includes('__USAGE__:')) {
           const parts = accumulated.split('__USAGE__:')

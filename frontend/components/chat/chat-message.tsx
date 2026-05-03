@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Check, Copy, Pencil, ThumbsUp, ThumbsDown, Sparkles, User } from 'lucide-react'
+import { Check, Copy, Pencil, ThumbsUp, ThumbsDown, User } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { MarkdownRenderer } from './markdown-renderer'
 import { Button } from '@/components/ui/button'
@@ -144,6 +144,26 @@ export function ChatMessage({
         
 
           <div className="flex-1 min-w-0 space-y-1">
+            {/* Image generation skeleton */}
+            {isStreaming && content?.startsWith('Generating neural image') && (
+              <div className="space-y-3 py-1">
+                <div className="flex items-center gap-2 text-xs text-muted-foreground/60">
+                  <span className="h-1.5 w-1.5 rounded-full bg-primary/60 animate-pulse" />
+                  Generating image…
+                </div>
+                <div className="relative overflow-hidden rounded-2xl border border-border/30 bg-muted/20" style={{ width: 480, height: 320 }}>
+                  <Skeleton className="absolute inset-0 w-full h-full rounded-none opacity-30" />
+                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-primary/5 to-transparent animate-shimmer" />
+                  <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 text-muted-foreground/40">
+                    <svg className="h-10 w-10 animate-pulse" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909M3 21h18M3 10.5h18M3 6.75h18" />
+                    </svg>
+                    <p className="text-[11px] font-medium tracking-wide uppercase">Generating with FLUX</p>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Streaming indicator */}
             {isStreaming && !content && (
               <div className="flex items-center gap-1.5 py-2">
@@ -153,22 +173,60 @@ export function ChatMessage({
               </div>
             )}
 
-            {content && (
-              <div className={cn(
-                "max-w-none transition-all",
-                bubbleStyle === 'modern' && "bg-card/20 border border-border/20 px-4 py-3 rounded-[var(--radius)] rounded-tl-sm",
-                bubbleStyle === 'glass' && "glass px-4 py-3 rounded-[var(--radius)] rounded-tl-sm",
-                bubbleStyle === 'minimal' && "prose-chat py-1"
-              )}>
-                <div className="prose-chat">
-                  <MarkdownRenderer 
-                    content={content} 
-                    isStreaming={isStreaming} 
-                    onSelectOption={onSelectOption}
-                  />
+            {content && (() => {
+              // Render generated images directly — bypasses react-markdown for huge data: URLs
+              const imgMatch = content.match(/^!\[Generated Image\]\((data:image\/[^)]+|https?:\/\/[^)]+)\)$/)
+              if (imgMatch) {
+                const src = imgMatch[1]
+                const handleDownload = async () => {
+                  try {
+                    const blob = src.startsWith('data:')
+                      ? await (await fetch(src)).blob()
+                      : await (await fetch(src)).blob()
+                    const url = URL.createObjectURL(blob)
+                    const a = document.createElement('a')
+                    a.href = url
+                    a.download = `generated-${Date.now()}.jpg`
+                    a.click()
+                    URL.revokeObjectURL(url)
+                  } catch {}
+                }
+                return (
+                  <div className={cn(
+                    "max-w-none transition-all",
+                    bubbleStyle === 'modern' && "bg-card/20 border border-border/20 px-4 py-3 rounded-[var(--radius)] rounded-tl-sm",
+                    bubbleStyle === 'glass' && "glass px-4 py-3 rounded-[var(--radius)] rounded-tl-sm",
+                    bubbleStyle === 'minimal' && "prose-chat py-1"
+                  )}>
+                    <span className="relative inline-block group/img" style={{ maxWidth: 480 }}>
+                      <img src={src} alt="Generated Image" className="rounded-xl border border-border/20 shadow-lg w-full block" />
+                      <button
+                        onClick={handleDownload}
+                        className="absolute top-2 right-2 opacity-0 group-hover/img:opacity-100 transition-opacity flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-black/60 backdrop-blur-sm text-white text-xs font-medium hover:bg-black/80"
+                      >
+                        ↓ Download
+                      </button>
+                    </span>
+                  </div>
+                )
+              }
+              return (
+                <div className={cn(
+                  "max-w-none transition-all",
+                  bubbleStyle === 'modern' && "bg-card/20 border border-border/20 px-4 py-3 rounded-[var(--radius)] rounded-tl-sm",
+                  bubbleStyle === 'glass' && "glass px-4 py-3 rounded-[var(--radius)] rounded-tl-sm",
+                  bubbleStyle === 'minimal' && "prose-chat py-1"
+                )}>
+                  <div className="prose-chat">
+                    <MarkdownRenderer
+                      content={content}
+                      isStreaming={isStreaming}
+                      onSelectOption={onSelectOption}
+                    />
+                  </div>
                 </div>
-              </div>
-            )}
+              )
+            })()}
 
             {/* Action bar */}
             {!isStreaming && content && (
