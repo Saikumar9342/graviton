@@ -188,8 +188,37 @@ export function MarkdownRenderer({ content, isStreaming, onSelectOption }: Markd
             }
             return <p className="mb-4 last:mb-0 leading-relaxed" {...props}>{children}</p>
           },
+          table({ children }) {
+            return (
+              <div className="my-4 w-full overflow-x-auto rounded-xl border border-border/20 bg-muted/5 shadow-sm">
+                <table className="w-full border-collapse text-sm text-left">
+                  {children}
+                </table>
+              </div>
+            )
+          },
+          thead({ children }) {
+            return <thead className="bg-muted/30">{children}</thead>
+          },
+          th({ children }) {
+            return (
+              <th className="border-b border-r border-border/20 px-4 py-2.5 font-semibold text-foreground last:border-r-0">
+                {children}
+              </th>
+            )
+          },
+          td({ children }) {
+            return (
+              <td className="border-b border-r border-border/20 px-4 py-2.5 last:border-r-0 break-words min-w-[120px] max-w-[400px]">
+                {children}
+              </td>
+            )
+          },
           pre({ children }) {
             return <>{children}</>
+          },
+          hr() {
+            return <hr className="my-6 border-border/20" />
           },
           a({ href, children }) {
             return (
@@ -197,7 +226,7 @@ export function MarkdownRenderer({ content, isStreaming, onSelectOption }: Markd
                 href={href}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-primary underline underline-offset-2 hover:text-primary/80"
+                className="text-primary underline underline-offset-2 hover:text-primary/80 transition-colors"
               >
                 {children}
               </a>
