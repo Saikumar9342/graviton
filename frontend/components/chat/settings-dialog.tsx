@@ -310,6 +310,9 @@ export function SettingsDialog({
   const { models, load: reloadModels, setModels } = useModelsStore();
   const [modelsLoading, setModelsLoading] = useState(false);
   const [syncing, setSyncing] = useState(false);
+  const [modelSearch, setModelSearch] = useState("");
+  const [modelPage, setModelPage] = useState(0);
+  const MODELS_PER_PAGE = 5;
   const [addName, setAddName] = useState("");
   const [addDisplay, setAddDisplay] = useState("");
   const [addError, setAddError] = useState("");
@@ -1507,40 +1510,194 @@ export function SettingsDialog({
       // ── Chat ──────────────────────────────────────────────────────────
       case "chat":
         return (
-          <div className="space-y-6">
-            <div>
-              <SLabel>Font Size</SLabel>
-              <div className="grid grid-cols-3 gap-2">
-                {(["small", "medium", "large"] as FontSize[]).map((v) => (
-                  <button
-                    key={v}
-                    onClick={() => update("fontSize", v)}
-                    className={cn(
-                      "py-3 rounded-xl border text-sm font-medium capitalize transition-all",
-                      local.fontSize === v
-                        ? "border-primary bg-primary/10 text-primary"
-                        : "border-border/40 text-muted-foreground hover:border-border hover:bg-muted/20",
-                    )}
-                  >
-                    {v}
-                  </button>
-                ))}
+          <div className="space-y-8 max-h-[550px] overflow-y-auto pr-2 scrollbar-none pb-8">
+
+            {/* ── Message Style ── */}
+            <div className="space-y-5">
+              <div className="flex items-center gap-3 pb-1 border-b border-border/30">
+                <div className="h-7 w-7 rounded-lg bg-primary/10 flex items-center justify-center text-primary border border-primary/20 shrink-0">
+                  <Type className="h-3.5 w-3.5" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-semibold tracking-tight">Message Style</h3>
+                  <p className="text-[10px] text-muted-foreground/50 uppercase tracking-widest">Bubbles & Typography</p>
+                </div>
+              </div>
+
+              <div>
+                <SLabel>Bubble Style</SLabel>
+                <div className="grid grid-cols-3 gap-2">
+                  {([
+                    { v: "modern", label: "Modern", desc: "Clean cards" },
+                    { v: "glass", label: "Glass", desc: "Frosted blur" },
+                    { v: "minimal", label: "Minimal", desc: "No border" },
+                  ] as const).map(({ v, label, desc }) => (
+                    <button key={v} onClick={() => update("bubbleStyle", v)}
+                      className={cn(
+                        "py-3 px-3 rounded-xl border text-left transition-all group",
+                        local.bubbleStyle === v
+                          ? "border-primary bg-primary/10 text-primary shadow-sm shadow-primary/10"
+                          : "border-border/40 text-muted-foreground hover:border-border hover:bg-muted/20"
+                      )}>
+                      <p className="text-xs font-semibold">{label}</p>
+                      <p className="text-[10px] opacity-60 mt-0.5">{desc}</p>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <SLabel>Font Size</SLabel>
+                <div className="grid grid-cols-3 gap-2">
+                  {([
+                    { v: "small", label: "Small", size: "text-xs" },
+                    { v: "medium", label: "Medium", size: "text-sm" },
+                    { v: "large", label: "Large", size: "text-base" },
+                  ] as const).map(({ v, label, size }) => (
+                    <button key={v} onClick={() => update("fontSize", v)}
+                      className={cn(
+                        "py-3 rounded-xl border transition-all flex flex-col items-center gap-1",
+                        local.fontSize === v
+                          ? "border-primary bg-primary/10 text-primary shadow-sm shadow-primary/10"
+                          : "border-border/40 text-muted-foreground hover:border-border hover:bg-muted/20"
+                      )}>
+                      <span className={cn("font-bold", size)}>Aa</span>
+                      <span className="text-[10px] font-medium capitalize">{label}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-6">
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <SLabel className="mb-0">Line Height</SLabel>
+                    <span className="text-[10px] font-mono text-primary/60">{local.lineHeight}%</span>
+                  </div>
+                  <Slider value={[local.lineHeight]} min={120} max={200} step={5}
+                    onValueChange={([v]) => update("lineHeight", v)} />
+                </div>
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <SLabel className="mb-0">Letter Spacing</SLabel>
+                    <span className="text-[10px] font-mono text-primary/60">{local.letterSpacing}px</span>
+                  </div>
+                  <Slider value={[local.letterSpacing]} min={-1} max={4} step={0.5}
+                    onValueChange={([v]) => update("letterSpacing", v)} />
+                </div>
               </div>
             </div>
 
-            <div className="space-y-2">
-              <Row title="Compact Mode" desc="Reduce message spacing">
-                <Switch
-                  checked={local.compactMode}
-                  onCheckedChange={(v) => update("compactMode", v)}
-                />
-              </Row>
-              <Row title="Sound Effects" desc="Notification sounds">
-                <Switch
-                  checked={local.soundEnabled}
-                  onCheckedChange={(v) => update("soundEnabled", v)}
-                />
-              </Row>
+            {/* ── Layout ── */}
+            <div className="space-y-5">
+              <div className="flex items-center gap-3 pb-1 border-b border-border/30">
+                <div className="h-7 w-7 rounded-lg bg-primary/10 flex items-center justify-center text-primary border border-primary/20 shrink-0">
+                  <Layout className="h-3.5 w-3.5" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-semibold tracking-tight">Layout</h3>
+                  <p className="text-[10px] text-muted-foreground/50 uppercase tracking-widest">Width & Spacing</p>
+                </div>
+              </div>
+
+              <div>
+                <SLabel>Content Width</SLabel>
+                <div className="grid grid-cols-2 gap-2">
+                  {([
+                    { v: "centered", label: "Centered", desc: "Max-width container" },
+                    { v: "full", label: "Full Width", desc: "Edge to edge" },
+                  ] as const).map(({ v, label, desc }) => (
+                    <button key={v} onClick={() => update("contentWidth", v)}
+                      className={cn(
+                        "py-3 px-3 rounded-xl border text-left transition-all",
+                        local.contentWidth === v
+                          ? "border-primary bg-primary/10 text-primary shadow-sm shadow-primary/10"
+                          : "border-border/40 text-muted-foreground hover:border-border hover:bg-muted/20"
+                      )}>
+                      <p className="text-xs font-semibold">{label}</p>
+                      <p className="text-[10px] opacity-60 mt-0.5">{desc}</p>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <SLabel>UI Density</SLabel>
+                <div className="grid grid-cols-3 gap-2">
+                  {([
+                    { v: "compact", label: "Compact", desc: "Dense" },
+                    { v: "comfort", label: "Comfort", desc: "Default" },
+                    { v: "spacious", label: "Spacious", desc: "Airy" },
+                  ] as const).map(({ v, label, desc }) => (
+                    <button key={v} onClick={() => update("uiDensity", v)}
+                      className={cn(
+                        "py-3 px-2 rounded-xl border text-left transition-all",
+                        local.uiDensity === v
+                          ? "border-primary bg-primary/10 text-primary shadow-sm shadow-primary/10"
+                          : "border-border/40 text-muted-foreground hover:border-border hover:bg-muted/20"
+                      )}>
+                      <p className="text-xs font-semibold">{label}</p>
+                      <p className="text-[10px] opacity-60 mt-0.5">{desc}</p>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-6">
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <SLabel className="mb-0">Chat Max Width</SLabel>
+                    <span className="text-[10px] font-mono text-primary/60">{local.chatMaxWidth}px</span>
+                  </div>
+                  <Slider value={[local.chatMaxWidth]} min={600} max={1200} step={50}
+                    onValueChange={([v]) => update("chatMaxWidth", v)} />
+                </div>
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <SLabel className="mb-0">Message Spacing</SLabel>
+                    <span className="text-[10px] font-mono text-primary/60">{local.messageSpacing}px</span>
+                  </div>
+                  <Slider value={[local.messageSpacing]} min={8} max={48} step={4}
+                    onValueChange={([v]) => update("messageSpacing", v)} />
+                </div>
+              </div>
+            </div>
+
+            {/* ── Behaviour ── */}
+            <div className="space-y-4">
+              <div className="flex items-center gap-3 pb-1 border-b border-border/30">
+                <div className="h-7 w-7 rounded-lg bg-primary/10 flex items-center justify-center text-primary border border-primary/20 shrink-0">
+                  <Sparkles className="h-3.5 w-3.5" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-semibold tracking-tight">Behaviour</h3>
+                  <p className="text-[10px] text-muted-foreground/50 uppercase tracking-widest">Interactions & Effects</p>
+                </div>
+              </div>
+
+              <div className="rounded-xl border border-border/40 bg-card/20 divide-y divide-border/20">
+                <div className="flex items-center justify-between px-4 py-3.5">
+                  <div>
+                    <p className="text-sm font-medium">Compact Mode</p>
+                    <p className="text-xs text-muted-foreground/50 mt-0.5">Denser message layout with reduced padding</p>
+                  </div>
+                  <Switch checked={local.compactMode} onCheckedChange={(v) => update("compactMode", v)} />
+                </div>
+                <div className="flex items-center justify-between px-4 py-3.5">
+                  <div>
+                    <p className="text-sm font-medium">Animations</p>
+                    <p className="text-xs text-muted-foreground/50 mt-0.5">Smooth transitions and slide-in effects</p>
+                  </div>
+                  <Switch checked={local.animationsEnabled} onCheckedChange={(v) => update("animationsEnabled", v)} />
+                </div>
+                <div className="flex items-center justify-between px-4 py-3.5">
+                  <div>
+                    <p className="text-sm font-medium">Sound Effects</p>
+                    <p className="text-xs text-muted-foreground/50 mt-0.5">Notification sounds on new messages</p>
+                  </div>
+                  <Switch checked={local.soundEnabled} onCheckedChange={(v) => update("soundEnabled", v)} />
+                </div>
+              </div>
             </div>
           </div>
         );
@@ -1560,15 +1717,32 @@ export function SettingsDialog({
                   title="Sync from Ollama"
                   className="flex items-center gap-1.5 text-[11px] text-muted-foreground/50 hover:text-foreground transition-colors"
                 >
-                  <RefreshCw
-                    className={cn(
-                      "h-3 w-3",
-                      (modelsLoading || syncing) && "animate-spin",
-                    )}
-                  />
+                  <RefreshCw className={cn("h-3 w-3", (modelsLoading || syncing) && "animate-spin")} />
                   Sync
                 </button>
               </div>
+
+              {/* Search */}
+              {models.length > 0 && (
+                <div className="relative mb-2">
+                  <input
+                    type="text"
+                    placeholder="Search models..."
+                    value={modelSearch}
+                    onChange={(e) => { setModelSearch(e.target.value); setModelPage(0); }}
+                    className="w-full h-8 pl-8 pr-3 text-xs rounded-lg border border-border/40 bg-muted/20 focus:outline-none focus:ring-1 focus:ring-primary/30 focus:border-primary/40 transition-all placeholder:text-muted-foreground/40"
+                  />
+                  <svg className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground/40" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                  </svg>
+                  {modelSearch && (
+                    <button onClick={() => { setModelSearch(""); setModelPage(0); }}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground/40 hover:text-foreground transition-colors">
+                      <X className="h-3 w-3" />
+                    </button>
+                  )}
+                </div>
+              )}
 
               {modelsLoading ? (
                 <div className="flex items-center gap-2 text-xs text-muted-foreground py-3">
@@ -1578,9 +1752,21 @@ export function SettingsDialog({
                 <div className="py-6 text-center text-xs text-muted-foreground/40 rounded-xl border border-dashed border-border/40">
                   No models registered — click Sync to import from Ollama
                 </div>
-              ) : (
+              ) : (() => {
+                const filtered = models.filter(m =>
+                  m.display_name.toLowerCase().includes(modelSearch.toLowerCase()) ||
+                  m.ollama_name.toLowerCase().includes(modelSearch.toLowerCase())
+                )
+                const totalPages = Math.ceil(filtered.length / MODELS_PER_PAGE)
+                const paginated = filtered.slice(modelPage * MODELS_PER_PAGE, (modelPage + 1) * MODELS_PER_PAGE)
+                return (
+                <>
                 <div className="space-y-1">
-                  {models.map((m) => {
+                  {paginated.length === 0 ? (
+                    <div className="py-6 text-center text-xs text-muted-foreground/40 rounded-xl border border-dashed border-border/40">
+                      No models match "{modelSearch}"
+                    </div>
+                  ) : paginated.map((m) => {
                     const providerLabel =
                       m.provider === "ollama"
                         ? "Ollama"
@@ -1709,7 +1895,41 @@ export function SettingsDialog({
                     );
                   })}
                 </div>
-              )}
+
+                {/* Pagination */}
+                {totalPages > 1 && (
+                  <div className="flex items-center justify-between mt-2 pt-2 border-t border-border/20">
+                    <span className="text-[10px] text-muted-foreground/40">
+                      {modelPage * MODELS_PER_PAGE + 1}–{Math.min((modelPage + 1) * MODELS_PER_PAGE, filtered.length)} of {filtered.length}
+                    </span>
+                    <div className="flex items-center gap-1">
+                      <button
+                        onClick={() => setModelPage(p => p - 1)}
+                        disabled={modelPage === 0}
+                        className="h-6 w-6 rounded-lg border border-border/40 flex items-center justify-center text-muted-foreground/50 hover:text-foreground hover:bg-muted/40 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+                      >
+                        <ChevronLeft className="h-3 w-3" />
+                      </button>
+                      {Array.from({ length: totalPages }, (_, i) => (
+                        <button key={i} onClick={() => setModelPage(i)}
+                          className={cn("h-6 w-6 rounded-lg text-[10px] font-medium transition-all",
+                            i === modelPage ? "bg-primary/20 text-primary border border-primary/30" : "text-muted-foreground/40 hover:text-foreground hover:bg-muted/40")}>
+                          {i + 1}
+                        </button>
+                      ))}
+                      <button
+                        onClick={() => setModelPage(p => p + 1)}
+                        disabled={modelPage >= totalPages - 1}
+                        className="h-6 w-6 rounded-lg border border-border/40 flex items-center justify-center text-muted-foreground/50 hover:text-foreground hover:bg-muted/40 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+                      >
+                        <ChevronRight className="h-3 w-3" />
+                      </button>
+                    </div>
+                  </div>
+                )}
+                </>
+                )
+              })()}
             </div>
 
             {/* Register model manually */}
@@ -2821,66 +3041,65 @@ export function SettingsDialog({
         )}
       </DialogTrigger>
 
-      <DialogContent className="p-0 gap-0 w-full max-w-[1000px] sm:max-w-[1000px] rounded-2xl overflow-hidden [&>button]:hidden">
+      <DialogContent className="p-0 gap-0 w-full max-w-[1000px] sm:max-w-[1000px] rounded-2xl overflow-hidden [&>button]:hidden border border-border/50 shadow-2xl">
         <DialogTitle className="sr-only">Settings</DialogTitle>
-        <DialogDescription className="sr-only">
-          Customize your Graviton experience
-        </DialogDescription>
+        <DialogDescription className="sr-only">Customize your Graviton experience</DialogDescription>
+
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-3.5 border-b border-border/40">
-          <div>
-            <p className="text-sm font-semibold">Settings</p>
-            <p className="text-xs text-muted-foreground/60">
-              Customize your Graviton experience
-            </p>
+        <div className="flex items-center justify-between px-5 py-4 border-b border-border/40 bg-muted/10">
+          <div className="flex items-center gap-3">
+            <div className="h-8 w-8 rounded-xl bg-primary/10 flex items-center justify-center text-primary border border-primary/20">
+              <SettingsIcon className="h-4 w-4" />
+            </div>
+            <div>
+              <p className="text-sm font-bold tracking-tight">Settings</p>
+              <p className="text-[11px] text-muted-foreground/50">Customize your Graviton experience</p>
+            </div>
           </div>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-7 w-7 rounded-lg text-muted-foreground hover:text-foreground"
+          <button
             onClick={handleClose}
+            className="h-7 w-7 rounded-lg flex items-center justify-center text-muted-foreground/50 hover:text-foreground hover:bg-muted/60 transition-all"
           >
             <X className="h-3.5 w-3.5" />
-          </Button>
+          </button>
         </div>
 
         <div className="flex" style={{ height: "580px" }}>
           {/* Left nav */}
-          <nav className="w-52 border-r border-border/40 bg-muted/15 p-2 flex flex-col gap-0.5 shrink-0">
+          <nav className="w-52 border-r border-border/40 bg-muted/10 p-2.5 flex flex-col gap-0.5 shrink-0">
+            <p className="px-2.5 text-[9px] font-bold text-muted-foreground/30 uppercase tracking-[0.2em] mb-1 mt-1">General</p>
             {mainNav.map(({ id, label, icon: Icon }) => (
               <button
                 key={id}
                 onClick={() => setSection(id)}
                 className={cn(
-                  "flex items-center gap-2.5 px-3 py-2 rounded-lg text-[13px] font-medium w-full text-left transition-all",
+                  "flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-[13px] font-medium w-full text-left transition-all",
                   section === id
-                    ? "bg-background text-foreground shadow-sm border border-border/40"
-                    : "text-muted-foreground/60 hover:text-foreground hover:bg-background/50",
+                    ? "bg-primary/10 text-primary border border-primary/20 shadow-sm"
+                    : "text-muted-foreground/60 hover:text-foreground hover:bg-muted/40",
                 )}
               >
-                <Icon className="h-3.5 w-3.5 shrink-0" />
+                <Icon className={cn("h-3.5 w-3.5 shrink-0", section === id ? "text-primary" : "")} />
                 {label}
               </button>
             ))}
 
             {!isMobile && (
               <>
-                <div className="my-1.5 mx-2 border-t border-border/30" />
-                <p className="px-3 text-[10px] text-muted-foreground/30 mb-0.5">
-                  Admin
-                </p>
+                <div className="my-2 mx-1 border-t border-border/30" />
+                <p className="px-2.5 text-[9px] font-bold text-muted-foreground/30 uppercase tracking-[0.2em] mb-1">Admin</p>
                 {adminNav.map(({ id, label, icon: Icon }) => (
                   <button
                     key={id}
                     onClick={() => setSection(id)}
                     className={cn(
-                      "flex items-center gap-2.5 px-3 py-2 rounded-lg text-[13px] font-medium w-full text-left transition-all",
+                      "flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-[13px] font-medium w-full text-left transition-all",
                       section === id
-                        ? "bg-background text-foreground shadow-sm border border-border/40"
-                        : "text-muted-foreground/60 hover:text-foreground hover:bg-background/50",
+                        ? "bg-primary/10 text-primary border border-primary/20 shadow-sm"
+                        : "text-muted-foreground/60 hover:text-foreground hover:bg-muted/40",
                     )}
                   >
-                    <Icon className="h-3.5 w-3.5 shrink-0" />
+                    <Icon className={cn("h-3.5 w-3.5 shrink-0", section === id ? "text-primary" : "")} />
                     {label}
                     {!adminOk && (
                       <Lock className="h-2.5 w-2.5 ml-auto text-muted-foreground/25" />
@@ -2890,37 +3109,38 @@ export function SettingsDialog({
               </>
             )}
 
-            <div className="mt-auto pt-2 px-3">
-              <p className="text-[10px] text-muted-foreground/25">
-                Graviton v1.0
-              </p>
+            <div className="mt-auto pt-2 px-2.5">
+              <div className="flex items-center gap-1.5 py-2 border-t border-border/20">
+                <div className="h-1.5 w-1.5 rounded-full bg-emerald-500/60 animate-pulse" />
+                <p className="text-[10px] text-muted-foreground/30 font-medium">Graviton v1.0</p>
+              </div>
             </div>
           </nav>
 
           {/* Content area */}
-          <div className="flex-1 overflow-y-auto p-6 scrollbar-none">
+          <div className="flex-1 overflow-y-auto p-6 scrollbar-none bg-background/30">
             {renderContent()}
           </div>
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-end gap-4 px-6 py-4 border-t border-border/40 bg-muted/5">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleClose}
-            className="h-8 text-[11px] px-5 text-muted-foreground hover:text-foreground"
-          >
-            Cancel
-          </Button>
-          <Button
-            size="sm"
-            onClick={handleSave}
-            className="h-8 text-xs px-5 gap-1.5"
-          >
-            <Check className="h-3.5 w-3.5" />
-            Save Changes
-          </Button>
+        <div className="flex items-center justify-between px-6 py-3.5 border-t border-border/40 bg-muted/10">
+          <p className="text-[11px] text-muted-foreground/30">Changes are applied immediately · Saved to database</p>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleClose}
+              className="px-4 py-2 rounded-xl text-xs font-medium text-muted-foreground/70 hover:text-foreground hover:bg-muted/50 transition-all"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleSave}
+              className="flex items-center gap-1.5 px-5 py-2 rounded-xl text-xs font-semibold bg-primary text-primary-foreground hover:bg-primary/90 transition-all shadow-sm shadow-primary/20"
+            >
+              <Check className="h-3.5 w-3.5" />
+              Save Changes
+            </button>
+          </div>
         </div>
       </DialogContent>
     </Dialog>

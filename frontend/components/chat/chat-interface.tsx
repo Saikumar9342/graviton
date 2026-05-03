@@ -100,46 +100,58 @@ export function ChatInterface() {
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
-    if (mounted) {
-      document.documentElement.setAttribute('data-font-size', settings.fontSize)
-      document.documentElement.style.setProperty('--primary', settings.accentColor)
-      document.documentElement.style.setProperty('--glow-primary', `${settings.accentColor}4d`)
-      document.documentElement.style.setProperty('--radius', `${settings.borderRadius}px`)
-      document.documentElement.style.setProperty('--font-sans', settings.fontFamily)
-      document.documentElement.style.setProperty('--glass-opacity', String(settings.glassOpacity / 100))
-      document.documentElement.style.setProperty('--glow-intensity', String(settings.glowIntensity / 100))
-      document.documentElement.style.setProperty('--glass-blur', `${settings.glassBlur}px`)
-      document.documentElement.style.setProperty('--border-width', `${settings.borderWidth}px`)
-      document.documentElement.style.setProperty('--glow-radius', `${settings.glowRadius}px`)
-      document.documentElement.style.setProperty('--sidebar-width', `${settings.sidebarWidth}px`)
-      document.documentElement.style.setProperty('--sidebar-padding', `${settings.sidebarPadding}px`)
-      document.documentElement.style.setProperty('--chat-max-width', `${settings.chatMaxWidth}px`)
-      document.documentElement.style.setProperty('--message-spacing', `${settings.messageSpacing}px`)
-      document.documentElement.style.setProperty('--sidebar-opacity', String(settings.sidebarOpacity / 100))
-      document.documentElement.style.setProperty('--sidebar-blur', `${settings.sidebarBlur}px`)
-      document.documentElement.style.setProperty('--accent-saturation', `${settings.accentSaturation}%`)
-      document.documentElement.style.setProperty('--contrast', String(settings.contrast / 100))
-      document.documentElement.style.setProperty('--noise-opacity', String(settings.noiseOpacity / 100))
-    }
+    if (!mounted) return
+    const root = document.documentElement
+    const s = settings
+
+    // CSS variables
+    root.style.setProperty('--primary', s.accentColor)
+    root.style.setProperty('--glow-primary', `${s.accentColor}4d`)
+    root.style.setProperty('--radius', `${s.borderRadius}px`)
+    root.style.setProperty('--font-sans', s.fontFamily)
+    root.style.setProperty('--glass-opacity', String(s.glassOpacity / 100))
+    root.style.setProperty('--glow-intensity', String(s.glowIntensity / 100))
+    root.style.setProperty('--glass-blur', `${s.glassBlur}px`)
+    root.style.setProperty('--border-width', `${s.borderWidth}px`)
+    root.style.setProperty('--glow-radius', `${s.glowRadius}px`)
+    root.style.setProperty('--sidebar-width', `${s.sidebarWidth}px`)
+    root.style.setProperty('--sidebar-padding', `${s.sidebarPadding}px`)
+    root.style.setProperty('--chat-max-width', `${s.chatMaxWidth}px`)
+    root.style.setProperty('--message-spacing', `${s.messageSpacing}px`)
+    root.style.setProperty('--sidebar-opacity', String(s.sidebarOpacity / 100))
+    root.style.setProperty('--sidebar-blur', `${s.sidebarBlur}px`)
+    root.style.setProperty('--accent-saturation', `${s.accentSaturation}%`)
+    root.style.setProperty('--contrast', String(s.contrast / 100))
+    root.style.setProperty('--noise-opacity', String(s.noiseOpacity / 100))
+    root.style.setProperty('--line-height', String(s.lineHeight / 100))
+    root.style.setProperty('--letter-spacing', `${s.letterSpacing}px`)
+    root.style.setProperty('--bg-opacity', String(s.backgroundOpacity / 100))
+    root.style.setProperty('--font-weight', String(s.fontWeight))
+    root.style.setProperty('--glass-tint', s.glassTintColor)
+    root.style.setProperty('--glass-saturation', `${s.glassSaturation}%`)
+    root.style.setProperty('--glow-spread', `${s.glowSpread}px`)
+    root.style.setProperty('--border-style', s.borderStyle)
+    root.style.setProperty('--grid-opacity', String(s.gridOpacity / 100))
+
+    // Data attributes
+    root.setAttribute('data-font-size', s.fontSize)
+    root.setAttribute('data-accent', s.accentColor)
+    root.setAttribute('data-accent-mode', s.accentMode)
+    root.setAttribute('data-content', s.contentWidth)
+    root.setAttribute('data-sidebar', s.sidebarPosition)
+    root.setAttribute('data-density', s.uiDensity)
+    root.setAttribute('data-pattern', s.backgroundPattern)
+    root.setAttribute('data-animations', s.animationsEnabled ? 'true' : 'false')
   }, [
-    settings.accentColor,
-    settings.fontSize,
-    settings.borderRadius,
-    settings.fontFamily,
-    settings.glassOpacity,
-    settings.glowIntensity,
-    settings.glassBlur,
-    settings.borderWidth,
-    settings.glowRadius,
-    settings.sidebarWidth,
-    settings.sidebarPadding,
-    settings.chatMaxWidth,
-    settings.messageSpacing,
-    settings.sidebarOpacity,
-    settings.sidebarBlur,
-    settings.accentSaturation,
-    settings.noiseOpacity,
-    mounted
+    settings.accentColor, settings.fontSize, settings.borderRadius, settings.fontFamily,
+    settings.glassOpacity, settings.glowIntensity, settings.glassBlur, settings.borderWidth,
+    settings.glowRadius, settings.sidebarWidth, settings.sidebarPadding, settings.chatMaxWidth,
+    settings.messageSpacing, settings.sidebarOpacity, settings.sidebarBlur, settings.accentSaturation,
+    settings.noiseOpacity, settings.contrast, settings.lineHeight, settings.letterSpacing,
+    settings.backgroundOpacity, settings.fontWeight, settings.glassTintColor, settings.glassSaturation,
+    settings.uiDensity, settings.glowSpread, settings.borderStyle, settings.gridOpacity,
+    settings.backgroundPattern, settings.contentWidth, settings.sidebarPosition, settings.accentMode,
+    settings.animationsEnabled, mounted,
   ])
 
   // Auto-scroll
@@ -418,6 +430,23 @@ setMessages((prev) => prev.map((m) => m.id === assistantId ? { ...m, content: da
         next.delete(chatId)
         return next
       })
+
+      // Play notification sound if enabled
+      if (settings.soundEnabled) {
+        try {
+          const ctx = new AudioContext()
+          const osc = ctx.createOscillator()
+          const gain = ctx.createGain()
+          osc.connect(gain)
+          gain.connect(ctx.destination)
+          osc.frequency.setValueAtTime(880, ctx.currentTime)
+          osc.frequency.exponentialRampToValueAtTime(440, ctx.currentTime + 0.15)
+          gain.gain.setValueAtTime(0.08, ctx.currentTime)
+          gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.2)
+          osc.start(ctx.currentTime)
+          osc.stop(ctx.currentTime + 0.2)
+        } catch { /* audio blocked */ }
+      }
 
       const elapsed = Date.now() - streamStart
       setLastResponseMs(elapsed)
