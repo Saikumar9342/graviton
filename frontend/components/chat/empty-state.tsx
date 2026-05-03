@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useRef, Fragment } from 'react'
 import { RefreshCw, Plus, ChevronRight } from 'lucide-react'
 import { fetchSettings } from '@/lib/api'
 import { TOPIC_REGISTRY } from '@/lib/types'
@@ -382,10 +382,10 @@ function Colophon({ now }: { now: Date }) {
           ['MEMORY',  'On · synced 2m ago'],
           ['TONE',    'Editorial, concise'],
         ].map(([k, v]) => (
-          <>
-            <span key={k} style={{ fontFamily: 'var(--font-jetbrains-mono, monospace)', fontSize: 10, color: 'var(--gv-ink-4)', alignSelf: 'center' }}>{k}</span>
-            <span key={v} style={k === 'TONE' ? { fontStyle: 'italic', fontFamily: 'var(--font-fraunces, Georgia, serif)' } : {}}>{v}</span>
-          </>
+          <Fragment key={k}>
+            <span style={{ fontFamily: 'var(--font-jetbrains-mono, monospace)', fontSize: 10, color: 'var(--gv-ink-4)', alignSelf: 'center' }}>{k}</span>
+            <span style={k === 'TONE' ? { fontStyle: 'italic', fontFamily: 'var(--font-fraunces, Georgia, serif)' } : {}}>{v}</span>
+          </Fragment>
         ))}
         <span style={{ fontFamily: 'var(--font-jetbrains-mono, monospace)', fontSize: 10, color: 'var(--gv-ink-4)' }}>TIME</span>
         <span style={{ fontFamily: 'var(--font-jetbrains-mono, monospace)', fontSize: 11 }}>
