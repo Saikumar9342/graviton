@@ -169,6 +169,7 @@ export interface RegisteredModel {
   is_active: boolean
   provider: string
   api_base_url?: string | null
+  has_api_key: boolean
   created_at: string
 }
 

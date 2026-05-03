@@ -20,6 +20,7 @@ import {
   Type,
   Palette,
   Layers,
+  AlertTriangle,
 } from 'lucide-react'
 import { useTheme } from '@/components/theme-provider'
 import {
@@ -41,6 +42,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Label } from '@/components/ui/label'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { useIsMobile } from '@/hooks/use-mobile'
 import {
   pullModel,
@@ -159,7 +161,7 @@ const CLOUD_PROVIDERS = [
   },
   {
     id: 'groq', label: 'Groq', url: 'https://api.groq.com/openai/v1', needsKey: true,
-    models: ['llama-3.1-8b-instant', 'llama-3.3-70b-versatile', 'llama3-70b-8192', 'mixtral-8x7b-32768', 'gemma2-9b-it', 'deepseek-r1-distill-llama-70b'],
+    models: ['llama-3.3-70b-versatile', 'llama-3.1-8b-instant', 'llama-4-scout', 'qwen-3-32b', 'gpt-oss-120b', 'deepseek-r1-distill-llama-70b'],
   },
   {
     id: 'openrouter', label: 'OpenRouter', url: 'https://openrouter.ai/api/v1', needsKey: true,
@@ -1248,6 +1250,14 @@ export function SettingsDialog({ settings, onSave, session }: SettingsDialogProp
                             )}>
                               {providerLabel}
                             </span>
+                            {isCloud && !m.has_api_key && (
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <AlertTriangle className="h-3 w-3 text-amber-500 shrink-0" />
+                                </TooltipTrigger>
+                                <TooltipContent side="top" className="text-[10px]">API Key missing</TooltipContent>
+                              </Tooltip>
+                            )}
                           </div>
                           <p className="text-[10px] text-muted-foreground/40 truncate">{m.ollama_name}</p>
                         </div>

@@ -105,6 +105,7 @@ class RegisteredModelResponse(BaseModel):
     provider: str
     api_base_url: Optional[str] = None
     created_at: datetime
+    has_api_key: bool = False
     # api_key intentionally excluded from response
 
 class MessageResponse(BaseModel):
@@ -154,7 +155,10 @@ def update_settings(body: SettingsUpdate, db: Session = Depends(database.get_db)
 
 @app.get("/api/registered-models", response_model=List[RegisteredModelResponse])
 def list_registered_models(db: Session = Depends(database.get_db)):
-    return db.query(models.RegisteredModel).order_by(models.RegisteredModel.created_at.asc()).all()
+    rows = db.query(models.RegisteredModel).order_by(models.RegisteredModel.created_at.asc()).all()
+    for r in rows:
+        r.has_api_key = bool(r.api_key and r.api_key.strip())
+    return rows
 
 @app.post("/api/registered-models", response_model=RegisteredModelResponse)
 def create_registered_model(body: RegisteredModelCreate, db: Session = Depends(database.get_db)):
@@ -173,6 +177,7 @@ def create_registered_model(body: RegisteredModelCreate, db: Session = Depends(d
     db.add(m)
     db.commit()
     db.refresh(m)
+    m.has_api_key = bool(m.api_key and m.api_key.strip())
     return m
 
 @app.put("/api/registered-models/{model_id}", response_model=RegisteredModelResponse)
@@ -186,6 +191,7 @@ def update_registered_model(model_id: str, body: RegisteredModelUpdate, db: Sess
         m.is_active = body.is_active
     db.commit()
     db.refresh(m)
+    m.has_api_key = bool(m.api_key and m.api_key.strip())
     return m
 
 @app.delete("/api/registered-models/{model_id}")
@@ -311,9 +317,11 @@ async def _ddg_search(query: str) -> str:
 async def _stream_openai_compat(model: str, messages: list, api_key: str, base_url: str):
     """Stream from any OpenAI-compatible API (NVIDIA NIM, Groq, OpenRouter, etc.)."""
     headers = {
-        "Authorization": f"Bearer {api_key}",
         "Content-Type": "application/json",
     }
+    if api_key:
+        headers["Authorization"] = f"Bearer {api_key}"
+    
     payload = {
         "model": model,
         "messages": messages,
@@ -421,26 +429,37 @@ async def chat_endpoint(
             ).first()
 
         try:
-            if db_model and db_model.provider == 'openai-compat' and db_model.api_base_url and db_model.api_key:
+            # Determine provider logic
+            is_openai_compat = db_model and db_model.provider == 'openai-compat'
+
+            if is_openai_compat:
+                if not db_model.api_base_url:
+                    raise Exception(f"Cloud provider '{db_model.display_name}' is missing a base URL.")
+                
+                # Stream from OpenAI-compatible provider
                 async for chunk in _stream_openai_compat(
                     model=model,
                     messages=ollama_messages,
-                    api_key=db_model.api_key,
+                    api_key=db_model.api_key or "",
                     base_url=db_model.api_base_url,
                 ):
                     full_response += chunk
                     yield chunk
             else:
+                # Default to Ollama
                 async for chunk in ollama_client.chat_with_ollama(model, ollama_messages):
                     full_response += chunk
                     yield chunk
         except Exception as e:
             err = str(e)
-            error_msg = (
-                f"\n\n⚠️ Model '{model}' is not installed. Go to Settings → Models and pull it first."
-                if "not found" in err.lower()
-                else f"\n\n⚠️ {err}"
-            )
+            if "not found" in err.lower() and not is_openai_compat:
+                error_msg = f"\n\n⚠️ Model '{model}' is not installed. Go to Settings → Models and pull it first."
+            elif "401" in err or "unauthorized" in err.lower():
+                error_msg = f"\n\n⚠️ Authentication failed for '{model}'. Please verify your API Key in Settings."
+            elif "404" in err and is_openai_compat:
+                error_msg = f"\n\n⚠️ Model '{model}' not found on the provider's server. Check the Model ID."
+            else:
+                error_msg = f"\n\n⚠️ {err}"
 
         if error_msg is not None:
             yield error_msg

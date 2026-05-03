@@ -154,7 +154,13 @@ export function ChatInput({
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start" className="w-64 rounded-2xl p-1.5">
-              {Object.entries(modelsByProvider).map(([provider, providerModels], i) => (
+              {Object.entries(modelsByProvider)
+                .sort(([a], [b]) => {
+                  if (a === 'Ollama') return -1
+                  if (b === 'Ollama') return 1
+                  return a.localeCompare(b)
+                })
+                .map(([provider, providerModels], i) => (
                 <div key={provider}>
                   {i > 0 && <DropdownMenuSeparator className="my-1" />}
                   <DropdownMenuLabel className="px-2 py-1 text-[11px] font-semibold text-muted-foreground/50 uppercase tracking-wider">

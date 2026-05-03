@@ -41,7 +41,18 @@ export function ChatInterface() {
 
   const availableModels = registeredModels
     .filter((m) => m.is_active)
-    .map((m) => ({ id: m.ollama_name, name: m.display_name, provider: 'Ollama' as const }))
+    .map((m) => {
+      let provider = m.provider === 'ollama' ? 'Ollama' : 'Cloud'
+      let badge = undefined
+      if (m.provider === 'openai-compat') {
+        badge = 'Cloud'
+        if (m.api_base_url?.includes('groq')) { provider = 'Groq'; badge = 'Fast'; }
+        else if (m.api_base_url?.includes('openrouter')) { provider = 'OpenRouter'; badge = 'Pro'; }
+        else if (m.api_base_url?.includes('together')) { provider = 'Together AI'; badge = 'Cloud'; }
+        else if (m.api_base_url?.includes('nvidia')) { provider = 'NVIDIA'; badge = 'H100'; }
+      }
+      return { id: m.ollama_name, name: m.display_name, provider, badge }
+    })
 
   const [messages, setMessages] = useState<Message[]>([])
   const [isLoading, setIsLoading] = useState(false)
