@@ -274,6 +274,8 @@ export interface ModelUsage {
   prompt_tokens: number
   completion_tokens: number
   total_tokens: number
+  avg_latency_ms?: number
+  tokens_per_sec?: number
   credits?: {
     limit: number
     usage: number

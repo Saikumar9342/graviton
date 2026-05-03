@@ -21,6 +21,8 @@ import {
   Palette,
   Layers,
   AlertTriangle,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react'
 import { useTheme } from '@/components/theme-provider'
 import {
@@ -234,6 +236,10 @@ export function SettingsDialog({ settings, onSave, session, children }: Settings
   const [cloudBaseUrl, setCloudBaseUrl] = useState('')
   const [cloudError, setCloudError] = useState('')
   const [cloudAdding, setCloudAdding] = useState(false)
+ 
+  // Lab Pagination
+  const [labPage, setLabPage] = useState(0)
+  const LAB_PAGE_SIZE = 5
 
   const [globalUsage, setGlobalUsage] = useState<{ prompt_tokens: number; completion_tokens: number; total_tokens: number } | null>(null)
   const [modelUsage, setModelUsage] = useState<ModelUsage[]>([])
@@ -1466,8 +1472,8 @@ export function SettingsDialog({ settings, onSave, session, children }: Settings
                     <Sparkles className="h-4 w-4 text-primary" />
                  </div>
                  <div>
-                    <h3 className="text-sm font-bold">Model Intelligence Lab</h3>
-                    <p className="text-[11px] text-muted-foreground/50">Compare capabilities and select the best intelligence for your task.</p>
+                    <h3 className="text-[13px] font-bold">Model Intelligence Lab</h3>
+                    <p className="text-[10.5px] text-muted-foreground/50">Compare capabilities and select the best intelligence for your task.</p>
                  </div>
               </div>
 
@@ -1478,8 +1484,8 @@ export function SettingsDialog({ settings, onSave, session, children }: Settings
                        <span className="text-[10px] font-bold uppercase tracking-widest text-primary/60">{cat.id}</span>
                        <div className="h-1.5 w-1.5 rounded-full bg-primary/20 group-hover:bg-primary/60 transition-colors" />
                     </div>
-                    <h4 className="text-sm font-bold mb-1">{cat.name}</h4>
-                    <p className="text-xs text-muted-foreground/50 leading-relaxed">{cat.desc}</p>
+                    <h4 className="text-[13px] font-bold mb-1">{cat.name}</h4>
+                    <p className="text-[11px] text-muted-foreground/50 leading-relaxed">{cat.desc}</p>
                     
                     <div className="mt-4 flex flex-wrap gap-1.5">
                        {models.filter(m => {
@@ -1489,7 +1495,7 @@ export function SettingsDialog({ settings, onSave, session, children }: Settings
                           if (cat.id === 'Fast') return lowName.includes('mistral') || lowName.includes('haiku')
                           return !lowName.includes('coder') && !lowName.includes('code') && !lowName.includes('qwen') && !lowName.includes('reasoning') && !lowName.includes('phi') && !lowName.includes('mistral') && !lowName.includes('haiku')
                        }).map(m => (
-                         <span key={m.id} className="px-2 py-0.5 rounded-lg bg-background/50 border border-border/40 text-[10px] font-medium opacity-60">
+                         <span key={m.id} className="px-2 py-0.5 rounded-lg bg-background/50 border border-border/40 text-[9px] font-medium opacity-60">
                             {m.display_name}
                          </span>
                        ))}
@@ -1505,46 +1511,58 @@ export function SettingsDialog({ settings, onSave, session, children }: Settings
                  <table className="w-full text-left border-collapse">
                     <thead>
                        <tr className="bg-muted/30 border-b border-border/20">
-                          <th className="px-4 py-3 text-[10px] uppercase font-bold text-muted-foreground/50">Model</th>
-                          <th className="px-4 py-3 text-[10px] uppercase font-bold text-muted-foreground/50 text-center">Category</th>
-                          <th className="px-4 py-3 text-[10px] uppercase font-bold text-muted-foreground/50 text-center">Speed</th>
-                          <th className="px-4 py-3 text-[10px] uppercase font-bold text-muted-foreground/50 text-center">Reasoning</th>
-                          <th className="px-4 py-3 text-[10px] uppercase font-bold text-muted-foreground/50 text-right">Action</th>
+                          <th className="px-4 py-3 text-[9px] uppercase font-bold text-muted-foreground/50 text-left">Model</th>
+                          <th className="px-4 py-3 text-[9px] uppercase font-bold text-muted-foreground/50 text-left">Category</th>
+                          <th className="px-4 py-3 text-[9px] uppercase font-bold text-muted-foreground/50 text-left">Speed</th>
+                          <th className="px-4 py-3 text-[9px] uppercase font-bold text-muted-foreground/50 text-left">Reasoning</th>
+                          <th className="px-4 py-3 text-[9px] uppercase font-bold text-muted-foreground/50 text-center">Action</th>
                        </tr>
                     </thead>
                     <tbody className="divide-y divide-border/10">
-                       {models.map(m => {
+                        {models.slice(labPage * LAB_PAGE_SIZE, (labPage + 1) * LAB_PAGE_SIZE).map(m => {
                           const lowName = m.ollama_name.toLowerCase()
-                          let speed = 'Medium'; let reasoning = 'Balanced'
-                          if (lowName.includes('mistral') || lowName.includes('haiku') || lowName.includes('phi')) speed = 'High'
-                          if (lowName.includes('qwen') || lowName.includes('llama3.1') || lowName.includes('gpt-4o')) reasoning = 'Expert'
+                          const usage = modelUsage.find(u => u.model === m.ollama_name)
+                          
+                          // Dynamic Speed Logic
+                          let speedLevel = 1 // Low
+                          const tps = usage?.tokens_per_sec ?? 0
+                          if (tps > 40 || lowName.includes('mistral') || lowName.includes('haiku') || lowName.includes('phi')) speedLevel = 3
+                          else if (tps > 15 || lowName.includes('llama3')) speedLevel = 2
+                          
+                          // Dynamic Reasoning Logic
+                          let reasoningLabel = 'Standard'
+                          if (lowName.includes('reasoning') || lowName.includes('qwen') || lowName.includes('llama3.1') || lowName.includes('pro')) reasoningLabel = 'Expert'
+                          else if (lowName.includes('coder') || lowName.includes('phi')) reasoningLabel = 'Technical'
                           
                           return (
                             <tr key={m.id} className="hover:bg-primary/5 transition-colors group">
-                               <td className="px-4 py-4">
+                               <td className="px-4 py-4 text-left">
                                   <div className="flex flex-col">
-                                     <span className="text-sm font-bold">{m.display_name}</span>
-                                     <span className="text-[10px] font-mono opacity-30">{m.ollama_name}</span>
+                                     <span className="text-[13px] font-bold">{m.display_name}</span>
+                                     <span className="text-[9px] font-mono opacity-30">{m.ollama_name}</span>
                                   </div>
                                </td>
-                               <td className="px-4 py-4 text-center">
-                                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-muted/30 border border-border/40">
+                               <td className="px-4 py-4 text-left">
+                                  <span className="text-[9px] px-2 py-0.5 rounded-full bg-muted/30 border border-border/40 font-bold uppercase tracking-wider">
                                      {lowName.includes('coder') ? 'Coding' : lowName.includes('phi') || lowName.includes('qwen') ? 'Reasoning' : 'General'}
                                   </span>
                                </td>
-                               <td className="px-4 py-4 text-center">
-                                  <div className="flex items-center justify-center gap-1">
-                                     <div className={cn("h-1 w-4 rounded-full", speed === 'High' ? 'bg-emerald-500' : 'bg-muted-foreground/30')} />
-                                     <div className={cn("h-1 w-4 rounded-full", speed === 'High' ? 'bg-emerald-500' : 'bg-muted-foreground/30')} />
-                                     <div className={cn("h-1 w-4 rounded-full", speed === 'High' ? 'bg-emerald-500' : 'bg-muted-foreground/30')} />
+                               <td className="px-4 py-4 text-left">
+                                  <div className="flex flex-col items-start gap-1.5">
+                                    <div className="flex items-center gap-1">
+                                       <div className={cn("h-1 w-3 rounded-full", speedLevel >= 1 ? 'bg-emerald-500' : 'bg-muted-foreground/20')} />
+                                       <div className={cn("h-1 w-3 rounded-full", speedLevel >= 2 ? 'bg-emerald-500' : 'bg-muted-foreground/20')} />
+                                       <div className={cn("h-1 w-3 rounded-full", speedLevel >= 3 ? 'bg-emerald-500' : 'bg-muted-foreground/20')} />
+                                    </div>
+                                    {tps > 0 && <span className="text-[8px] font-mono opacity-40">{tps.toFixed(1)} t/s</span>}
                                   </div>
                                </td>
-                               <td className="px-4 py-4 text-center">
-                                  <span className={cn("text-[11px] font-medium", reasoning === 'Expert' ? 'text-primary' : 'text-muted-foreground/60')}>
-                                     {reasoning}
+                               <td className="px-4 py-4 text-left">
+                                  <span className={cn("text-[10px] font-bold uppercase tracking-tight", reasoningLabel === 'Expert' ? 'text-primary' : reasoningLabel === 'Technical' ? 'text-emerald-500/70' : 'text-muted-foreground/60')}>
+                                     {reasoningLabel}
                                   </span>
                                </td>
-                               <td className="px-4 py-4 text-right">
+                               <td className="px-4 py-4 text-center">
                                   <Button 
                                     size="sm" 
                                     variant={local.model === m.ollama_name ? 'secondary' : 'outline'}
@@ -1561,6 +1579,35 @@ export function SettingsDialog({ settings, onSave, session, children }: Settings
                     </tbody>
                  </table>
               </div>
+              
+              {/* Pagination */}
+              {models.length > LAB_PAGE_SIZE && (
+                 <div className="mt-4 flex items-center justify-between">
+                    <p className="text-[10px] text-muted-foreground/40">
+                       Showing {labPage * LAB_PAGE_SIZE + 1} to {Math.min((labPage + 1) * LAB_PAGE_SIZE, models.length)} of {models.length} models
+                    </p>
+                    <div className="flex items-center gap-1">
+                       <Button 
+                         variant="outline" 
+                         size="sm" 
+                         disabled={labPage === 0}
+                         onClick={() => setLabPage(p => p - 1)}
+                         className="h-7 w-7 p-0 rounded-lg"
+                       >
+                          <ChevronLeft className="h-3 w-3" />
+                       </Button>
+                       <Button 
+                         variant="outline" 
+                         size="sm" 
+                         disabled={(labPage + 1) * LAB_PAGE_SIZE >= models.length}
+                         onClick={() => setLabPage(p => p + 1)}
+                         className="h-7 w-7 p-0 rounded-lg"
+                       >
+                          <ChevronRight className="h-3 w-3" />
+                       </Button>
+                    </div>
+                 </div>
+              )}
             </div>
           </div>
         )

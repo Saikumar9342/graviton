@@ -28,6 +28,7 @@ class Message(Base):
     prompt_tokens = Column(Integer, nullable=True)
     completion_tokens = Column(Integer, nullable=True)
     total_tokens = Column(Integer, nullable=True)
+    latency_ms = Column(Integer, nullable=True) # Time taken to generate the response
 
     chat = relationship("Chat", back_populates="messages")
 

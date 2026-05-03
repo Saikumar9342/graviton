@@ -52,6 +52,7 @@ async def lifespan(app: FastAPI):
                 ("completion_tokens", "ALTER TABLE messages ADD COLUMN completion_tokens INTEGER"),
                 ("total_tokens",      "ALTER TABLE messages ADD COLUMN total_tokens INTEGER"),
                 ("model",             "ALTER TABLE messages ADD COLUMN model VARCHAR"),
+                ("latency_ms",        "ALTER TABLE messages ADD COLUMN latency_ms INTEGER"),
             ]:
                 if col not in msg_cols:
                     conn.execute(text(ddl))
@@ -413,6 +414,8 @@ async def chat_endpoint(
             db.commit()
         except Exception as e:
             print(f"Warning: Could not save user message: {e}")
+ 
+    start_time = datetime.now(timezone.utc)
 
     async def generate():
         combined_system = system_prompt
@@ -519,6 +522,7 @@ async def chat_endpoint(
                         prompt_tokens=usage_data.get("prompt_tokens"),
                         completion_tokens=usage_data.get("completion_tokens"),
                         total_tokens=usage_data.get("total_tokens"),
+                        latency_ms=int((datetime.now(timezone.utc) - start_time).total_seconds() * 1000),
                     )
                     session.add(assistant_msg)
                     db_chat = session.query(models.Chat).filter(models.Chat.id == chat_id).first()
@@ -696,7 +700,8 @@ async def get_model_usage(db: Session = Depends(database.get_db)):
         func.count(models.Message.id).label("requests"),
         func.sum(models.Message.prompt_tokens).label("prompt"),
         func.sum(models.Message.completion_tokens).label("completion"),
-        func.sum(models.Message.total_tokens).label("total")
+        func.sum(models.Message.total_tokens).label("total"),
+        func.avg(models.Message.latency_ms).label("avg_latency")
     ).group_by(models.Message.model).all()
     
     model_stats = []
@@ -717,6 +722,8 @@ async def get_model_usage(db: Session = Depends(database.get_db)):
             "prompt_tokens": s.prompt or 0,
             "completion_tokens": s.completion or 0,
             "total_tokens": s.total or 0,
+            "avg_latency_ms": s.avg_latency or 0,
+            "tokens_per_sec": (s.total / (s.avg_latency / 1000)) if s.avg_latency and s.avg_latency > 0 else 0,
             "credits": None
         }
         
