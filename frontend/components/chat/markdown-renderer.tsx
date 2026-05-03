@@ -73,6 +73,12 @@ function CodeBlock({
 }
 
 export function MarkdownRenderer({ content, isStreaming, onSelectOption }: MarkdownRendererProps) {
+  // Pre-process content to handle raw and escaped <br> tags
+  const processedContent = content
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/&lt;br\s*\/?&gt;/gi, '\n')
+    .replace(/\\n/g, '\n') // Ensure escaped newlines are handled
+
   const handleOptionClick = (marker: string, content: string) => {
     if (onSelectOption) {
       // Send just the marker (e.g. "A") as usually expected in MCQs
@@ -215,7 +221,7 @@ export function MarkdownRenderer({ content, isStreaming, onSelectOption }: Markd
           }
         }}
       >
-        {content}
+        {processedContent}
       </ReactMarkdown>
     </div>
   )

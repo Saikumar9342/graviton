@@ -38,10 +38,16 @@ async def chat_with_ollama(model: str, messages: List[Dict[str, str]]) -> AsyncG
                 except json.JSONDecodeError:
                     continue
 
-async def get_ollama_models() -> List[str]:
+async def get_ollama_models() -> List[Dict[str, Any]]:
     async with httpx.AsyncClient() as client:
-        response = await client.get(f"{OLLAMA_URL}/tags")
-        if response.status_code == 200:
-            data = response.json()
-            return [m["name"] for m in data.get("models", [])]
+        try:
+            response = await client.get(f"{OLLAMA_URL}/tags")
+            if response.status_code == 200:
+                data = response.json()
+                return [
+                    {"name": m["name"], "modified_at": m.get("modified_at")} 
+                    for m in data.get("models", [])
+                ]
+        except Exception:
+            pass
         return []

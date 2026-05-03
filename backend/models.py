@@ -52,3 +52,5 @@ class RegisteredModel(Base):
     api_base_url = Column(String, nullable=True)                 # for openai-compat providers
     api_key = Column(String, nullable=True)                      # stored server-side only
     created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    model_type = Column(String, default='text', nullable=False)  # 'text' | 'image-generation' | 'vision'

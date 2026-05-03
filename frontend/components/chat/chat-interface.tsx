@@ -286,37 +286,68 @@ export function ChatInterface() {
       const reader = res.body.getReader()
       const decoder = new TextDecoder()
       let accumulated = ''
+      let currentText = ''
       const streamStart = Date.now()
 
       while (true) {
         const { done, value } = await reader.read()
-        if (done) break
-        const chunk = decoder.decode(value, { stream: true })
-        
-        if (chunk.includes('__USAGE__:')) {
-          const [content, usageStr] = chunk.split('__USAGE__:')
-          if (content) {
-            accumulated += content
-            const snap = accumulated
-            setMessages((prev) => prev.map((m) => m.id === assistantId ? { ...m, content: snap } : m))
+        if (done) {
+          // Final flush of anything remaining in accumulated (unless it's a marker)
+          if (accumulated && !accumulated.startsWith('__USAGE')) {
+            currentText += accumulated
+            setMessages((prev) => prev.map((m) => m.id === assistantId ? { ...m, content: currentText } : m))
           }
+          break
+        }
+        
+        const chunk = decoder.decode(value, { stream: true })
+        accumulated += chunk
+        
+        // 1. If we have a full marker, process it
+        if (accumulated.includes('__USAGE__:')) {
+          const parts = accumulated.split('__USAGE__:')
+          // The part before the marker is new text
+          currentText += parts[0]
+          
+          const usagePart = parts[1]
           try {
-            const usage = JSON.parse(usageStr)
+            const usage = JSON.parse(usagePart)
             setMessages((prev) => prev.map((m) => m.id === assistantId ? { 
               ...m, 
+              content: currentText,
               prompt_tokens: usage.prompt_tokens,
               completion_tokens: usage.completion_tokens,
               total_tokens: usage.total_tokens
             } : m))
+            // Marker processed, clear accumulated
+            accumulated = '' 
           } catch (e) {
-            console.warn('Failed to parse usage data:', e)
+            // Partial JSON after the marker, keep the marker and JSON for next chunk
+            accumulated = '__USAGE__:' + usagePart
+            // Update UI with the text found before the marker
+            setMessages((prev) => prev.map((m) => m.id === assistantId ? { ...m, content: currentText } : m))
           }
-          continue
+        } 
+        // 2. Check for potential partial markers at the end
+        else {
+          const partialMatch = accumulated.match(/__U?S?A?G?E?:?$/)
+          if (partialMatch) {
+            // We have a partial marker at the end. 
+            // Extract any text BEFORE the partial marker.
+            const textBeforePartial = accumulated.slice(0, -partialMatch[0].length)
+            if (textBeforePartial) {
+              currentText += textBeforePartial
+              accumulated = partialMatch[0] // Keep only the partial marker
+              setMessages((prev) => prev.map((m) => m.id === assistantId ? { ...m, content: currentText } : m))
+            }
+            // If no text before partial, just wait for next chunk
+          } else {
+            // No marker at all, whole accumulated is text
+            currentText += accumulated
+            accumulated = ''
+            setMessages((prev) => prev.map((m) => m.id === assistantId ? { ...m, content: currentText } : m))
+          }
         }
-
-        accumulated += chunk
-        const snap = accumulated
-        setMessages((prev) => prev.map((m) => m.id === assistantId ? { ...m, content: snap } : m))
       }
 
       setActiveStreamingIds(prev => {

@@ -182,15 +182,18 @@ export interface RegisteredModel {
   display_name: string
   is_active: boolean
   provider: string
+  model_type: 'text' | 'vision' | 'image-generation'
   api_base_url?: string | null
   has_api_key: boolean
   created_at: string
+  updated_at: string
 }
 
 export interface CreateModelPayload {
   ollama_name: string
   display_name: string
   provider?: string
+  model_type?: 'text' | 'vision' | 'image-generation'
   api_base_url?: string
   api_key?: string
 }
@@ -214,7 +217,15 @@ export async function createRegisteredModel(payload: CreateModelPayload): Promis
   return res.json()
 }
 
-export async function updateRegisteredModel(id: string, data: { display_name?: string; is_active?: boolean; api_key?: string }): Promise<RegisteredModel> {
+export async function updateRegisteredModel(
+  id: string, 
+  data: { 
+    display_name?: string; 
+    is_active?: boolean; 
+    model_type?: 'text' | 'vision' | 'image-generation';
+    api_key?: string 
+  }
+): Promise<RegisteredModel> {
   const res = await fetch(`${API_BASE}/registered-models/${id}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
@@ -288,4 +299,29 @@ export async function fetchModelUsage(): Promise<ModelUsage[]> {
   const response = await fetch(`${API_BASE}/admin/model-usage`)
   if (!response.ok) throw new Error('Failed to fetch model usage')
   return response.json()
+}
+
+// ── Images ───────────────────────────────────────────────────────────────────
+
+export const imageApi = {
+  generate: async (prompt: string): Promise<string> => {
+    const res = await fetch(`${API_BASE}/image/generate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prompt }),
+    })
+    if (!res.ok) throw new Error('Generation failed')
+    const data = await res.json()
+    return data.image
+  },
+  analyze: async (image_b64: string, question: string = "Describe this image"): Promise<string> => {
+    const res = await fetch(`${API_BASE}/image/analyze`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ image_b64, question }),
+    })
+    if (!res.ok) throw new Error('Analysis failed')
+    const data = await res.json()
+    return data.result
+  }
 }

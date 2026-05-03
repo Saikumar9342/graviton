@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
-import { ArrowUp, Square, Paperclip, Globe, ChevronDown, Cpu, Search, MessageSquare, Terminal, X, FileText, Loader2, Brain, Zap, Bot } from 'lucide-react'
+import { ArrowUp, Square, Paperclip, Globe,Sparkles, ChevronDown, Cpu, Search, MessageSquare, Terminal, X, FileText, Loader2, Brain, Zap, Bot } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import {
@@ -38,10 +38,12 @@ const ALLOWED_TYPES = [
   'text/', 'application/json', 'application/xml',
   'application/javascript', 'application/typescript',
   'application/pdf',
+  'image/jpeg', 'image/png', 'image/webp', 'image/gif'
 ]
 
 function isAllowedFile(file: File) {
-  return ALLOWED_TYPES.some((t) => file.type.startsWith(t)) || file.name.match(/\.(txt|md|csv|json|xml|js|ts|tsx|jsx|py|go|rs|java|c|cpp|h|css|html|yaml|yml|toml|sh|sql)$/i)
+  return ALLOWED_TYPES.some((t) => file.type.startsWith(t)) || 
+    file.name.match(/\.(txt|md|csv|json|xml|js|ts|tsx|jsx|py|go|rs|java|c|cpp|h|css|html|yaml|yml|toml|sh|sql|jpg|jpeg|png|webp|gif)$/i)
 }
 
 export function ChatInput({
@@ -73,6 +75,10 @@ export function ChatInput({
   }, {})
 
   const currentModel = models.find((m) => m.id === settings.model) ?? models[0]
+  // @ts-ignore - model_type might be present if it's a RegisteredModel
+  const isImageGen = (currentModel as any)?.model_type === 'image-generation'
+  // @ts-ignore
+  const isVision = (currentModel as any)?.model_type === 'vision'
 
   useEffect(() => {
     const textarea = textareaRef.current
@@ -288,7 +294,7 @@ export function ChatInput({
               type="file"
               multiple
               className="hidden"
-              accept=".txt,.md,.csv,.json,.xml,.js,.ts,.tsx,.jsx,.py,.go,.rs,.java,.c,.cpp,.h,.css,.html,.yaml,.yml,.toml,.sh,.sql,.pdf"
+              accept=".txt,.md,.csv,.json,.xml,.js,.ts,.tsx,.jsx,.py,.go,.rs,.java,.c,.cpp,.h,.css,.html,.yaml,.yml,.toml,.sh,.sql,.pdf,.jpg,.jpeg,.png,.webp,.gif"
               onChange={handleFileChange}
             />
 
@@ -312,7 +318,7 @@ export function ChatInput({
                 </Button>
               </TooltipTrigger>
               <TooltipContent side="top" className="text-xs">
-                {isUploading ? 'Uploading…' : 'Attach file'}
+                {isUploading ? 'Uploading…' : isVision ? 'Attach file or image' : 'Attach file'}
               </TooltipContent>
             </Tooltip>
 
@@ -322,8 +328,10 @@ export function ChatInput({
                   variant="ghost"
                   size="icon"
                   onClick={() => setWebSearch((v) => !v)}
+                  disabled={isImageGen}
                   className={cn(
                     'h-7 w-7 rounded-2xl transition-colors hidden sm:flex',
+                    isImageGen && 'opacity-0 pointer-events-none',
                     webSearch
                       ? 'text-sky-400 bg-sky-400/10 hover:bg-sky-400/15'
                       : 'text-muted-foreground/35 hover:text-muted-foreground/70 hover:bg-muted/40'
@@ -372,7 +380,11 @@ export function ChatInput({
                     : 'bg-muted/40 text-muted-foreground/20 cursor-not-allowed'
                 )}
               >
-                <ArrowUp className={cn('h-3.5 w-3.5', hasContent && 'stroke-[2.5px]')} />
+                {isImageGen ? (
+                  <Sparkles className={cn('h-3.5 w-3.5', hasContent && 'animate-pulse')} />
+                ) : (
+                  <ArrowUp className={cn('h-3.5 w-3.5', hasContent && 'stroke-[2.5px]')} />
+                )}
               </Button>
             )}
           </div>

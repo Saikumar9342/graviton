@@ -135,6 +135,8 @@ export const MODEL_CATEGORIES = [
   { id: 'Coding', name: 'Coding & Technical', desc: 'Optimized for software development and logic.' },
   { id: 'Reasoning', name: 'Advanced Reasoning', desc: 'Best for complex logic and step-by-step thinking.' },
   { id: 'Fast', name: 'High Speed', desc: 'Optimized for low-latency, quick responses.' },
+  { id: 'Vision', name: 'Vision Systems', desc: 'Capable of analyzing and understanding images.' },
+  { id: 'ImageGeneration', name: 'Image Synthesis', desc: 'Generate visual assets from text prompts.' },
 ]
 
 export const OPENAI_MODELS = [

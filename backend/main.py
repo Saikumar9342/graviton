@@ -5,7 +5,6 @@ from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 from sqlalchemy import text, create_engine
 from typing import List, Optional
-from datetime import datetime
 import os
 import httpx
 import json
@@ -13,7 +12,7 @@ import uuid
 from pathlib import Path
 from datetime import datetime, timezone
 
-import models, database, ollama_client
+import models, database, ollama_client, images.routes
 from pydantic import BaseModel, ConfigDict
 
 @asynccontextmanager
@@ -41,10 +40,38 @@ async def lifespan(app: FastAPI):
                 ("provider",     "ALTER TABLE registered_models ADD COLUMN provider VARCHAR DEFAULT 'ollama' NOT NULL"),
                 ("api_base_url", "ALTER TABLE registered_models ADD COLUMN api_base_url VARCHAR"),
                 ("api_key",      "ALTER TABLE registered_models ADD COLUMN api_key VARCHAR"),
+                ("model_type",   "ALTER TABLE registered_models ADD COLUMN model_type VARCHAR DEFAULT 'text' NOT NULL"),
+                ("created_at",   "ALTER TABLE registered_models ADD COLUMN created_at TIMESTAMP"),
+                ("updated_at",   "ALTER TABLE registered_models ADD COLUMN updated_at TIMESTAMP"),
             ]:
                 if col not in rm_cols:
-                    conn.execute(text(ddl))
-                    conn.commit()
+                    try:
+                        conn.execute(text(ddl))
+                        conn.commit()
+                        print(f"Added column {col} to registered_models")
+                    except Exception as e:
+                        # Dialect-specific fallbacks
+                        dialect = database.engine.dialect.name
+                        if dialect == "postgresql":
+                            if "TIMESTAMP WITH TIME ZONE" in ddl:
+                                try:
+                                    fallback_ddl = ddl.replace("TIMESTAMP WITH TIME ZONE", "TIMESTAMP")
+                                    conn.execute(text(fallback_ddl))
+                                    conn.commit()
+                                    print(f"Added column {col} to registered_models (TIMESTAMP fallback)")
+                                    continue
+                                except: pass
+                        elif dialect == "sqlite":
+                            # SQLite uses DATETIME or TIMESTAMP
+                            try:
+                                fallback_ddl = ddl.replace("TIMESTAMP WITH TIME ZONE", "DATETIME")
+                                conn.execute(text(fallback_ddl))
+                                conn.commit()
+                                print(f"Added column {col} to registered_models (DATETIME fallback)")
+                                continue
+                            except: pass
+                        
+                        print(f"Error adding column {col}: {e}")
 
             # messages migrations
             for col, ddl in [
@@ -55,8 +82,12 @@ async def lifespan(app: FastAPI):
                 ("latency_ms",        "ALTER TABLE messages ADD COLUMN latency_ms INTEGER"),
             ]:
                 if col not in msg_cols:
-                    conn.execute(text(ddl))
-                    conn.commit()
+                    try:
+                        conn.execute(text(ddl))
+                        conn.commit()
+                        print(f"Added column {col} to messages")
+                    except Exception as e:
+                        print(f"Error adding column {col}: {e}")
     except Exception as e:
         print(f"Warning: Migration check failed: {e}")
 
@@ -66,9 +97,21 @@ async def lifespan(app: FastAPI):
             count = db.query(models.RegisteredModel).count()
             if count == 0:
                 installed = await ollama_client.get_ollama_models()
-                for name in installed:
+                for m_info in installed:
+                    name = m_info["name"]
+                    modified = m_info.get("modified_at")
+                    dt = None
+                    if modified:
+                        try: dt = datetime.fromisoformat(modified.replace('Z', '+00:00'))
+                        except: pass
+                    
                     display = name.split(":")[0].replace("-", " ").title()
-                    db.add(models.RegisteredModel(ollama_name=name, display_name=display, provider='ollama'))
+                    db.add(models.RegisteredModel(
+                        ollama_name=name, 
+                        display_name=display, 
+                        provider='ollama',
+                        updated_at=dt or datetime.utcnow()
+                    ))
                 db.commit()
                 print(f"Initial model seed completed. Added {len(installed)} models.")
     except Exception as e:
@@ -87,6 +130,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+app.include_router(images.routes.router)
 
 UPLOAD_DIR = Path("uploads")
 UPLOAD_DIR.mkdir(exist_ok=True)
@@ -111,12 +156,14 @@ class RegisteredModelCreate(BaseModel):
     ollama_name: str
     display_name: str
     provider: str = 'ollama'
+    model_type: str = 'text'
     api_base_url: Optional[str] = None
     api_key: Optional[str] = None
 
 class RegisteredModelUpdate(BaseModel):
     display_name: Optional[str] = None
     is_active: Optional[bool] = None
+    model_type: Optional[str] = None
     api_key: Optional[str] = None
 
 class RegisteredModelResponse(BaseModel):
@@ -126,8 +173,10 @@ class RegisteredModelResponse(BaseModel):
     display_name: str
     is_active: bool
     provider: str
+    model_type: str
     api_base_url: Optional[str] = None
     created_at: datetime
+    updated_at: Optional[datetime] = None
     has_api_key: bool = False
     # api_key intentionally excluded from response
 
@@ -197,6 +246,7 @@ def create_registered_model(body: RegisteredModelCreate, db: Session = Depends(d
         ollama_name=body.ollama_name,
         display_name=body.display_name,
         provider=body.provider,
+        model_type=body.model_type,
         api_base_url=body.api_base_url,
         api_key=body.api_key,
     )
@@ -215,6 +265,10 @@ def update_registered_model(model_id: str, body: RegisteredModelUpdate, db: Sess
         m.display_name = body.display_name
     if body.is_active is not None:
         m.is_active = body.is_active
+    if body.model_type is not None:
+        m.model_type = body.model_type
+    
+    m.updated_at = datetime.utcnow()
     db.commit()
     db.refresh(m)
     m.has_api_key = bool(m.api_key and m.api_key.strip())
@@ -234,17 +288,36 @@ async def sync_models_from_ollama(db: Session = Depends(database.get_db)):
     """Pull installed Ollama models and upsert into registered_models."""
     installed = await ollama_client.get_ollama_models()
     added = []
-    for name in installed:
+    synced_count = 0
+    for m_info in installed:
+        name = m_info["name"]
+        modified = m_info.get("modified_at")
+        dt = None
+        if modified:
+            try: dt = datetime.fromisoformat(modified.replace('Z', '+00:00'))
+            except: pass
+
         existing = db.query(models.RegisteredModel).filter(
             models.RegisteredModel.ollama_name == name
         ).first()
+        
         if not existing:
             display = name.split(":")[0].replace("-", " ").title()
-            m = models.RegisteredModel(ollama_name=name, display_name=display)
+            m = models.RegisteredModel(
+                ollama_name=name, 
+                display_name=display,
+                updated_at=dt or datetime.utcnow()
+            )
             db.add(m)
             added.append(name)
+        else:
+            # Update existing with latest modified time from Ollama if newer
+            if dt:
+                existing.updated_at = dt
+            synced_count += 1
+            
     db.commit()
-    return {"synced": len(installed), "added": added}
+    return {"synced": synced_count, "added": added}
 
 # ── Models (Ollama passthrough) ──────────────────────────────────────────────
 
@@ -335,8 +408,24 @@ async def _ddg_search(query: str) -> str:
                 parts.append(f"• {result['Text'][:200]}")
 
         return "\n\n".join(parts)
-    except Exception:
+    except Exception as e:
+        print(f"Web search error: {e}")
         return ""
+
+def strip_usage_metadata(text: str) -> str:
+    """Removes __USAGE__: metadata and any partial trailing markers from a string."""
+    if not text:
+        return text
+    
+    # 1. Handle complete marker
+    if "__USAGE__:" in text:
+        text = text.split("__USAGE__:")[0]
+    
+    # 2. Handle partial trailing markers (e.g., "__USA", "__USAGE")
+    import re
+    text = re.sub(r'__U?S?A?G?E?:?$', '', text)
+    
+    return text
 
 # ── Provider streaming ──────────────────────────────────────────────────────
 
@@ -420,15 +509,30 @@ async def chat_endpoint(
     async def generate():
         combined_system = system_prompt
 
-        # Inject uploaded file contents
+        # Inject uploaded file contents and collect images for vision models
+        images_b64 = []
         for fid in file_ids:
             matches = list(UPLOAD_DIR.glob(f"{fid}.*"))
             if matches:
-                try:
-                    text = matches[0].read_text(encoding="utf-8", errors="replace")
-                    combined_system += f"\n\n[Attached file: {matches[0].name}]\n{text[:8000]}"
-                except Exception:
-                    pass
+                file_path = matches[0]
+                ext = file_path.suffix.lower()
+                
+                # Check if it's an image
+                if ext in ['.jpg', '.jpeg', '.png', '.webp', '.gif']:
+                    try:
+                        import base64
+                        with open(file_path, "rb") as f:
+                            img_data = base64.b64encode(f.read()).decode('utf-8')
+                            images_b64.append(img_data)
+                    except Exception:
+                        pass
+                else:
+                    # Treat as text
+                    try:
+                        text = file_path.read_text(encoding="utf-8", errors="replace")
+                        combined_system += f"\n\n[Attached file: {file_path.name}]\n{text[:8000]}"
+                    except Exception:
+                        pass
 
         # Inject web search results
         if web_search and messages_data:
@@ -443,30 +547,54 @@ async def chat_endpoint(
                         "Use these results to answer accurately with current information."
                     )
 
-        ollama_messages = []
-        if combined_system:
-            ollama_messages.append({"role": "system", "content": combined_system})
-
-        for m in messages_data:
-            content = m.get("content", "")
-            if not content and "parts" in m:
-                content = next((p["text"] for p in m["parts"] if p["type"] == "text"), "")
-            ollama_messages.append({"role": m["role"], "content": content})
-
-        full_response = ""
-        error_msg = None
-        usage_data = {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}
-
-        # Look up the registered model to determine provider
+        # Look up the registered model to determine provider and capabilities
         db_model = None
         if db:
             db_model = db.query(models.RegisteredModel).filter(
                 models.RegisteredModel.ollama_name == model
             ).first()
+            if db_model:
+                try:
+                    # Use timezone-aware UTC now
+                    db_model.updated_at = datetime.now(timezone.utc)
+                    db.commit()
+                except Exception: 
+                    db.rollback()
+
+        ollama_messages = []
+        if combined_system:
+            ollama_messages.append({"role": "system", "content": combined_system})
+
+        for i, m in enumerate(messages_data):
+            content = m.get("content", "")
+            if not content and "parts" in m:
+                content = next((p["text"] for p in m["parts"] if p["type"] == "text"), "")
+            
+            msg = {"role": m["role"], "content": content}
+            
+            # Add images to the last user message if vision model
+            if (db_model and db_model.model_type == 'vision' and 
+                m["role"] == "user" and i == len(messages_data) - 1 and images_b64):
+                msg["images"] = images_b64
+                
+            ollama_messages.append(msg)
+
+        full_response = ""
+        error_msg = None
+        usage_data = {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}
 
         try:
             # Determine provider logic
             is_openai_compat = db_model and db_model.provider == 'openai-compat'
+            is_image_gen = db_model and db_model.model_type == 'image-generation'
+
+            if is_image_gen:
+                prompt = messages_data[-1].get("content", "")
+                if prompt:
+                    from images import service as image_service
+                    img_data = await image_service.generateImage(prompt)
+                    yield f"Generating neural image for: **{prompt}**...\n\n![Generated Image]({img_data})"
+                    return
 
             if is_openai_compat:
                 if not db_model.api_base_url:
@@ -479,21 +607,33 @@ async def chat_endpoint(
                     api_key=db_model.api_key or "",
                     base_url=db_model.api_base_url,
                 ):
-                    if chunk.startswith("__USAGE__:"):
+                    if "__USAGE__:" in chunk:
                         try:
-                            usage_data.update(json.loads(chunk[10:]))
-                        except Exception: pass
-                        continue
+                            parts = chunk.split("__USAGE__:")
+                            usage_str = parts[1]
+                            usage_data.update(json.loads(usage_str))
+                            text_part = parts[0]
+                            if not text_part: continue
+                            chunk = text_part
+                        except Exception:
+                            if chunk.startswith("__USAGE__:"): continue
+                    
                     full_response += chunk
                     yield chunk
             else:
                 # Default to Ollama
                 async for chunk in ollama_client.chat_with_ollama(model, ollama_messages):
-                    if chunk.startswith("__USAGE__:"):
+                    if "__USAGE__:" in chunk:
                         try:
-                            usage_data.update(json.loads(chunk[10:]))
-                        except Exception: pass
-                        continue
+                            parts = chunk.split("__USAGE__:")
+                            usage_str = parts[1]
+                            usage_data.update(json.loads(usage_str))
+                            text_part = parts[0]
+                            if not text_part: continue
+                            chunk = text_part
+                        except Exception:
+                            if chunk.startswith("__USAGE__:"): continue
+                    
                     full_response += chunk
                     yield chunk
         except Exception as e:
@@ -517,7 +657,7 @@ async def chat_endpoint(
                     assistant_msg = models.Message(
                         chat_id=chat_id,
                         role="assistant",
-                        content=full_response,
+                        content=strip_usage_metadata(full_response),
                         model=model,
                         prompt_tokens=usage_data.get("prompt_tokens"),
                         completion_tokens=usage_data.get("completion_tokens"),
@@ -546,7 +686,8 @@ async def generate_chat_title(chat_id: str, body: dict = Body({}), db: Session =
     if not messages:
         return {"title": db_chat.title}
 
-    context = "\n".join([f"{m.role}: {m.content[:300]}" for m in messages])
+    # Filter out any lingering metadata from the context passed to the title generator
+    context = "\n".join([f"{m.role}: {strip_usage_metadata(m.content)[:300]}" for m in messages])
     req_model_name = body.get("model")
     reg_model = None
     if req_model_name:
@@ -563,9 +704,15 @@ async def generate_chat_title(chat_id: str, body: dict = Body({}), db: Session =
         # Use a short timeout for title generation to avoid blocking
         if reg_model and reg_model.provider == 'openai-compat':
              async for chunk in _stream_openai_compat(model=model_name, messages=[{"role": "system", "content": system_instr}, {"role": "user", "content": user_prompt}], api_key=reg_model.api_key or "", base_url=reg_model.api_base_url):
+                if "__USAGE__:" in chunk:
+                    chunk = chunk.split("__USAGE__:")[0]
+                    if not chunk: continue
                 full_response += chunk
         else:
             async for chunk in ollama_client.chat_with_ollama(model_name, [{"role": "system", "content": system_instr}, {"role": "user", "content": user_prompt}]):
+                if "__USAGE__:" in chunk:
+                    chunk = chunk.split("__USAGE__:")[0]
+                    if not chunk: continue
                 full_response += chunk
         
         raw_title = full_response.strip().split('\n')[0].replace('Title:', '').replace('title:', '').strip()
@@ -724,6 +871,7 @@ async def get_model_usage(db: Session = Depends(database.get_db)):
             "total_tokens": s.total or 0,
             "avg_latency_ms": s.avg_latency or 0,
             "tokens_per_sec": (s.total / (s.avg_latency / 1000)) if s.avg_latency and s.avg_latency > 0 else 0,
+            "updated_at": reg.updated_at.isoformat() if reg and reg.updated_at else None,
             "credits": None
         }
         

@@ -61,10 +61,8 @@ export function ChatHeader({
           'flex items-center gap-2 transition-all duration-500 ease-out',
           !isSidebarCollapsed && 'md:opacity-0 md:pointer-events-none md:-translate-x-2'
         )}>
-           <div className="h-7 w-7 rounded-lg bg-primary/10 flex items-center justify-center border border-primary/20">
-              <Sparkles className="h-3.5 w-3.5 text-primary" />
-           </div>
-           <span className="text-xs font-bold tracking-tight text-foreground/80">Graviton</span>
+        
+           <span className="text-md font-bold tracking-tight text-foreground/80">Graviton</span>
         </div>
       </div>
 
