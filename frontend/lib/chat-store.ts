@@ -30,7 +30,15 @@ export function generateId(): string {
 }
 
 export function generateTitle(content: string): string {
-  const cleaned = content.replace(/\n/g, ' ').trim()
-  if (cleaned.length <= 40) return cleaned
-  return cleaned.substring(0, 40) + '...'
+  // Instant cleanup of conversational fillers for a better starting title
+  let cleaned = content
+    .replace(/^(hey|hi|hello|please|help|can you|could you|i want to|i need to|tell me about)\s+/i, '')
+    .replace(/\n/g, ' ')
+    .trim()
+  
+  // Capitalize first letter
+  cleaned = cleaned.charAt(0).toUpperCase() + cleaned.slice(1)
+  
+  if (cleaned.length <= 30) return cleaned
+  return cleaned.substring(0, 30).trim() + '...'
 }

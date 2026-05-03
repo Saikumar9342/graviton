@@ -10,6 +10,7 @@ import httpx
 import json
 import uuid
 from pathlib import Path
+from datetime import datetime, timezone
 
 import models, database, ollama_client
 from pydantic import BaseModel, ConfigDict
@@ -476,7 +477,7 @@ async def chat_endpoint(
                     session.add(assistant_msg)
                     db_chat = session.query(models.Chat).filter(models.Chat.id == chat_id).first()
                     if db_chat:
-                        db_chat.updated_at = datetime.utcnow()
+                        db_chat.updated_at = datetime.now(timezone.utc)
                     session.commit()
             except Exception as e:
                 print(f"Warning: Could not save assistant message: {e}")
@@ -484,6 +485,54 @@ async def chat_endpoint(
     return StreamingResponse(generate(), media_type="text/plain")
 
 # ── Chats CRUD ──────────────────────────────────────────────────────────────
+
+@app.post("/api/chats/{chat_id}/generate-title")
+async def generate_chat_title(chat_id: str, body: dict = Body({}), db: Session = Depends(database.get_db)):
+    db_chat = db.query(models.Chat).filter(models.Chat.id == chat_id).first()
+    if not db_chat:
+        raise HTTPException(status_code=404, detail="Chat not found")
+    
+    messages = db.query(models.Message).filter(models.Message.chat_id == chat_id).order_by(models.Message.created_at.asc()).limit(3).all()
+    if not messages:
+        return {"title": db_chat.title}
+
+    context = "\n".join([f"{m.role}: {m.content[:300]}" for m in messages])
+    req_model_name = body.get("model")
+    reg_model = None
+    if req_model_name:
+        reg_model = db.query(models.RegisteredModel).filter(models.RegisteredModel.ollama_name == req_model_name).first()
+    if not reg_model:
+        reg_model = db.query(models.RegisteredModel).filter(models.RegisteredModel.is_active == True).first()
+    model_name = reg_model.ollama_name if reg_model else (req_model_name or "llama3")
+
+    system_instr = "You are a title generator. Summarize the user's intent into a 2-4 word title. NO quotes. NO period. NO 'Title:'. NO intro. Just the words."
+    user_prompt = f"Summarize this conversation into a concise title (max 5 words):\n\n{context}"
+
+    try:
+        full_response = ""
+        # Use a short timeout for title generation to avoid blocking
+        if reg_model and reg_model.provider == 'openai-compat':
+             async for chunk in _stream_openai_compat(model=model_name, messages=[{"role": "system", "content": system_instr}, {"role": "user", "content": user_prompt}], api_key=reg_model.api_key or "", base_url=reg_model.api_base_url):
+                full_response += chunk
+        else:
+            async for chunk in ollama_client.chat_with_ollama(model_name, [{"role": "system", "content": system_instr}, {"role": "user", "content": user_prompt}]):
+                full_response += chunk
+        
+        raw_title = full_response.strip().split('\n')[0].replace('Title:', '').replace('title:', '').strip()
+        title = raw_title.strip('"').strip("'").strip('`').strip('.').strip()
+        
+        if title and len(title) > 1:
+            # Final check to ensure it's not a full sentence
+            if len(title.split()) > 7:
+                title = " ".join(title.split()[:5]) + "..."
+            
+            db_chat.title = title
+            db.commit()
+            print(f"Generated title for {chat_id}: {title}")
+            return {"title": title}
+    except Exception as e:
+        print(f"Title generation error for {chat_id}: {e}")
+    return {"title": db_chat.title}
 
 @app.get("/api/chats", response_model=List[ChatResponse])
 def get_chats(db: Session = Depends(database.get_db)):
@@ -527,6 +576,7 @@ def get_chat_messages(chat_id: str, db: Session = Depends(database.get_db)):
         .all()
     )
     return messages
+
 
 # ── Admin ───────────────────────────────────────────────────────────────────
 

@@ -12,7 +12,14 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Spinner } from '@/components/ui/spinner'
 import { generateId, generateTitle } from '@/lib/chat-store'
-import { fetchChats, createChat, deleteChat as apiDeleteChat, fetchMessages } from '@/lib/api'
+import { 
+  fetchChats, 
+  fetchMessages, 
+  createChat, 
+  deleteChat as apiDeleteChat, 
+  renameChat,
+  generateChatTitle
+} from '@/lib/api'
 import { Chat, Settings, MODE_SYSTEM_PROMPTS } from '@/lib/types'
 import { useSettingsStore, useModelsStore } from '@/lib/store'
 import { cn } from '@/lib/utils'
@@ -283,6 +290,16 @@ export function ChatInterface() {
       if (elapsed > 0 && accumulated.length > 0) {
         setStreamSpeed(Math.round(accumulated.length / (elapsed / 1000)))
       }
+
+      // Automatically generate a better title after the first turn
+      if (allMessages.length === 1) {
+        try {
+          const newTitle = await generateChatTitle(chatId, settings.model)
+          setChats(prev => prev.map(c => c.id === chatId ? { ...c, title: newTitle } : c))
+        } catch (titleErr) {
+          console.error('Title generation failed:', titleErr)
+        }
+      }
     } catch (err: unknown) {
       if (err instanceof Error && err.name !== 'AbortError') {
         setError(err)
@@ -388,21 +405,33 @@ export function ChatInterface() {
             className="flex flex-col flex-1 overflow-y-auto scrollbar-none scroll-smooth px-4 sm:px-6"
           >
             {isFetchingMessages ? (
-              <div className="max-w-3xl mx-auto space-y-6 pt-4">
-                <div className="flex justify-end gap-3 pr-4">
-                  <div className="space-y-2 max-w-[60%]">
-                    <Skeleton className="h-4 w-48 rounded-lg" />
-                    <Skeleton className="h-12 w-64 rounded-2xl" />
+              <div 
+                className="mx-auto space-y-12 pt-10 w-full"
+                style={{ maxWidth: `${settings.chatMaxWidth}px` }}
+              >
+                <div className="flex justify-end pr-4">
+                  <div className="space-y-3 max-w-[60%] flex flex-col items-end">
+                    <Skeleton className="h-3 w-24 rounded-full opacity-40" />
+                    <Skeleton className="h-14 w-64 rounded-[22px] rounded-tr-none" />
                   </div>
                 </div>
-                <div className="flex gap-3 pl-4">
-                  <div className="space-y-2 flex-1 max-w-[70%]">
-                    <Skeleton className="h-4 w-32 rounded-lg" />
-                    <Skeleton className="h-20 w-full rounded-2xl" />
+                <div className="flex gap-4 pl-4">
+                  <div className="space-y-4 flex-1 max-w-[80%]">
+                    <Skeleton className="h-3 w-32 rounded-md opacity-30" />
+                    <div className="space-y-2.5">
+                      <Skeleton className="h-3.5 w-full rounded-md" />
+                      <Skeleton className="h-3.5 w-[92%] rounded-md" />
+                      <Skeleton className="h-3.5 w-[85%] rounded-md" />
+                      <Skeleton className="h-3.5 w-[40%] rounded-md" />
+                    </div>
+                    <div className="pt-2 space-y-2.5">
+                      <Skeleton className="h-3.5 w-[95%] rounded-md" />
+                      <Skeleton className="h-3.5 w-[70%] rounded-md" />
+                    </div>
                   </div>
                 </div>
-                <div className="flex justify-end gap-3 pr-4">
-                  <Skeleton className="h-10 w-40 rounded-2xl" />
+                <div className="flex justify-end pr-4">
+                  <Skeleton className="h-12 w-48 rounded-[20px] rounded-tr-none" />
                 </div>
               </div>
             ) : messages.length === 0 ? (
@@ -478,31 +507,45 @@ function LayoutSkeleton() {
   return (
     <div className="flex h-[100svh] overflow-hidden bg-background">
       {/* Sidebar Skeleton */}
-      <div className="w-[var(--sidebar-width)] border-r border-border/40 flex flex-col p-4 space-y-6">
-        <div className="flex items-center justify-between mb-4">
-          <Skeleton className="h-6 w-24" />
-          <Skeleton className="h-6 w-6 rounded-lg" />
+      <div className="w-[var(--sidebar-width)] border-r border-border/20 flex flex-col p-4 space-y-6 bg-muted/5">
+        <div className="flex items-center justify-between mb-2">
+          <Skeleton className="h-5 w-20 rounded-md opacity-50" />
+          <Skeleton className="h-8 w-8 rounded-xl opacity-40" />
         </div>
-        <Skeleton className="h-11 w-full rounded-2xl" />
-        <Skeleton className="h-11 w-full rounded-2xl" />
-        <div className="space-y-3 pt-6">
-          <Skeleton className="h-4 w-16" />
-          <Skeleton className="h-8 w-full rounded-xl" />
-          <Skeleton className="h-8 w-full rounded-xl" />
-          <Skeleton className="h-8 w-full rounded-xl" />
+        <div className="space-y-2">
+          <Skeleton className="h-10 w-full rounded-2xl opacity-20" />
+        </div>
+        <div className="space-y-3 pt-4">
+          <Skeleton className="h-3 w-12 rounded-md opacity-30" />
+          <Skeleton className="h-9 w-full rounded-xl opacity-15" />
+          <Skeleton className="h-9 w-full rounded-xl opacity-15" />
+          <Skeleton className="h-9 w-full rounded-xl opacity-15" />
         </div>
       </div>
       {/* Main Content Skeleton */}
       <div className="flex-1 flex flex-col relative">
-        <div className="h-14 border-b border-border/40 flex items-center justify-between px-6">
-          <Skeleton className="h-5 w-32" />
-          <Skeleton className="h-8 w-8 rounded-full" />
+        <div className="h-14 border-b border-border/20 flex items-center justify-between px-6">
+          <Skeleton className="h-4 w-28 rounded-md opacity-40" />
+          <div className="flex items-center gap-3">
+             <Skeleton className="h-7 w-7 rounded-lg opacity-30" />
+             <Skeleton className="h-7 w-7 rounded-lg opacity-30" />
+          </div>
         </div>
-        <div className="flex-1 flex flex-col items-center justify-center space-y-4">
-          <Skeleton className="h-4 w-48 opacity-20" />
+        <div className="flex-1 flex flex-col items-center justify-center p-8">
+           <div className="w-full max-w-2xl space-y-8 opacity-10">
+              <div className="space-y-3">
+                 <Skeleton className="h-3 w-full rounded-md" />
+                 <Skeleton className="h-3 w-[90%] rounded-md" />
+                 <Skeleton className="h-3 w-[40%] rounded-md" />
+              </div>
+              <div className="space-y-3">
+                 <Skeleton className="h-3 w-[95%] rounded-md" />
+                 <Skeleton className="h-3 w-[80%] rounded-md" />
+              </div>
+           </div>
         </div>
         <div className="p-6">
-          <Skeleton className="h-24 w-full max-w-3xl mx-auto rounded-3xl" />
+          <Skeleton className="h-20 w-full max-w-3xl mx-auto rounded-3xl opacity-10" />
         </div>
       </div>
     </div>

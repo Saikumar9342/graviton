@@ -345,8 +345,6 @@ function ChatRow({
   }
 
 
-  const shortTitle = chat.title.length > 28 ? chat.title.slice(0, 28) + '…' : chat.title
-
   return (
     <div
       className={cn(
@@ -367,7 +365,7 @@ function ChatRow({
           isActive ? 'font-medium text-foreground' : 'font-normal text-foreground/80',
         )}
       >
-        {shortTitle}
+        <span className="truncate flex-1">{chat.title}</span>
         {isStreaming && (
           <span className="flex gap-0.5 shrink-0">
             <span className="h-1 w-1 rounded-full bg-primary animate-pulse" />

@@ -43,6 +43,17 @@ export async function renameChat(id: string, title: string): Promise<void> {
   if (!response.ok) throw new Error('Failed to rename chat')
 }
 
+export async function generateChatTitle(id: string, model?: string): Promise<string> {
+  const response = await fetch(`${API_BASE}/chats/${id}/generate-title`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ model }),
+  })
+  if (!response.ok) throw new Error('Failed to generate title')
+  const data = await response.json()
+  return data.title
+}
+
 export async function deleteChat(id: string): Promise<void> {
   const response = await fetch(`${API_BASE}/chats/${id}`, { method: 'DELETE' })
   if (!response.ok) throw new Error('Failed to delete chat')

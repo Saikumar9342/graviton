@@ -40,7 +40,7 @@ export function EmptyState({ onSuggestionClick }: EmptyStateProps) {
 
       {/* Heading */}
       <h1
-        className="mb-2 text-center font-bold tracking-tight leading-none"
+        className="mb-2 pb-1 text-center font-bold tracking-tight leading-tight"
         style={{
           fontSize: 'clamp(1rem, 4vw, 2.5rem)',
           letterSpacing: '-0.02em',

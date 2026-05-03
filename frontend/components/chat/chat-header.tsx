@@ -37,24 +37,23 @@ export function ChatHeader({
           <span className="sr-only">Toggle sidebar</span>
         </Button>
 
-        {/* Logo — visible only when sidebar is collapsed on desktop */}
+        {/* Logo group */}
         <div className={cn(
           'flex items-center gap-2.5 transition-all duration-500',
           !isSidebarCollapsed && 'md:opacity-0 md:pointer-events-none md:-translate-x-3'
         )}>
-         
           <span className="text-sm font-semibold text-foreground">Graviton</span>
         </div>
       </div>
 
-      {/* Current model pill */}
-      <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-muted/40 border border-border/50 text-xs text-muted-foreground font-medium">
-        <div className="h-1.5 w-1.5 rounded-full bg-emerald-500 shadow-sm shadow-emerald-500/50" />
-        {settings.model}
-      </div>
-
       {/* Controls */}
-      <div className="flex items-center gap-1">
+      <div className="flex items-center gap-4">
+        {/* Model Indicator - Moved to Right Control Group */}
+        <div className="hidden md:flex items-center gap-2 text-[10px] uppercase tracking-widest text-muted-foreground/50 font-semibold cursor-default hover:text-muted-foreground/80 transition-colors mr-2">
+          <div className="h-1.5 w-1.5 rounded-full bg-emerald-500/80" />
+          {settings.model}
+        </div>
+
         <Button
           variant="ghost"
           size="icon"
