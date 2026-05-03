@@ -260,16 +260,47 @@ export function ChatInterface() {
     setIsLoading(true)
     setStreamingId(assistantId)
 
-    let modelType: string | undefined = registeredModels.find(m => m.ollama_name === settings.model)?.model_type
+    let allModels = registeredModels
+    let modelType: string | undefined = allModels.find(m => m.ollama_name === settings.model)?.model_type
     if (!modelType) {
       // Store not loaded yet — fetch directly
       try {
         const { fetchRegisteredModels } = await import('@/lib/api')
-        const all = await fetchRegisteredModels()
-        modelType = all.find(m => m.ollama_name === settings.model)?.model_type
+        allModels = await fetchRegisteredModels()
+        modelType = allModels.find(m => m.ollama_name === settings.model)?.model_type
       } catch { /* ignore */ }
     }
+
+    // Detect image-generation intent when the selected model can't do it
+    const imageIntent = /\b(generate|create|draw|make|render|paint|design|produce|show me)\b.{0,60}\b(image|picture|photo|illustration|artwork|painting|drawing|portrait|landscape|wallpaper)\b|\b(image|picture|photo|illustration|artwork)\b.{0,40}\b(of|showing|with|featuring)\b/i
+    if (modelType !== 'image-generation' && imageIntent.test(content)) {
+      const imageModels = allModels.filter(m => m.model_type === 'image-generation')
+      const suggestion = imageModels.length > 0
+        ? `I can't generate images with the current model (**${settings.model}**). To generate images, please switch to one of these models:\n\n${imageModels.map(m => `- **${m.display_name}** (\`${m.ollama_name}\`)`).join('\n')}\n\nYou can change the model from the selector at the top of the chat.`
+        : `I can't generate images with the current model (**${settings.model}**). No image-generation models are registered yet — you can add one in **Settings → Models**.`
+      setMessages((prev) => prev.map((m) =>
+        m.id === assistantId ? { ...m, content: suggestion } : m
+      ))
+      setIsLoading(false)
+      setStreamingId(null)
+      return
+    }
+
     if (modelType === 'image-generation') {
+      // Warn if the user is asking a text/code question with an image model
+      const textIntent = /\b(write|code|explain|summarize|translate|fix|debug|help me|how to|what is|why|when|who|calculate|list|compare)\b/i
+      if (textIntent.test(content) && !imageIntent.test(content)) {
+        const textModels = allModels.filter(m => m.model_type === 'text' || m.model_type === 'vision')
+        const suggestion = textModels.length > 0
+          ? `The current model (**${settings.model}**) is an image-generation model and can't answer text or coding questions.\n\nPlease switch to one of these models for text/code tasks:\n\n${textModels.map(m => `- **${m.display_name}** (\`${m.ollama_name}\`)`).join('\n')}\n\nYou can change the model from the selector at the top of the chat.`
+          : `The current model (**${settings.model}**) is an image-generation model and can't answer text or coding questions. Please switch to a text model from the model selector.`
+        setMessages((prev) => prev.map((m) =>
+          m.id === assistantId ? { ...m, content: suggestion } : m
+        ))
+        setIsLoading(false)
+        setStreamingId(null)
+        return
+      }
       startImageGen(allMsgs, assistantId, chatId)
     } else {
       startStream(allMsgs, assistantId, chatId, mode, fileIds, webSearch)

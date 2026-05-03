@@ -144,7 +144,7 @@ function SearchChatsDialog({
       </Button>
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-w-2xl rounded-2xl p-0 gap-0 overflow-hidden [&>button]:hidden">
+        <DialogContent className="max-w-3xl rounded-2xl p-0 gap-0 overflow-hidden [&>button]:hidden">
           <DialogTitle className="sr-only">Search chats</DialogTitle>
           <DialogDescription className="sr-only">Find and open your chats</DialogDescription>
 
@@ -395,7 +395,7 @@ function ChatRow({
             side="right" 
             align="start" 
             sideOffset={8}
-            className="w-48 rounded-xl border border-border/40 bg-popover shadow-xl shadow-black/20 overflow-hidden animate-in fade-in slide-in-from-left-1 duration-150 z-[100]"
+            className="w-56 rounded-xl border border-border/40 bg-popover shadow-xl shadow-black/20 overflow-hidden animate-in fade-in slide-in-from-left-1 duration-150 z-[100]"
           >
             <div className="p-1 space-y-0.5">
               <DropdownMenuItem
