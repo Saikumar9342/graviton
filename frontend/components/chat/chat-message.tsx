@@ -110,20 +110,21 @@ export function ChatMessage({
               </div>
             ) : (
               <div className="relative group/bubble">
-                <div className={cn(
-                  "px-4 py-3 leading-relaxed whitespace-pre-wrap text-sm transition-all",
-                  "rounded-[var(--radius)]",
-                  bubbleStyle === 'modern' && "bg-primary/12 border border-primary/15 text-foreground/90 rounded-br-sm",
-                  bubbleStyle === 'glass' && "glass text-foreground rounded-br-sm",
-                  bubbleStyle === 'minimal' && "bg-transparent border border-border/40 text-foreground/80"
-                )}>
+                <div
+                  className="px-4 py-3 leading-relaxed whitespace-pre-wrap text-sm"
+                  style={{
+                    background: 'var(--ed-paper-3)',
+                    border: '1px solid var(--ed-rule)',
+                    color: 'var(--foreground)',
+                  }}
+                >
                   {content}
                 </div>
-                {/* Edit button */}
                 {canEdit && !isEditing && (
                   <button
                     onClick={() => setIsEditing(true)}
-                    className="absolute -bottom-2 -right-2 opacity-0 group-hover/bubble:opacity-100 transition-opacity h-6 w-6 rounded-full bg-background border border-border/60 flex items-center justify-center text-muted-foreground/60 hover:text-foreground shadow-sm z-10"
+                    className="absolute -bottom-2 -right-2 opacity-0 group-hover/bubble:opacity-100 transition-opacity h-6 w-6 flex items-center justify-center text-muted-foreground/60 hover:text-foreground z-10"
+                    style={{ border: '1px solid var(--ed-rule)', background: 'var(--background)' }}
                   >
                     <Pencil className="h-3 w-3" />
                   </button>
@@ -192,14 +193,12 @@ export function ChatMessage({
                   } catch {}
                 }
                 return (
-                  <div className={cn(
-                    "max-w-none transition-all",
-                    bubbleStyle === 'modern' && "bg-card/20 border border-border/20 px-4 py-3 rounded-[var(--radius)] rounded-tl-sm",
-                    bubbleStyle === 'glass' && "glass px-4 py-3 rounded-[var(--radius)] rounded-tl-sm",
-                    bubbleStyle === 'minimal' && "prose-chat py-1"
-                  )}>
+                  <div
+                    className="max-w-none px-4 py-3"
+                    style={{ border: '1px solid var(--ed-rule)', background: 'var(--background)' }}
+                  >
                     <span className="relative inline-block group/img" style={{ maxWidth: 480 }}>
-                      <img src={src} alt="Generated Image" className="rounded-xl border border-border/20 shadow-lg w-full block" />
+                      <img src={src} alt="Generated Image" className="w-full block" style={{ border: '1px solid var(--ed-rule)' }} />
                       <button
                         onClick={handleDownload}
                         className="absolute top-2 right-2 opacity-0 group-hover/img:opacity-100 transition-opacity flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-black/60 backdrop-blur-sm text-white text-xs font-medium hover:bg-black/80"
@@ -211,12 +210,10 @@ export function ChatMessage({
                 )
               }
               return (
-                <div className={cn(
-                  "max-w-none transition-all",
-                  bubbleStyle === 'modern' && "bg-card/20 border border-border/20 px-4 py-3 rounded-[var(--radius)] rounded-tl-sm",
-                  bubbleStyle === 'glass' && "glass px-4 py-3 rounded-[var(--radius)] rounded-tl-sm",
-                  bubbleStyle === 'minimal' && "prose-chat py-1"
-                )}>
+                <div
+                  className="max-w-none px-4 py-3"
+                  style={{ border: '1px solid var(--ed-rule)', background: 'var(--background)' }}
+                >
                   <div className="prose-chat">
                     <MarkdownRenderer
                       content={content}

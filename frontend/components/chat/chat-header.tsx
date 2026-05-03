@@ -1,16 +1,8 @@
 'use client'
 
-import { Menu, Sun, Moon, Sparkles, Cpu, Zap, Code2, BrainCircuit, Settings as SettingsIcon } from 'lucide-react'
+import { Menu, Sun, Moon, Settings as SettingsIcon } from 'lucide-react'
 import { useTheme } from '@/components/theme-provider'
 import { Button } from '@/components/ui/button'
-import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
 import { SettingsDialog, SessionStats } from './settings-dialog'
 import { Settings } from '@/lib/types'
 import { cn } from '@/lib/utils'
@@ -30,73 +22,64 @@ export function ChatHeader({
   settings,
   onSaveSettings,
   session,
-  availableModels,
 }: ChatHeaderProps) {
   const { theme, setTheme } = useTheme()
 
-  const getCategoryIcon = (cat: string) => {
-    switch (cat) {
-      case 'Coding': return <Code2 className="h-3 w-3" />
-      case 'Reasoning': return <BrainCircuit className="h-3 w-3" />
-      case 'Fast': return <Zap className="h-3 w-3" />
-      default: return <Cpu className="h-3 w-3" />
-    }
-  }
-
   return (
-    <header className="flex h-12 items-center justify-between border-b border-border/40 bg-background/60 backdrop-blur-xl px-4 sticky top-0 z-40">
+    <header
+      className="flex h-11 items-center justify-between px-5 sticky top-0 z-40 shrink-0"
+      style={{
+        borderBottom: '1px solid var(--ed-rule)',
+        background: 'var(--ed-paper-2)',
+      }}
+    >
+      {/* Left — mobile toggle + wordmark */}
       <div className="flex items-center gap-3">
         <Button
           variant="ghost"
           size="icon"
           onClick={onToggleSidebar}
-          className="h-8 w-8 md:hidden text-muted-foreground hover:text-foreground hover:bg-muted/10 rounded-lg"
+          className="h-7 w-7 md:hidden text-muted-foreground hover:text-foreground"
         >
-          <Menu className="h-4 w-4" />
-          <span className="sr-only">Toggle sidebar</span>
+          <Menu className="h-3.5 w-3.5" />
         </Button>
 
-        {/* Logo group */}
         <div className={cn(
-          'flex items-center gap-2 transition-all duration-500 ease-out',
-          !isSidebarCollapsed && 'md:opacity-0 md:pointer-events-none md:-translate-x-2'
+          'flex items-baseline gap-1.5 transition-all duration-300',
+          !isSidebarCollapsed && 'md:opacity-0 md:pointer-events-none',
         )}>
-        
-           <span className="text-md font-bold tracking-tight text-foreground/80">Graviton</span>
+          <span
+            className="ed-display"
+            style={{ fontSize: 17, color: 'var(--foreground)', letterSpacing: '-0.03em' }}
+          >
+            Graviton
+          </span>
+          <span className="ed-mono" style={{ fontSize: 9, color: 'var(--ed-ink-4)' }}>™</span>
         </div>
       </div>
 
-      {/* Controls */}
-      <div className="flex items-center gap-4">
-        {/* Model Switcher */}
-  
+      {/* Right — controls */}
+      <div className="flex items-center gap-1">
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+          className="h-7 w-7 text-muted-foreground hover:text-foreground"
+          style={{ border: '1px solid var(--ed-rule)', background: 'transparent' }}
+        >
+          {theme === 'dark' ? <Sun className="h-3 w-3" /> : <Moon className="h-3 w-3" />}
+        </Button>
 
-        <div className="h-4 w-px bg-border/20" />
-
-        <div className="flex items-center gap-1">
+        <SettingsDialog settings={settings} onSave={onSaveSettings} session={session}>
           <Button
             variant="ghost"
             size="icon"
-            onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-            className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-muted/10 rounded-lg"
+            className="h-7 w-7 text-muted-foreground hover:text-foreground"
+            style={{ border: '1px solid var(--ed-rule)', background: 'transparent' }}
           >
-            {theme === 'dark' ? <Sun className="h-3.5 w-3.5" /> : <Moon className="h-3.5 w-3.5" />}
+            <SettingsIcon className="h-3 w-3" />
           </Button>
-
-          <SettingsDialog
-            settings={settings}
-            onSave={onSaveSettings}
-            session={session}
-          >
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-muted/10 rounded-lg"
-            >
-              <SettingsIcon className="h-3.5 w-3.5" />
-            </Button>
-          </SettingsDialog>
-        </div>
+        </SettingsDialog>
       </div>
     </header>
   )

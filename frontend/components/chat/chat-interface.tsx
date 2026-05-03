@@ -74,6 +74,7 @@ export function ChatInterface() {
     })
 
   const [messages, setMessages] = useState<Message[]>([])
+  const [suggestions, setSuggestions] = useState<string[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [isFetchingMessages, setIsFetchingMessages] = useState(false)
   const [streamingId, setStreamingId] = useState<string | null>(null)
@@ -235,6 +236,7 @@ export function ChatInterface() {
     webSearch = false,
   ) => {
     if (isLoading || !content.trim()) return
+    setSuggestions([])
 
     let chatId = currentChatIdRef.current
     if (!chatId) {
@@ -507,6 +509,43 @@ setMessages((prev) => prev.map((m) => m.id === assistantId ? { ...m, content: da
     }
   }
 
+  // Derive follow-up suggestions from the last assistant message
+  useEffect(() => {
+    if (isLoading) { setSuggestions([]); return }
+    const last = [...messages].reverse().find(m => m.role === 'assistant')
+    if (!last?.content) { setSuggestions([]); return }
+
+    const text = last.content.slice(0, 1200)
+    const chips: string[] = []
+
+    // Extract question-like sentences the assistant asked
+    const questions = text.match(/[^.!?\n]{10,120}\?/g) ?? []
+    for (const q of questions) {
+      const clean = q.replace(/\*\*/g, '').trim()
+      if (clean.length > 8 && clean.length < 80) chips.push(clean)
+      if (chips.length >= 2) break
+    }
+
+    // Pad with contextual follow-ups based on keywords
+    const lower = text.toLowerCase()
+    const extras: string[] = []
+    if (lower.includes('code') || lower.includes('function') || lower.includes('implement'))
+      extras.push('Show me the full code', 'Add error handling', 'Explain step by step')
+    else if (lower.includes('design') || lower.includes('architecture') || lower.includes('system'))
+      extras.push('Show a diagram', 'What are the trade-offs?', 'How does this scale?')
+    else if (lower.includes('explain') || lower.includes('concept') || lower.includes('mean'))
+      extras.push('Give me an example', 'Simplify further', 'What are the alternatives?')
+    else
+      extras.push('Tell me more', 'Give an example', 'What are the next steps?')
+
+    for (const e of extras) {
+      if (chips.length >= 3) break
+      if (!chips.includes(e)) chips.push(e)
+    }
+
+    setSuggestions(chips.slice(0, 3))
+  }, [messages, isLoading])
+
   // Edit-and-resend via pending ref
   useEffect(() => {
     if (pendingResend.current) {
@@ -696,6 +735,7 @@ setMessages((prev) => prev.map((m) => m.id === assistantId ? { ...m, content: da
               settings={settings}
               onSettingsChange={handleSaveSettings}
               availableModels={availableModels}
+              suggestions={messages.length > 0 ? suggestions : undefined}
             />
           </div>
         </div>

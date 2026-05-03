@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
-import { ArrowUp, Square, Paperclip, Globe,Sparkles, ChevronDown, Cpu, Search, MessageSquare, Terminal, X, FileText, Loader2, Brain, Zap, Bot } from 'lucide-react'
+import { ArrowUp, Square, Paperclip, Globe, ChevronDown, Cpu, Search, MessageSquare, Terminal, X, FileText, Loader2, Brain, Zap, Bot } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import {
@@ -26,6 +26,7 @@ interface ChatInputProps {
   settings: Settings
   onSettingsChange: (settings: Settings) => void
   availableModels?: { id: string; name: string; provider: string; badge?: string }[]
+  suggestions?: string[]
 }
 
 const MODES = [
@@ -54,6 +55,7 @@ export function ChatInput({
   settings,
   onSettingsChange,
   availableModels,
+  suggestions,
 }: ChatInputProps) {
   const [input, setInput] = useState('')
   const [isFocused, setIsFocused] = useState(false)
@@ -137,27 +139,64 @@ export function ChatInput({
 
   return (
     <div className="relative w-full">
-      <div className={cn(
-        'relative rounded-2xl border bg-muted/20 transition-all duration-200 overflow-hidden',
-        isFocused
-          ? 'border-primary/40 ring-[3px] ring-primary/[0.07] shadow-xl shadow-black/15'
-          : 'border-border/50 hover:border-border/80 shadow-md shadow-black/10',
-        isLoading && !isFocused && 'border-primary/25',
-      )}>
+      {/* Follow-up suggestion chips */}
+      {suggestions && suggestions.length > 0 && !isLoading && (
+        <div className="flex gap-2 mb-2 overflow-x-auto scrollbar-none pb-0.5">
+          {suggestions.map((s, i) => (
+            <button
+              key={i}
+              onClick={() => { onSend(s, mode, [], false) }}
+              className="shrink-0 text-xs px-3 py-1.5 transition-colors duration-150 whitespace-nowrap"
+              style={{
+                border: '1px solid var(--ed-rule)',
+                background: 'var(--background)',
+                color: 'var(--ed-ink-3)',
+                fontFamily: 'inherit',
+              }}
+              onMouseEnter={e => {
+                e.currentTarget.style.borderColor = 'var(--foreground)'
+                e.currentTarget.style.color = 'var(--foreground)'
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.borderColor = 'var(--ed-rule)'
+                e.currentTarget.style.color = 'var(--ed-ink-3)'
+              }}
+            >
+              {s}
+            </button>
+          ))}
+        </div>
+      )}
+
+      <div
+        className="relative overflow-hidden transition-all duration-150"
+        style={{
+          border: `1px solid ${isFocused ? 'var(--foreground)' : 'var(--ed-rule)'}`,
+          background: 'var(--background)',
+          boxShadow: isFocused ? '4px 4px 0 var(--ed-rule)' : 'none',
+        }}
+      >
 
         {/* Toolbar */}
         <div className="flex items-center gap-1.5 px-4 pt-3 pb-1.5">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-7 gap-1.5 px-2.5 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted/60 rounded-2xl shrink-0"
+              <button
+                style={{
+                  appearance: 'none', border: 'none', background: 'transparent',
+                  display: 'inline-flex', alignItems: 'center', gap: 5,
+                  padding: '3px 8px', cursor: 'pointer',
+                  fontFamily: 'var(--font-jetbrains-mono)', fontSize: 11,
+                  fontWeight: 600, letterSpacing: '0.02em', textTransform: 'uppercase',
+                  color: 'var(--ed-ink-3)',
+                }}
+                onMouseEnter={e => (e.currentTarget.style.color = 'var(--foreground)')}
+                onMouseLeave={e => (e.currentTarget.style.color = 'var(--ed-ink-3)')}
               >
-                <Cpu className="h-3 w-3 text-primary/70" />
+                <Cpu className="h-3 w-3" style={{ color: 'var(--ed-accent)' }} />
                 {currentModel?.name ?? settings.model}
-                <ChevronDown className="h-3 w-3 opacity-40" />
-              </Button>
+                <ChevronDown className="h-2.5 w-2.5 opacity-50" />
+              </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent 
               align="start" 
@@ -361,39 +400,41 @@ export function ChatInput({
             )}
 
             {isLoading ? (
-              <Button
-                size="icon"
+              <button
                 onClick={onStop}
-                className="h-8 w-8 rounded-xl bg-muted/50 hover:bg-destructive/10 hover:text-destructive text-muted-foreground/50 transition-all duration-150"
+                style={{
+                  appearance: 'none', border: '1px solid var(--ed-rule)', background: 'var(--ed-paper-2)',
+                  width: 30, height: 30, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  cursor: 'pointer', color: 'var(--ed-ink-3)',
+                }}
               >
-                <Square className="h-3.5 w-3.5 fill-current" />
-              </Button>
+                <Square className="h-3 w-3 fill-current" />
+              </button>
             ) : (
-              <Button
-                size="icon"
+              <button
                 onClick={handleSubmit}
                 disabled={!hasContent || disabled || isUploading}
-                className={cn(
-                  'h-8 w-8 rounded-2xl transition-all duration-200',
-                  hasContent && !isUploading
-                    ? 'bg-primary text-primary-foreground hover:opacity-90 shadow-md shadow-primary/25 active:scale-95'
-                    : 'bg-muted/40 text-muted-foreground/20 cursor-not-allowed'
-                )}
+                style={{
+                  appearance: 'none',
+                  border: 'none',
+                  background: hasContent && !isUploading ? 'var(--foreground)' : 'var(--ed-paper-3)',
+                  color: hasContent && !isUploading ? 'var(--background)' : 'var(--ed-ink-4)',
+                  padding: '6px 14px', height: 30,
+                  display: 'inline-flex', alignItems: 'center', gap: 5,
+                  fontFamily: 'var(--font-jetbrains-mono)', fontSize: 11,
+                  fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase',
+                  cursor: hasContent && !isUploading ? 'pointer' : 'not-allowed',
+                  opacity: disabled ? 0.5 : 1,
+                }}
+                onMouseEnter={e => { if (hasContent) (e.currentTarget as HTMLElement).style.opacity = '0.85' }}
+                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.opacity = '1' }}
               >
-                {isImageGen ? (
-                  <Sparkles className={cn('h-3.5 w-3.5', hasContent && 'animate-pulse')} />
-                ) : (
-                  <ArrowUp className={cn('h-3.5 w-3.5', hasContent && 'stroke-[2.5px]')} />
-                )}
-              </Button>
+                Send <ArrowUp className="h-3 w-3" />
+              </button>
             )}
           </div>
         </div>
       </div>
-
-      <p className="mt-2 text-center text-[11px] text-muted-foreground/25 select-none">
-        Graviton can make mistakes. Verify important information.
-      </p>
     </div>
   )
 }

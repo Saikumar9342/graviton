@@ -74,6 +74,8 @@ import {
   ACCENT_COLORS,
   FONT_FAMILIES,
   MODEL_CATEGORIES,
+  PRESET_THEMES,
+  TOPIC_REGISTRY,
 } from "@/lib/types";
 import { useModelsStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
@@ -282,13 +284,15 @@ const CLOUD_PROVIDERS = [
 ] as const;
 
 type Section =
+  | "themes"
   | "appearance"
   | "chat"
   | "models"
   | "lab"
   | "session"
   | "database"
-  | "admin";
+  | "admin"
+  | "dashboard";
 
 export function SettingsDialog({
   settings,
@@ -297,7 +301,7 @@ export function SettingsDialog({
   children,
 }: SettingsDialogProps) {
   const [open, setOpen] = useState(false);
-  const [section, setSection] = useState<Section>("appearance");
+  const [section, setSection] = useState<Section>("themes");
   const [local, setLocal] = useState<Settings>(settings);
   const { theme, setTheme } = useTheme();
   const isMobile = useIsMobile();
@@ -346,6 +350,9 @@ export function SettingsDialog({
   // Lab Pagination
   const [labPage, setLabPage] = useState(0);
   const LAB_PAGE_SIZE = 5;
+
+  // Dashboard
+  const [expandedDashCat, setExpandedDashCat] = useState<string | null>(null);
 
   const [addModelType, setAddModelType] = useState<
     "text" | "vision" | "image-generation"
@@ -767,8 +774,10 @@ export function SettingsDialog({
   };
 
   const mainNav = [
+    { id: "themes", label: "Themes", icon: Palette },
     { id: "appearance", label: "Appearance", icon: Sun },
     { id: "chat", label: "Chat Settings", icon: Sparkles },
+    { id: "dashboard", label: "Dashboard", icon: Layout },
     { id: "models", label: "Local Models", icon: Server },
     { id: "lab", label: "Model Lab", icon: Sparkles },
     { id: "session", label: "Session Info", icon: Activity },
@@ -779,8 +788,107 @@ export function SettingsDialog({
     { id: "admin", label: "System Admin", icon: Lock },
   ] as const;
 
+  const applyPreset = (preset: typeof PRESET_THEMES[number]) => {
+    const next = { ...local, ...preset.vars } as Settings;
+    setLocal(next);
+    const root = document.documentElement;
+    if (preset.vars.theme) {
+      setTheme(preset.vars.theme as "light" | "dark" | "system");
+    }
+    if (preset.vars.accentColor) {
+      root.style.setProperty("--primary", preset.vars.accentColor);
+      root.setAttribute("data-accent", preset.vars.accentColor);
+    }
+    if (preset.vars.borderRadius !== undefined) {
+      root.style.setProperty("--radius", `${preset.vars.borderRadius}px`);
+    }
+    if (preset.vars.fontFamily) {
+      root.style.setProperty("--font-sans", preset.vars.fontFamily);
+      document.body.style.fontFamily = preset.vars.fontFamily;
+    }
+    if (preset.vars.glowIntensity !== undefined) {
+      root.style.setProperty("--glow-intensity", String(preset.vars.glowIntensity / 100));
+    }
+    if (preset.vars.glassBlur !== undefined) {
+      root.style.setProperty("--glass-blur", `${preset.vars.glassBlur}px`);
+    }
+    if (preset.vars.glowRadius !== undefined) {
+      root.style.setProperty("--glow-radius", `${preset.vars.glowRadius}px`);
+    }
+    if (preset.vars.backgroundPattern) {
+      root.setAttribute("data-pattern", preset.vars.backgroundPattern);
+    }
+    if (preset.vars.gridOpacity !== undefined) {
+      root.style.setProperty("--grid-opacity", String(preset.vars.gridOpacity / 100));
+    }
+  };
+
   const renderContent = () => {
     switch (section) {
+      case "themes":
+        return (
+          <div className="space-y-6">
+            <div className="flex items-center gap-3">
+              <div className="h-8 w-8 rounded-xl bg-primary/10 flex items-center justify-center text-primary border border-primary/20">
+                <Palette className="h-4 w-4" />
+              </div>
+              <div>
+                <h3 className="text-sm font-semibold tracking-tight">Theme Presets</h3>
+                <p className="text-[10px] text-muted-foreground/60 uppercase tracking-widest font-medium">One-click looks · fine-tune in Appearance</p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              {PRESET_THEMES.map((preset) => {
+                const isActive =
+                  local.accentColor === preset.vars.accentColor &&
+                  local.theme === preset.vars.theme &&
+                  (preset.vars.borderRadius === undefined || local.borderRadius === preset.vars.borderRadius);
+                return (
+                  <button
+                    key={preset.id}
+                    onClick={() => applyPreset(preset)}
+                    className={cn(
+                      "relative text-left p-4 rounded-xl border transition-all duration-200 group",
+                      isActive
+                        ? "border-primary bg-primary/8 shadow-sm"
+                        : "border-border/40 hover:border-border bg-muted/10 hover:bg-muted/20"
+                    )}
+                  >
+                    {isActive && (
+                      <span className="absolute top-2.5 right-2.5 h-4 w-4 rounded-full bg-primary flex items-center justify-center">
+                        <Check className="h-2.5 w-2.5 text-primary-foreground" />
+                      </span>
+                    )}
+                    <div className="flex items-start gap-3">
+                      <span className="text-2xl leading-none mt-0.5">{preset.emoji}</span>
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold leading-tight">{preset.name}</p>
+                        <p className="text-[11px] text-muted-foreground/60 mt-0.5 leading-tight">{preset.description}</p>
+                        <div className="flex items-center gap-1.5 mt-2">
+                          <span
+                            className="h-3 w-3 rounded-full border border-white/20 shrink-0"
+                            style={{ background: preset.vars.accentColor }}
+                          />
+                          <span className="text-[10px] text-muted-foreground/50 uppercase tracking-wider font-mono">
+                            {preset.vars.theme} · r{preset.vars.borderRadius ?? '—'}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+
+            <div className="pt-2 border-t border-border/30">
+              <p className="text-[11px] text-muted-foreground/40 leading-relaxed">
+                Applying a preset updates your live settings. Fine-tune any value in the <button className="underline text-muted-foreground/60 hover:text-foreground" onClick={() => setSection("appearance")}>Appearance</button> tab. Changes save when you click <strong>Save Changes</strong>.
+              </p>
+            </div>
+          </div>
+        );
+
       case "appearance":
         return (
           <div className="space-y-10 max-h-[550px] overflow-y-auto pr-4 scrollbar-none pb-8">
@@ -2816,6 +2924,145 @@ export function SettingsDialog({
                 No active conversation. Start a chat to see live stats.
               </p>
             )}
+          </div>
+        );
+      }
+
+      // ── Dashboard ─────────────────────────────────────────────────────
+      case "dashboard": {
+        const topics: string[] = (local as any).dashboardTopics ?? ['world', 'tech', 'weather'];
+        const subTopics: string[] = (local as any).dashboardSubTopics ?? [];
+        const expandedCat = expandedDashCat;
+        const setExpandedCat = setExpandedDashCat;
+
+        const toggleTopic = (id: string, required?: boolean) => {
+          if (required) return;
+          const next = topics.includes(id) ? topics.filter((t) => t !== id) : [...topics, id];
+          // When disabling a category, also remove its sub-topics
+          const cleanedSubs = next.includes(id) ? subTopics : subTopics.filter(st => !st.startsWith(`${id}_`));
+          update("dashboardTopics" as any, next);
+          update("dashboardSubTopics" as any, cleanedSubs);
+        };
+
+        const toggleSubTopic = (catId: string, subId: string) => {
+          // Enabling a sub-topic also enables its parent category
+          let newTopics = topics;
+          if (!topics.includes(catId)) {
+            newTopics = [...topics, catId];
+            update("dashboardTopics" as any, newTopics);
+          }
+          const next = subTopics.includes(subId)
+            ? subTopics.filter(s => s !== subId)
+            : [...subTopics, subId];
+          update("dashboardSubTopics" as any, next);
+        };
+
+        return (
+          <div className="space-y-6 max-h-[520px] overflow-y-auto pr-2 scrollbar-none pb-4">
+            <div className="flex items-center gap-3">
+              <div className="h-8 w-8 rounded-xl bg-primary/10 flex items-center justify-center text-primary border border-primary/20">
+                <Layout className="h-4 w-4" />
+              </div>
+              <div>
+                <h3 className="text-sm font-semibold tracking-tight">Dashboard Preferences</h3>
+                <p className="text-[10px] text-muted-foreground/60 uppercase tracking-widest font-medium">Personalise your briefing</p>
+              </div>
+            </div>
+
+            {/* Location */}
+            <div className="space-y-2">
+              <SLabel>Your Location</SLabel>
+              <p className="text-xs text-muted-foreground/60 -mt-1 mb-2">Used for live weather. City name (e.g. "Mumbai") or leave blank for auto-detect.</p>
+              <Input
+                placeholder="e.g. London, Mumbai, New York"
+                value={(local as any).dashboardCity ?? ''}
+                onChange={(e) => update("dashboardCity" as any, e.target.value)}
+                className="text-sm"
+              />
+            </div>
+
+            {/* Hierarchical topic + sub-topic picker */}
+            <div className="space-y-2">
+              <SLabel>Feed Topics & Sources</SLabel>
+              <p className="text-xs text-muted-foreground/60 -mt-1 mb-3">
+                Toggle categories on/off. Expand any category to pick specific sources — useful for Sports (Cricket vs Football) or Tech (Hacker News vs Wired).
+              </p>
+              <div className="space-y-1">
+                {TOPIC_REGISTRY.map((cat) => {
+                  const catOn = topics.includes(cat.id);
+                  const isExpanded = expandedCat === cat.id;
+                  const activeSubs = subTopics.filter(s => s.startsWith(`${cat.id}_`));
+                  return (
+                    <div key={cat.id} className="border border-border/30 rounded-lg overflow-hidden">
+                      {/* Category row */}
+                      <div className="flex items-center gap-3 px-3 py-2.5 bg-muted/10">
+                        <span className="text-base leading-none w-5 shrink-0">{cat.emoji}</span>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <p className="text-sm font-medium leading-tight">{cat.label}</p>
+                            {cat.required && (
+                              <span className="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-primary/10 text-primary border border-primary/20">Always on</span>
+                            )}
+                            {activeSubs.length > 0 && (
+                              <span className="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-600 border border-emerald-500/20">{activeSubs.length} source{activeSubs.length > 1 ? 's' : ''}</span>
+                            )}
+                          </div>
+                          <p className="text-[11px] text-muted-foreground/50 mt-0.5">{cat.desc}</p>
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0">
+                          {cat.subtopics.length > 0 && catOn && (
+                            <button
+                              onClick={() => setExpandedCat(isExpanded ? null : cat.id)}
+                              className="text-[10px] text-muted-foreground/50 hover:text-foreground uppercase tracking-wider font-mono border border-border/30 rounded px-2 py-0.5 transition-colors"
+                            >
+                              {isExpanded ? 'Close' : 'Sources'}
+                            </button>
+                          )}
+                          <Switch
+                            checked={catOn || !!cat.required}
+                            onCheckedChange={() => toggleTopic(cat.id, cat.required)}
+                            disabled={!!cat.required}
+                          />
+                        </div>
+                      </div>
+
+                      {/* Sub-topics (expanded) */}
+                      {isExpanded && cat.subtopics.length > 0 && (
+                        <div className="border-t border-border/20 bg-background/40 divide-y divide-border/10">
+                          {cat.subtopics.map((sub) => {
+                            const subOn = subTopics.includes(sub.id);
+                            return (
+                              <button
+                                key={sub.id}
+                                onClick={() => toggleSubTopic(cat.id, sub.id)}
+                                className={cn(
+                                  "w-full flex items-center gap-3 px-4 py-2 text-left transition-colors",
+                                  subOn ? "bg-primary/5" : "hover:bg-muted/20"
+                                )}
+                              >
+                                <span className="text-sm w-4 shrink-0">{sub.emoji}</span>
+                                <span className="flex-1 text-[13px]">{sub.label}</span>
+                                <div className={cn(
+                                  "h-4 w-4 rounded border flex items-center justify-center shrink-0",
+                                  subOn ? "bg-primary border-primary" : "border-border/40"
+                                )}>
+                                  {subOn && <Check className="h-2.5 w-2.5 text-primary-foreground" />}
+                                </div>
+                              </button>
+                            );
+                          })}
+                          <div className="px-4 py-2 bg-muted/5">
+                            <p className="text-[10px] text-muted-foreground/40 font-mono">
+                              {activeSubs.length === 0 ? 'No sources selected — showing default feed for this category' : `${activeSubs.length} source${activeSubs.length > 1 ? 's' : ''} selected — these will be merged and deduplicated`}
+                            </p>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
           </div>
         );
       }

@@ -60,6 +60,9 @@ export interface Settings {
   borderStyle: 'solid' | 'dashed' | 'dotted'
   gridOpacity: number
   backgroundPattern: 'none' | 'grid' | 'dots' | 'mesh'
+  dashboardCity: string
+  dashboardTopics: string[]
+  dashboardSubTopics: string[]
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -102,7 +105,155 @@ export const DEFAULT_SETTINGS: Settings = {
   borderStyle: 'solid',
   gridOpacity: 0,
   backgroundPattern: 'none',
+  dashboardCity: '',
+  dashboardTopics: ['world', 'tech', 'weather'],
+  dashboardSubTopics: [],
 }
+
+// ── Dashboard topic registry ──────────────────────────────────────────────────
+
+export interface SubTopic {
+  id: string
+  label: string
+  emoji: string
+  rss?: string          // RSS feed URL
+  note?: string         // short note shown in settings
+}
+
+export interface TopicCategory {
+  id: string
+  label: string
+  emoji: string
+  desc: string
+  required?: boolean
+  subtopics: SubTopic[]
+}
+
+export const TOPIC_REGISTRY: TopicCategory[] = [
+  {
+    id: 'weather',
+    label: 'Weather',
+    emoji: '🌤️',
+    desc: 'Live conditions for your saved location',
+    required: true,
+    subtopics: [],
+  },
+  {
+    id: 'world',
+    label: 'World News',
+    emoji: '🌍',
+    desc: 'Top global headlines',
+    required: true,
+    subtopics: [
+      { id: 'world_bbc',     label: 'BBC World',      emoji: '📡', rss: 'https://feeds.bbci.co.uk/news/world/rss.xml' },
+      { id: 'world_reuters', label: 'Reuters',         emoji: '📰', rss: 'https://feeds.reuters.com/reuters/topNews' },
+      { id: 'world_ap',      label: 'AP News',         emoji: '🗞️', rss: 'https://rsshub.app/apnews/topics/apf-topnews' },
+    ],
+  },
+  {
+    id: 'tech',
+    label: 'Technology',
+    emoji: '💻',
+    desc: 'Latest in tech, AI, and software',
+    subtopics: [
+      { id: 'tech_bbc',    label: 'BBC Tech',       emoji: '📡', rss: 'https://feeds.bbci.co.uk/news/technology/rss.xml' },
+      { id: 'tech_hn',     label: 'Hacker News',    emoji: '🧡', rss: 'https://hnrss.org/frontpage' },
+      { id: 'tech_verge',  label: 'The Verge',      emoji: '⚡', rss: 'https://www.theverge.com/rss/index.xml' },
+      { id: 'tech_wired',  label: 'Wired',          emoji: '🔬', rss: 'https://www.wired.com/feed/rss' },
+    ],
+  },
+  {
+    id: 'sports',
+    label: 'Sports',
+    emoji: '⚽',
+    desc: 'Scores, fixtures, and sports news',
+    subtopics: [
+      { id: 'sports_bbc',      label: 'BBC Sport',       emoji: '📡', rss: 'https://feeds.bbci.co.uk/sport/rss.xml' },
+      { id: 'sports_football', label: 'Football (Soccer)',emoji: '⚽', rss: 'https://feeds.bbci.co.uk/sport/football/rss.xml' },
+      { id: 'sports_cricket',  label: 'Cricket',          emoji: '🏏', rss: 'https://feeds.bbci.co.uk/sport/cricket/rss.xml' },
+      { id: 'sports_tennis',   label: 'Tennis',           emoji: '🎾', rss: 'https://feeds.bbci.co.uk/sport/tennis/rss.xml' },
+      { id: 'sports_f1',       label: 'Formula 1',        emoji: '🏎️', rss: 'https://feeds.bbci.co.uk/sport/formula1/rss.xml' },
+      { id: 'sports_nba',      label: 'Basketball / NBA', emoji: '🏀', rss: 'https://feeds.bbci.co.uk/sport/basketball/rss.xml' },
+      { id: 'sports_golf',     label: 'Golf',             emoji: '⛳', rss: 'https://feeds.bbci.co.uk/sport/golf/rss.xml' },
+    ],
+  },
+  {
+    id: 'science',
+    label: 'Science',
+    emoji: '🔭',
+    desc: 'Research, space, biology, climate',
+    subtopics: [
+      { id: 'science_bbc',   label: 'BBC Science',  emoji: '📡', rss: 'https://feeds.bbci.co.uk/news/science_and_environment/rss.xml' },
+      { id: 'science_nasa',  label: 'NASA',         emoji: '🚀', rss: 'https://www.nasa.gov/rss/dyn/breaking_news.rss' },
+      { id: 'science_nature',label: 'Nature',       emoji: '🧬', rss: 'https://www.nature.com/nature.rss' },
+      { id: 'science_astro', label: 'Astronomy',    emoji: '🌌', rss: 'https://www.skyandtelescope.com/astronomy-news/feed/' },
+    ],
+  },
+  {
+    id: 'entertainment',
+    label: 'Entertainment',
+    emoji: '🎬',
+    desc: 'Film, TV, celebrities, and culture',
+    subtopics: [
+      { id: 'ent_bbc',     label: 'BBC Entertainment', emoji: '📡', rss: 'https://feeds.bbci.co.uk/news/entertainment_and_arts/rss.xml' },
+      { id: 'ent_variety', label: 'Variety',            emoji: '🎭', rss: 'https://variety.com/feed/' },
+      { id: 'ent_imdb',    label: 'Movies (IMDB News)', emoji: '🍿', rss: 'https://www.imdb.com/news/top' },
+    ],
+  },
+  {
+    id: 'music',
+    label: 'Music',
+    emoji: '🎵',
+    desc: 'Charts, new releases, and music news',
+    subtopics: [
+      { id: 'music_billboard', label: 'Billboard',        emoji: '📊', rss: 'https://www.billboard.com/feed/' },
+      { id: 'music_pitchfork', label: 'Pitchfork',        emoji: '🎸', rss: 'https://pitchfork.com/rss/news/feed.xml' },
+      { id: 'music_nme',       label: 'NME',              emoji: '🎤', rss: 'https://www.nme.com/news/music/feed' },
+    ],
+  },
+  {
+    id: 'gaming',
+    label: 'Gaming',
+    emoji: '🎮',
+    desc: 'Game releases, reviews, and eSports',
+    subtopics: [
+      { id: 'gaming_ign',       label: 'IGN',           emoji: '🕹️', rss: 'https://feeds.ign.com/ign/all' },
+      { id: 'gaming_eurogamer', label: 'Eurogamer',     emoji: '🇪🇺', rss: 'https://www.eurogamer.net/?format=rss' },
+      { id: 'gaming_pcgamer',   label: 'PC Gamer',      emoji: '🖥️', rss: 'https://www.pcgamer.com/rss/' },
+    ],
+  },
+  {
+    id: 'finance',
+    label: 'Finance',
+    emoji: '📈',
+    desc: 'Markets, stocks, crypto, and economy',
+    subtopics: [
+      { id: 'finance_reuters', label: 'Reuters Finance', emoji: '💹', rss: 'https://feeds.reuters.com/reuters/businessNews' },
+      { id: 'finance_cnbc',    label: 'CNBC',            emoji: '📊', rss: 'https://www.cnbc.com/id/100003114/device/rss/rss.html' },
+      { id: 'finance_crypto',  label: 'CoinDesk (Crypto)',emoji: '₿', rss: 'https://www.coindesk.com/arc/outboundfeeds/rss/' },
+    ],
+  },
+  {
+    id: 'health',
+    label: 'Health',
+    emoji: '🏥',
+    desc: 'Medical research, fitness, and wellness',
+    subtopics: [
+      { id: 'health_bbc',     label: 'BBC Health',    emoji: '📡', rss: 'https://feeds.bbci.co.uk/news/health/rss.xml' },
+      { id: 'health_who',     label: 'WHO News',      emoji: '🌐', rss: 'https://www.who.int/rss-feeds/news-english.xml' },
+    ],
+  },
+  {
+    id: 'politics',
+    label: 'Politics',
+    emoji: '🏛️',
+    desc: 'Government, elections, and policy',
+    subtopics: [
+      { id: 'politics_bbc',      label: 'BBC Politics',  emoji: '📡', rss: 'https://feeds.bbci.co.uk/news/politics/rss.xml' },
+      { id: 'politics_guardian', label: 'The Guardian',  emoji: '🗞️', rss: 'https://www.theguardian.com/politics/rss' },
+    ],
+  },
+]
 
 export const ACCENT_COLORS: { id: string; name: string; class: string; hex: string }[] = [
   { id: 'violet', name: 'Violet', class: 'bg-violet-500', hex: '#8b5cf6' },
@@ -148,6 +299,73 @@ export const OPENAI_MODELS = [
 export const ANTHROPIC_MODELS = [
   { id: 'claude-sonnet-4-6', name: 'Claude Sonnet 4.6', provider: 'Anthropic', badge: 'Latest' },
   { id: 'claude-haiku-4-5-20251001', name: 'Claude Haiku 4.5', provider: 'Anthropic', badge: 'Fast' },
+]
+
+export interface ThemePreset {
+  id: string
+  name: string
+  description: string
+  emoji: string
+  vars: Partial<Settings>
+}
+
+export const PRESET_THEMES: ThemePreset[] = [
+  {
+    id: 'editorial-dark',
+    name: 'Editorial Dark',
+    description: 'Warm paper tones, sharp borders, newspaper feel',
+    emoji: '📰',
+    vars: { theme: 'dark', accentColor: '#e07a40', borderRadius: 4, fontFamily: 'Inter', glowIntensity: 0, glassBlur: 0, backgroundPattern: 'none' },
+  },
+  {
+    id: 'editorial-light',
+    name: 'Editorial Light',
+    description: 'Clean paper, high contrast, minimal chrome',
+    emoji: '🗞️',
+    vars: { theme: 'light', accentColor: '#e07a40', borderRadius: 4, fontFamily: 'Inter', glowIntensity: 0, glassBlur: 0, backgroundPattern: 'none' },
+  },
+  {
+    id: 'midnight-violet',
+    name: 'Midnight Violet',
+    description: 'Deep dark with vivid violet glow',
+    emoji: '🌌',
+    vars: { theme: 'dark', accentColor: '#8b5cf6', borderRadius: 12, glowIntensity: 80, glassBlur: 12, glowRadius: 24, backgroundPattern: 'none' },
+  },
+  {
+    id: 'ocean-glass',
+    name: 'Ocean Glass',
+    description: 'Frosted glass with cyan ocean accent',
+    emoji: '🌊',
+    vars: { theme: 'dark', accentColor: '#06b6d4', borderRadius: 16, glowIntensity: 60, glassBlur: 16, glassOpacity: 25, backgroundPattern: 'none' },
+  },
+  {
+    id: 'forest-mono',
+    name: 'Forest Mono',
+    description: 'Earthy greens, monospaced, terminal feel',
+    emoji: '🌿',
+    vars: { theme: 'dark', accentColor: '#10b981', borderRadius: 2, fontFamily: "'JetBrains Mono'", glowIntensity: 40, glassBlur: 0, backgroundPattern: 'grid', gridOpacity: 15 },
+  },
+  {
+    id: 'rose-dawn',
+    name: 'Rose Dawn',
+    description: 'Soft light mode with warm rose accent',
+    emoji: '🌸',
+    vars: { theme: 'light', accentColor: '#f43f5e', borderRadius: 20, glowIntensity: 0, glassBlur: 0, backgroundPattern: 'none' },
+  },
+  {
+    id: 'amber-tech',
+    name: 'Amber Tech',
+    description: 'Amber on dark, retro-terminal aesthetic',
+    emoji: '🟡',
+    vars: { theme: 'dark', accentColor: '#f59e0b', borderRadius: 6, fontFamily: "'JetBrains Mono'", glowIntensity: 50, glassBlur: 0, backgroundPattern: 'dots', gridOpacity: 20 },
+  },
+  {
+    id: 'sky-clean',
+    name: 'Sky Clean',
+    description: 'Light, airy, blue-sky productivity',
+    emoji: '☁️',
+    vars: { theme: 'light', accentColor: '#3b82f6', borderRadius: 14, glowIntensity: 0, glassBlur: 0, backgroundPattern: 'none' },
+  },
 ]
 
 export const FONT_FAMILIES = [

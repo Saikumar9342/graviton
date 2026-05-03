@@ -1,10 +1,10 @@
 'use client'
 
-import { useState, useMemo, useEffect, useRef } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import {
   Plus, Trash2, ChevronLeft, ChevronRight, Search, Pencil, Check, X,
-  Folder, FolderPlus, ChevronDown, MoreHorizontal, Pin, AlertTriangle, Lightbulb,
-  MessageSquare, Clock, Zap,
+  Folder, FolderPlus, ChevronDown, MoreHorizontal, Pin, Lightbulb,
+  MessageSquare, Zap,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -475,7 +475,7 @@ export function ChatSidebar({
   chats, currentChatId, onSelectChat, onNewChat, onDeleteChat, onRenameChat,
   isOpen, isCollapsed, onClose, onToggleCollapse, activeStreamingIds,
 }: ChatSidebarProps) {
-  const [search, setSearch] = useState('')
+  const [search] = useState('')
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editValue, setEditValue] = useState('')
   const [deletingChatId, setDeletingChatId] = useState<string | null>(null)
@@ -617,27 +617,39 @@ export function ChatSidebar({
     <TooltipProvider delayDuration={0}>
       <aside
         className={cn(
-          'fixed inset-y-0 left-0 z-50 flex flex-col border-r border-border/40 bg-sidebar transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] md:relative',
+          'app-sidebar fixed inset-y-0 left-0 z-50 flex flex-col transition-all duration-300 md:relative',
           isOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0',
-          isCollapsed ? 'w-[60px]' : 'w-[var(--sidebar-width)]',
+          isCollapsed ? 'w-[56px]' : 'w-[var(--sidebar-width)]',
         )}
-        style={{ 
-          backgroundColor: `color-mix(in srgb, var(--sidebar), transparent calc(100% - (var(--sidebar-opacity) * 100%)))`,
-          backdropFilter: 'blur(var(--glass-blur))'
+        style={{
+          background: 'var(--ed-paper-2)',
+          borderRight: '1px solid var(--ed-rule)',
         }}
       >
         {/* Header */}
-        <div className="flex h-14 items-center justify-between px-3 border-b border-border/40 shrink-0">
+        <div
+          className="flex h-11 items-center justify-between px-3 shrink-0"
+          style={{ borderBottom: '1px solid var(--ed-rule)' }}
+        >
           {!isCollapsed && (
-            <span className="text-sm font-semibold animate-in fade-in duration-200">Graviton</span>
+            <div className="flex items-baseline gap-1.5 min-w-0">
+              <span
+                className="ed-display truncate"
+                style={{ fontSize: 17, letterSpacing: '-0.03em', color: 'var(--foreground)' }}
+              >
+                Graviton
+              </span>
+              <span className="ed-mono shrink-0" style={{ fontSize: 9, color: 'var(--ed-ink-4)' }}>™</span>
+            </div>
           )}
           <Button
             variant="ghost"
             size="icon"
             onClick={onToggleCollapse}
-            className={cn('h-7 w-7 rounded-lg text-muted-foreground hover:text-foreground shrink-0', isCollapsed && 'mx-auto')}
+            className={cn('h-6 w-6 shrink-0 text-muted-foreground hover:text-foreground', isCollapsed && 'mx-auto')}
+            style={{ border: '1px solid var(--ed-rule)', background: 'transparent' }}
           >
-            {isCollapsed ? <ChevronRight className="h-3.5 w-3.5" /> : <ChevronLeft className="h-3.5 w-3.5" />}
+            {isCollapsed ? <ChevronRight className="h-3 w-3" /> : <ChevronLeft className="h-3 w-3" />}
           </Button>
         </div>
 
@@ -659,12 +671,21 @@ export function ChatSidebar({
             </Tooltip>
           ) : (
             <>
-              <Button
+              <button
                 onClick={onNewChat}
-                className="w-full justify-center gap-2 h-11 text-sm font-bold rounded-2xl"
+                className="w-full flex items-center justify-between h-9 px-3 text-[13px] font-medium cursor-pointer transition-colors"
+                style={{
+                  background: 'var(--foreground)',
+                  color: 'var(--background)',
+                  border: 'none',
+                  borderRadius: 'var(--radius)',
+                }}
+                onMouseEnter={e => (e.currentTarget.style.opacity = '0.85')}
+                onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
               >
-                <Plus className="h-5 w-5 shrink-0" />New Chat
-              </Button>
+                <span className="flex items-center gap-2"><Plus className="h-3.5 w-3.5" />New thread</span>
+                <span className="ed-mono" style={{ fontSize: 9.5, opacity: 0.5 }}>⌘N</span>
+              </button>
               <SearchChatsDialog
                 chats={chats}
                 onSelectChat={onSelectChat}
@@ -682,7 +703,7 @@ export function ChatSidebar({
               <div className="mb-1">
                 <div className="flex items-center gap-1.5 px-3 py-2">
                   <Pin className="h-2.5 w-2.5 text-muted-foreground/60" />
-                  <p className="text-[10px] font-bold text-muted-foreground/80 uppercase tracking-widest">Pinned</p>
+                  <p className="ed-label">Pinned</p>
                 </div>
                 <div className="space-y-0.5">
                   {pinnedChats.map((chat) => <ChatRow key={chat.id} {...sharedRowProps(chat)} />)}
@@ -694,7 +715,7 @@ export function ChatSidebar({
             {!isCollapsed && (
               <div className="mb-1">
                 <div className="flex items-center justify-between px-3 py-2">
-                  <p className="text-[10px] font-bold text-muted-foreground/80 uppercase tracking-widest">Projects</p>
+                  <p className="ed-label">Projects</p>
                   <button
                     onClick={() => setCreateDialogOpen(true)}
                     className="h-5 w-5 rounded-md flex items-center justify-center text-muted-foreground/60 hover:text-primary hover:bg-primary/10 transition-colors"
@@ -802,7 +823,7 @@ export function ChatSidebar({
             {grouped.map(({ label, chats: groupChats }) => (
               <div key={label} className="mb-1">
                 {!isCollapsed && (
-                  <p className="px-3 py-2 text-[10px] font-bold text-muted-foreground/80 uppercase tracking-widest">{label}</p>
+                  <p className="ed-label px-3 py-2">{label}</p>
                 )}
                 <div className="space-y-0.5">
                   {groupChats.map((chat) =>

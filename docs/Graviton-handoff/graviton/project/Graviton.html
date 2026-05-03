@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Graviton — Editorial</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Instrument+Serif&family=GT+Sectra&family=Spectral:wght@300;400;500;600&family=DM+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    /* Light (paper) */
+    --paper: oklch(0.985 0.006 80);
+    --paper-2: oklch(0.965 0.008 75);
+    --paper-3: oklch(0.94 0.01 75);
+    --rule: oklch(0.85 0.012 75);
+    --rule-soft: oklch(0.9 0.012 75);
+    --ink: oklch(0.18 0.01 60);
+    --ink-2: oklch(0.32 0.012 60);
+    --ink-3: oklch(0.5 0.013 60);
+    --ink-4: oklch(0.65 0.013 60);
+    --accent: oklch(0.58 0.16 42);
+    --accent-soft: oklch(0.92 0.05 42);
+    --accent-ink: oklch(0.32 0.13 42);
+    --bg: var(--paper);
+    --fg: var(--ink);
+  }
+  html.dark {
+    --paper: oklch(0.16 0.008 80);
+    --paper-2: oklch(0.205 0.01 80);
+    --paper-3: oklch(0.245 0.012 80);
+    --rule: oklch(0.32 0.012 80);
+    --rule-soft: oklch(0.255 0.011 80);
+    --ink: oklch(0.95 0.01 80);
+    --ink-2: oklch(0.82 0.012 80);
+    --ink-3: oklch(0.62 0.013 80);
+    --ink-4: oklch(0.46 0.013 80);
+    --accent: oklch(0.74 0.14 42);
+    --accent-soft: oklch(0.28 0.08 42);
+    --accent-ink: oklch(0.86 0.13 42);
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--font-body, 'Inter'), system-ui, sans-serif;
+    font-feature-settings: 'ss01', 'cv11';
+    -webkit-font-smoothing: antialiased;
+    transition: background .25s ease, color .25s ease;
+  }
+  .display { font-family: var(--font-display, 'Fraunces'), Georgia, serif; font-feature-settings: 'ss01'; }
+  .mono { font-family: var(--font-mono, 'JetBrains Mono'), ui-monospace, monospace; }
+  .label {
+    font-family: var(--font-mono, 'JetBrains Mono'), ui-monospace, monospace;
+    font-size: 10.5px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+  }
+  ::selection { background: var(--accent); color: var(--paper); }
+  button { font-family: inherit; }
+  /* prevent scroll behind fixed UI */
+  body.no-scroll { overflow: hidden; }
+</style>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel" src="tweaks-panel.jsx"></script>
+<script type="text/babel" src="data.jsx"></script>
+<script type="text/babel" src="components.jsx"></script>
+<script type="text/babel" src="main.jsx"></script>
+<script type="text/babel" src="app.jsx"></script>
+</body>
+</html>
