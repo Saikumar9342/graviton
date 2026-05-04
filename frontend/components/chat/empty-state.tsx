@@ -422,11 +422,27 @@ function applyGvVars() {
 function useGvTheme() {
   useEffect(() => {
     applyGvVars()
-    // Re-apply whenever dark/light class changes
     const observer = new MutationObserver(applyGvVars)
-    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class', 'style'] })
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class', 'style', 'data-theme-preset'] })
     return () => observer.disconnect()
   }, [])
+}
+
+// ── Theme preset hook ─────────────────────────────────────────────────────────
+
+function useThemePreset() {
+  const [preset, setPreset] = useState(() =>
+    typeof document !== 'undefined'
+      ? document.documentElement.getAttribute('data-theme-preset') ?? 'editorial-dark'
+      : 'editorial-dark'
+  )
+  useEffect(() => {
+    const update = () => setPreset(document.documentElement.getAttribute('data-theme-preset') ?? 'editorial-dark')
+    const observer = new MutationObserver(update)
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme-preset'] })
+    return () => observer.disconnect()
+  }, [])
+  return preset
 }
 
 // ── Main ──────────────────────────────────────────────────────────────────────
@@ -437,6 +453,8 @@ interface EmptyStateProps {
 
 export function EmptyState({ onSuggestionClick }: EmptyStateProps) {
   const now = useClock()
+  const themePreset = useThemePreset()
+  const isEditorial = themePreset.startsWith('editorial')
   const [activeTopic, setActiveTopic] = useState('world')
   const [data, setData] = useState<DashboardData | null>(null)
   const [loading, setLoading] = useState(true)
@@ -484,74 +502,202 @@ export function EmptyState({ onSuggestionClick }: EmptyStateProps) {
   const col2 = activeNews.filter((_, i) => i % 3 === 1)
   const col3 = activeNews.filter((_, i) => i % 3 === 2)
 
+  if (isEditorial) {
+    // ── Editorial / Newspaper layout ─────────────────────────────────────────
+    return (
+      <div
+        className="flex flex-col w-full h-full overflow-y-auto"
+        style={{ background: 'var(--gv-paper)', color: 'var(--gv-ink)', fontFamily: 'inherit' }}
+      >
+        <Masthead now={now} onRefresh={() => setRefreshKey(k => k + 1)} />
+        <TopicRail active={activeTopic} setActive={setActiveTopic} enabledTopics={enabledTopics} />
+
+        <div style={{ padding: '20px 32px 40px', display: 'grid', gridTemplateColumns: 'minmax(0,1.4fr) minmax(0,1fr)', gap: 36, flex: 1 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 20, minWidth: 0 }}>
+            <FeaturedThread onPick={onSuggestionClick} />
+            <section>
+              <SectionHead kicker={`${TOPICS.find(t=>t.id===activeTopic)?.emoji ?? ''} ${TOPICS.find(t=>t.id===activeTopic)?.label ?? ''} · Top Stories`} title="Latest headlines" meta={loading ? 'LOADING…' : `${activeNews.length} stories`} />
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0 20px', borderTop: '1px solid var(--gv-rule)' }}>
+                <NewsColumn catId={activeTopic} items={col1} loading={loading} onPick={onSuggestionClick} />
+                <div style={{ borderLeft: '1px solid var(--gv-rule)', paddingLeft: 20 }}>
+                  <NewsColumn catId={activeTopic} items={col2} loading={loading} onPick={onSuggestionClick} />
+                </div>
+                <div style={{ borderLeft: '1px solid var(--gv-rule)', paddingLeft: 20 }}>
+                  <NewsColumn catId={activeTopic} items={col3} loading={loading} onPick={onSuggestionClick} />
+                </div>
+              </div>
+            </section>
+            <section>
+              <SectionHead kicker="Quick Prompts" title="Start a thread" meta={`${QUICK_PROMPTS.length} curated`} />
+              <QuickPromptsGrid onPick={onSuggestionClick} />
+            </section>
+            <section>
+              <SectionHead kicker="Workspace" title="At a glance" />
+              <StatStrip />
+            </section>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 20, minWidth: 0 }}>
+            <ClockCard now={now} />
+            <WeatherBlock weather={data?.weather ?? null} loading={loading} />
+            <section>
+              <SectionHead kicker="Pick up where you left off" title="Open threads" meta="4 active" />
+              <OpenThreads onPick={onSuggestionClick} />
+            </section>
+            <Colophon now={now} />
+          </div>
+        </div>
+
+        <div style={{ borderTop: '1px solid var(--gv-rule)', padding: '8px 32px', display: 'flex', justifyContent: 'space-between', background: 'var(--gv-paper-2)' }}>
+          <span style={{ fontSize: 10, fontFamily: 'var(--font-jetbrains-mono, monospace)', letterSpacing: '0.06em', color: 'var(--gv-ink-4)', textTransform: 'uppercase' }}>Graviton can make mistakes · verify important information</span>
+          <span style={{ fontSize: 10, fontFamily: 'var(--font-jetbrains-mono, monospace)', letterSpacing: '0.06em', color: 'var(--gv-ink-4)' }}>News · BBC RSS · Weather · wttr.in</span>
+        </div>
+      </div>
+    )
+  }
+
+  // ── Card / Modern layout (all non-editorial themes) ────────────────────────
+  const topicLabel = TOPICS.find(t => t.id === activeTopic)
   return (
     <div
       className="flex flex-col w-full h-full overflow-y-auto"
       style={{ background: 'var(--gv-paper)', color: 'var(--gv-ink)', fontFamily: 'inherit' }}
     >
-      {/* Masthead */}
-      <Masthead now={now} onRefresh={() => setRefreshKey(k => k + 1)} />
-
-      {/* Topic Rail */}
-      <TopicRail active={activeTopic} setActive={setActiveTopic} enabledTopics={enabledTopics} />
-
-      {/* Main grid */}
-      <div style={{ padding: '20px 32px 40px', display: 'grid', gridTemplateColumns: 'minmax(0,1.4fr) minmax(0,1fr)', gap: 36, flex: 1 }}>
-
-        {/* LEFT column */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 20, minWidth: 0 }}>
-
-          <FeaturedThread onPick={onSuggestionClick} />
-
-          {/* News in 3 newspaper columns */}
-          <section>
-            <SectionHead kicker={`${TOPICS.find(t=>t.id===activeTopic)?.emoji ?? ''} ${TOPICS.find(t=>t.id===activeTopic)?.label ?? ''} · Top Stories`} title="Latest headlines" meta={loading ? 'LOADING…' : `${activeNews.length} stories`} />
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0 20px', borderTop: '1px solid var(--gv-rule)' }}>
-              <NewsColumn catId={activeTopic} items={col1} loading={loading} onPick={onSuggestionClick} />
-              <div style={{ borderLeft: '1px solid var(--gv-rule)', paddingLeft: 20 }}>
-                <NewsColumn catId={activeTopic} items={col2} loading={loading} onPick={onSuggestionClick} />
-              </div>
-              <div style={{ borderLeft: '1px solid var(--gv-rule)', paddingLeft: 20 }}>
-                <NewsColumn catId={activeTopic} items={col3} loading={loading} onPick={onSuggestionClick} />
-              </div>
-            </div>
-          </section>
-
-          <section>
-            <SectionHead kicker="Quick Prompts" title="Start a thread" meta={`${QUICK_PROMPTS.length} curated`} />
-            <QuickPromptsGrid onPick={onSuggestionClick} />
-          </section>
-
-          <section>
-            <SectionHead kicker="Workspace" title="At a glance" />
-            <StatStrip />
-          </section>
+      {/* Header bar */}
+      <div style={{ padding: '16px 28px', borderBottom: '1px solid var(--gv-rule)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div>
+          <div style={{ fontSize: 22, fontWeight: 700, letterSpacing: '-0.02em', lineHeight: 1.2 }}>Good {now.getHours() < 12 ? 'morning' : now.getHours() < 17 ? 'afternoon' : 'evening'}</div>
+          <div style={{ fontSize: 12, color: 'var(--gv-ink-3)', marginTop: 2 }}>{now.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}</div>
         </div>
-
-        {/* RIGHT rail */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 20, minWidth: 0 }}>
-
-          <ClockCard now={now} />
-
-          <WeatherBlock weather={data?.weather ?? null} loading={loading} />
-
-          <section>
-            <SectionHead kicker="Pick up where you left off" title="Open threads" meta="4 active" />
-            <OpenThreads onPick={onSuggestionClick} />
-          </section>
-
-          <Colophon now={now} />
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div style={{ textAlign: 'right' }}>
+            <div style={{ fontSize: 26, fontWeight: 700, letterSpacing: '-0.03em', lineHeight: 1 }}>{now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })}</div>
+          </div>
+          <button
+            onClick={() => setRefreshKey(k => k + 1)}
+            style={{ appearance: 'none', border: '1px solid var(--gv-rule)', background: 'var(--gv-paper-2)', color: 'var(--gv-ink-3)', width: 32, height: 32, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+          >
+            <RefreshCw style={{ width: 13, height: 13 }} />
+          </button>
         </div>
       </div>
 
-      {/* Footer */}
-      <div style={{ borderTop: '1px solid var(--gv-rule)', padding: '8px 32px', display: 'flex', justifyContent: 'space-between', background: 'var(--gv-paper-2)' }}>
-        <span style={{ fontSize: 10, fontFamily: 'var(--font-jetbrains-mono, monospace)', letterSpacing: '0.06em', color: 'var(--gv-ink-4)', textTransform: 'uppercase' }}>
-          Graviton can make mistakes · verify important information
-        </span>
-        <span style={{ fontSize: 10, fontFamily: 'var(--font-jetbrains-mono, monospace)', letterSpacing: '0.06em', color: 'var(--gv-ink-4)' }}>
-          News · BBC RSS · Weather · wttr.in
-        </span>
+      {/* Topic pill rail */}
+      <div style={{ padding: '10px 28px', borderBottom: '1px solid var(--gv-rule)', display: 'flex', gap: 8, overflowX: 'auto' }}>
+        {TOPICS.filter(t => enabledTopics.includes(t.id) && t.id !== 'weather').map(t => (
+          <button
+            key={t.id}
+            onClick={() => setActiveTopic(t.id)}
+            style={{
+              appearance: 'none', border: `1px solid ${activeTopic === t.id ? 'var(--gv-accent)' : 'var(--gv-rule)'}`,
+              background: activeTopic === t.id ? 'var(--gv-accent)' : 'transparent',
+              color: activeTopic === t.id ? 'var(--gv-paper)' : 'var(--gv-ink-3)',
+              padding: '5px 14px', borderRadius: 999, fontSize: 12, fontWeight: 500, cursor: 'pointer',
+              whiteSpace: 'nowrap', transition: 'all .15s',
+            }}
+          >
+            {t.emoji} {t.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Main grid */}
+      <div style={{ padding: '20px 28px 40px', display: 'grid', gridTemplateColumns: 'minmax(0,1fr) minmax(0,340px)', gap: 20, flex: 1 }}>
+
+        {/* LEFT — news cards + quick prompts */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16, minWidth: 0 }}>
+
+          {/* News cards */}
+          <div style={{ borderRadius: 12, border: '1px solid var(--gv-rule)', overflow: 'hidden', background: 'var(--gv-paper-2)' }}>
+            <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--gv-rule)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <span style={{ fontSize: 13, fontWeight: 600 }}>{topicLabel?.emoji} {topicLabel?.label ?? 'News'}</span>
+              <span style={{ fontSize: 11, color: 'var(--gv-ink-4)' }}>{loading ? 'Loading…' : `${activeNews.length} stories`}</span>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 0 }}>
+              {loading ? (
+                Array.from({ length: 4 }).map((_, i) => (
+                  <div key={i} style={{ padding: '14px 16px', borderBottom: '1px solid var(--gv-rule)', borderRight: i % 2 === 0 ? '1px solid var(--gv-rule)' : 'none' }}>
+                    <div style={{ height: 10, background: 'var(--gv-rule)', borderRadius: 4, marginBottom: 8, width: '60%' }} />
+                    <div style={{ height: 8, background: 'var(--gv-rule)', borderRadius: 4, width: '90%' }} />
+                  </div>
+                ))
+              ) : activeNews.slice(0, 8).map((item, i) => (
+                <a
+                  key={i}
+                  href={item.link}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{
+                    display: 'block', padding: '14px 16px', textDecoration: 'none', color: 'inherit',
+                    borderBottom: i < activeNews.slice(0,8).length - 2 ? '1px solid var(--gv-rule)' : 'none',
+                    borderRight: i % 2 === 0 ? '1px solid var(--gv-rule)' : 'none',
+                    transition: 'background .1s',
+                  }}
+                  onMouseEnter={e => (e.currentTarget.style.background = 'var(--gv-paper-3)')}
+                  onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                >
+                  <div style={{ fontSize: 13, fontWeight: 600, lineHeight: 1.4, marginBottom: 4, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{item.title}</div>
+                  <div style={{ fontSize: 11, color: 'var(--gv-ink-4)' }}>{timeAgo(item.pubDate)}</div>
+                </a>
+              ))}
+            </div>
+          </div>
+
+          {/* Quick prompts */}
+          <div style={{ borderRadius: 12, border: '1px solid var(--gv-rule)', overflow: 'hidden', background: 'var(--gv-paper-2)' }}>
+            <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--gv-rule)' }}>
+              <span style={{ fontSize: 13, fontWeight: 600 }}>Quick Prompts</span>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 0 }}>
+              {QUICK_PROMPTS.map((p, i) => (
+                <button
+                  key={i}
+                  onClick={() => onSuggestionClick(p.title)}
+                  style={{
+                    appearance: 'none', background: 'transparent', border: 'none',
+                    borderBottom: i < QUICK_PROMPTS.length - 2 ? '1px solid var(--gv-rule)' : 'none',
+                    borderRight: i % 2 === 0 ? '1px solid var(--gv-rule)' : 'none',
+                    padding: '14px 16px', textAlign: 'left', cursor: 'pointer', color: 'inherit', transition: 'background .1s',
+                  }}
+                  onMouseEnter={e => (e.currentTarget.style.background = 'var(--gv-paper-3)')}
+                  onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                >
+                  <div style={{ fontSize: 12, color: 'var(--gv-accent)', fontWeight: 600, marginBottom: 3 }}>{p.tag}</div>
+                  <div style={{ fontSize: 13, fontWeight: 500, lineHeight: 1.4 }}>{p.title}</div>
+                  <div style={{ fontSize: 11, color: 'var(--gv-ink-4)', marginTop: 3 }}>{p.est}</div>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* RIGHT — weather + clock + threads */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16, minWidth: 0 }}>
+
+          {/* Weather card */}
+          <div style={{ borderRadius: 12, border: '1px solid var(--gv-rule)', background: 'var(--gv-paper-2)', overflow: 'hidden' }}>
+            <WeatherBlock weather={data?.weather ?? null} loading={loading} />
+          </div>
+
+          {/* Open threads */}
+          <div style={{ borderRadius: 12, border: '1px solid var(--gv-rule)', background: 'var(--gv-paper-2)', overflow: 'hidden' }}>
+            <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--gv-rule)' }}>
+              <span style={{ fontSize: 13, fontWeight: 600 }}>Recent Threads</span>
+            </div>
+            <div style={{ padding: '4px 0' }}>
+              <OpenThreads onPick={onSuggestionClick} />
+            </div>
+          </div>
+
+          {/* Stats */}
+          <div style={{ borderRadius: 12, border: '1px solid var(--gv-rule)', background: 'var(--gv-paper-2)', padding: '14px 16px' }}>
+            <StatStrip />
+          </div>
+        </div>
+      </div>
+
+      <div style={{ borderTop: '1px solid var(--gv-rule)', padding: '8px 28px', display: 'flex', justifyContent: 'space-between', background: 'var(--gv-paper-2)' }}>
+        <span style={{ fontSize: 10, color: 'var(--gv-ink-4)' }}>Graviton can make mistakes · verify important information</span>
+        <span style={{ fontSize: 10, color: 'var(--gv-ink-4)' }}>News · BBC RSS · Weather · wttr.in</span>
       </div>
     </div>
   )

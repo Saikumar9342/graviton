@@ -160,6 +160,168 @@
   --ed-accent-ink: oklch(0.86 0.13 42);
 }
 
+/* ── Per-preset theme overrides ──────────────────────────────────────────── */
+
+/* Editorial Dark — warm amber paper, flat, sharp borders, Fraunces serif body */
+[data-theme-preset="editorial-dark"] {
+  --background: oklch(0.16 0.008 80);
+  --foreground: oklch(0.93 0.008 75);
+  --border: oklch(0.30 0.010 75);
+  --ed-rule: oklch(0.30 0.010 75);
+  --ed-paper-2: oklch(0.19 0.009 78);
+  --ed-paper-3: oklch(0.22 0.010 78);
+  --primary-raw: oklch(0.68 0.14 44);
+  font-feature-settings: "ss01", "cv11";
+}
+[data-theme-preset="editorial-dark"] h1,
+[data-theme-preset="editorial-dark"] h2,
+[data-theme-preset="editorial-dark"] h3,
+[data-theme-preset="editorial-dark"] .prose-chat h1,
+[data-theme-preset="editorial-dark"] .prose-chat h2,
+[data-theme-preset="editorial-dark"] .prose-chat h3 {
+  font-family: var(--font-fraunces), Georgia, serif;
+  font-weight: 600;
+  letter-spacing: -0.03em;
+}
+
+/* Editorial Light — cream paper, high contrast ink, Fraunces headings */
+[data-theme-preset="editorial-light"] {
+  --background: oklch(0.985 0.006 80);
+  --foreground: oklch(0.15 0.008 55);
+  --border: oklch(0.82 0.012 75);
+  --ed-rule: oklch(0.82 0.012 75);
+  --ed-paper-2: oklch(0.965 0.008 75);
+  --ed-paper-3: oklch(0.940 0.010 75);
+  --primary-raw: oklch(0.58 0.16 44);
+}
+[data-theme-preset="editorial-light"] h1,
+[data-theme-preset="editorial-light"] h2,
+[data-theme-preset="editorial-light"] h3,
+[data-theme-preset="editorial-light"] .prose-chat h1,
+[data-theme-preset="editorial-light"] .prose-chat h2,
+[data-theme-preset="editorial-light"] .prose-chat h3 {
+  font-family: var(--font-fraunces), Georgia, serif;
+  font-weight: 700;
+  letter-spacing: -0.04em;
+}
+
+/* Midnight Violet — deep charcoal, vivid purple glow, clean Inter */
+[data-theme-preset="midnight-violet"] {
+  --background: oklch(0.11 0.012 285);
+  --foreground: oklch(0.96 0.005 285);
+  --card: oklch(0.15 0.015 285);
+  --border: oklch(0.28 0.025 285);
+  --muted: oklch(0.18 0.012 285);
+  --muted-foreground: oklch(0.60 0.015 285);
+  --ed-paper-2: oklch(0.15 0.015 285);
+  --ed-paper-3: oklch(0.18 0.018 285);
+  --ed-rule: oklch(0.28 0.025 285);
+  --primary-raw: oklch(0.72 0.22 290);
+}
+
+/* Ocean Glass — deep blue-slate, glass surfaces, Inter light */
+[data-theme-preset="ocean-glass"] {
+  --background: oklch(0.13 0.018 220);
+  --foreground: oklch(0.95 0.010 210);
+  --card: oklch(0.18 0.020 215);
+  --border: oklch(0.30 0.030 215);
+  --muted: oklch(0.20 0.018 215);
+  --muted-foreground: oklch(0.62 0.018 215);
+  --ed-paper-2: oklch(0.18 0.020 215);
+  --ed-paper-3: oklch(0.22 0.022 215);
+  --ed-rule: oklch(0.30 0.030 215);
+  --primary-raw: oklch(0.76 0.18 200);
+}
+
+/* Forest Mono — near-black with green tint, full monospace personality */
+[data-theme-preset="forest-mono"] {
+  --background: oklch(0.10 0.010 150);
+  --foreground: oklch(0.88 0.040 145);
+  --card: oklch(0.14 0.012 148);
+  --border: oklch(0.25 0.030 148);
+  --muted: oklch(0.16 0.012 148);
+  --muted-foreground: oklch(0.55 0.030 148);
+  --ed-paper-2: oklch(0.14 0.012 148);
+  --ed-paper-3: oklch(0.18 0.015 148);
+  --ed-rule: oklch(0.25 0.030 148);
+  --primary-raw: oklch(0.72 0.18 152);
+}
+[data-theme-preset="forest-mono"] h1,
+[data-theme-preset="forest-mono"] h2,
+[data-theme-preset="forest-mono"] h3,
+[data-theme-preset="forest-mono"] .prose-chat h1,
+[data-theme-preset="forest-mono"] .prose-chat h2,
+[data-theme-preset="forest-mono"] .prose-chat h3 {
+  font-family: var(--font-jetbrains-mono), ui-monospace, monospace;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+/* Rose Dawn — warm white, rose highlights, airy Inter */
+[data-theme-preset="rose-dawn"] {
+  --background: oklch(0.99 0.004 15);
+  --foreground: oklch(0.20 0.010 15);
+  --card: oklch(0.97 0.006 15);
+  --border: oklch(0.88 0.015 15);
+  --muted: oklch(0.95 0.008 15);
+  --muted-foreground: oklch(0.52 0.012 15);
+  --ed-paper-2: oklch(0.97 0.006 15);
+  --ed-paper-3: oklch(0.94 0.010 15);
+  --ed-rule: oklch(0.88 0.015 15);
+  --primary-raw: oklch(0.62 0.22 5);
+}
+[data-theme-preset="rose-dawn"] h1,
+[data-theme-preset="rose-dawn"] h2,
+[data-theme-preset="rose-dawn"] h3,
+[data-theme-preset="rose-dawn"] .prose-chat h1,
+[data-theme-preset="rose-dawn"] .prose-chat h2,
+[data-theme-preset="rose-dawn"] .prose-chat h3 {
+  font-family: var(--font-fraunces), Georgia, serif;
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  font-style: italic;
+}
+
+/* Amber Tech — near-black, amber text, retro terminal monospace */
+[data-theme-preset="amber-tech"] {
+  --background: oklch(0.09 0.008 50);
+  --foreground: oklch(0.90 0.08 65);
+  --card: oklch(0.13 0.010 52);
+  --border: oklch(0.26 0.040 58);
+  --muted: oklch(0.15 0.010 52);
+  --muted-foreground: oklch(0.58 0.050 60);
+  --ed-paper-2: oklch(0.13 0.010 52);
+  --ed-paper-3: oklch(0.17 0.014 54);
+  --ed-rule: oklch(0.26 0.040 58);
+  --primary-raw: oklch(0.78 0.18 72);
+}
+[data-theme-preset="amber-tech"] h1,
+[data-theme-preset="amber-tech"] h2,
+[data-theme-preset="amber-tech"] h3,
+[data-theme-preset="amber-tech"] .prose-chat h1,
+[data-theme-preset="amber-tech"] .prose-chat h2,
+[data-theme-preset="amber-tech"] .prose-chat h3 {
+  font-family: var(--font-jetbrains-mono), ui-monospace, monospace;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+/* Sky Clean — clean white with blue, generous space, Inter */
+[data-theme-preset="sky-clean"] {
+  --background: oklch(0.990 0.004 220);
+  --foreground: oklch(0.18 0.012 230);
+  --card: oklch(0.975 0.006 220);
+  --border: oklch(0.86 0.014 220);
+  --muted: oklch(0.95 0.006 220);
+  --muted-foreground: oklch(0.52 0.014 225);
+  --ed-paper-2: oklch(0.975 0.006 220);
+  --ed-paper-3: oklch(0.950 0.008 220);
+  --ed-rule: oklch(0.86 0.014 220);
+  --primary-raw: oklch(0.60 0.20 240);
+}
+
 @theme inline {
   --font-sans: var(--font-inter), system-ui, sans-serif;
   --font-mono: var(--font-jetbrains-mono), ui-monospace, monospace;
@@ -472,9 +634,16 @@
 }
 
 .app-sidebar {
+  width: var(--sidebar-width);
+  min-width: var(--sidebar-width);
   background-color: var(--ed-paper-2);
   border-right: 1px solid var(--ed-rule) !important;
   backdrop-filter: none;
+}
+
+.app-sidebar.collapsed {
+  width: 56px !important;
+  min-width: 56px !important;
 }
 
 /* ── Background styles ──────────────────────────────────────────────────── */

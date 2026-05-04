@@ -14,11 +14,22 @@ export function useAppearancePreview(settings: Settings, setTheme: (theme: any) 
       case "borderRadius":
         root.style.setProperty("--radius", `${value}px`);
         break;
-      case "fontFamily":
-        root.style.setProperty("--font-sans", value);
-        root.style.setProperty("--font-family", value);
-        document.body.style.fontFamily = value;
+      case "fontFamily": {
+        // Map setting values to actual CSS font-family stacks
+        const fontMap: Record<string, string> = {
+          'Inter': 'var(--font-inter), system-ui, sans-serif',
+          'inter': 'var(--font-inter), system-ui, sans-serif',
+          'JetBrains Mono': 'var(--font-jetbrains-mono), ui-monospace, monospace',
+          "'JetBrains Mono'": 'var(--font-jetbrains-mono), ui-monospace, monospace',
+          'Fraunces': 'var(--font-fraunces), Georgia, serif',
+          'System': 'system-ui, -apple-system, sans-serif',
+        };
+        const resolved = fontMap[value] ?? value;
+        root.style.setProperty("--font-sans", resolved);
+        root.style.setProperty("--font-family", resolved);
+        document.body.style.fontFamily = resolved;
         break;
+      }
       case "theme":
         setTheme(value);
         break;
@@ -111,6 +122,17 @@ export function useAppearancePreview(settings: Settings, setTheme: (theme: any) 
         break;
       case "backgroundPattern":
         root.setAttribute("data-pattern", value);
+        break;
+      case "themePreset":
+        root.setAttribute("data-theme-preset", value);
+        // Clear inline overrides so CSS preset block vars take effect
+        root.style.removeProperty("--font-sans");
+        root.style.removeProperty("--font-family");
+        root.style.removeProperty("--font-weight");
+        root.style.removeProperty("--letter-spacing");
+        root.style.removeProperty("--line-height");
+        root.style.removeProperty("--radius");
+        document.body.style.fontFamily = "";
         break;
     }
   };

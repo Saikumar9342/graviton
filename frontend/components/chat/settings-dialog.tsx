@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   Settings as SettingsIcon,
   Sun,
@@ -322,6 +322,8 @@ export function SettingsDialog({
 
   // Dashboard
   const [expandedDashCat, setExpandedDashCat] = useState<string | null>(null);
+  const [cityOpen, setCityOpen] = useState(false);
+  const cityRef = useRef<HTMLDivElement>(null);
 
   const [addModelType, setAddModelType] = useState<
     "text" | "vision" | "image-generation"
@@ -572,8 +574,11 @@ export function SettingsDialog({
   ] as const;
 
   const applyPreset = (preset: typeof PRESET_THEMES[number]) => {
-    const next = { ...local, ...preset.vars } as Settings;
+    const next = { ...local, ...preset.vars, themePreset: preset.id } as Settings;
     setLocal(next);
+    // Set the preset attribute first — CSS block vars take effect, inline overrides cleared
+    updatePreview('themePreset' as any, preset.id);
+    // Then apply the preset's explicit vars on top (e.g. accentColor, borderRadius)
     Object.entries(preset.vars).forEach(([key, value]) => {
       updatePreview(key as keyof Settings, value);
     });
@@ -581,55 +586,137 @@ export function SettingsDialog({
 
   const renderContent = () => {
     switch (section) {
-      case "themes":
+      case "themes": {
+        const activePresetId = PRESET_THEMES.find(p =>
+          p.vars.accentColor === local.accentColor &&
+          p.vars.theme === local.theme &&
+          (p.vars.borderRadius === undefined || p.vars.borderRadius === local.borderRadius)
+        )?.id ?? null;
+
         return (
-          <div className="space-y-6">
+          <div className="space-y-5 max-h-[540px] overflow-y-auto pr-2 scrollbar-none pb-4">
             <div className="flex items-center gap-3">
               <div className="h-8 w-8 rounded-xl bg-primary/10 flex items-center justify-center text-primary border border-primary/20">
                 <Palette className="h-4 w-4" />
               </div>
               <div>
                 <h3 className="text-sm font-semibold tracking-tight">Theme Presets</h3>
-                <p className="text-[10px] text-muted-foreground/60 uppercase tracking-widest font-medium">One-click looks · fine-tune in Appearance</p>
+                <p className="text-[10px] text-muted-foreground/60 uppercase tracking-widest font-medium">One-click complete looks</p>
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 gap-2.5">
               {PRESET_THEMES.map((preset) => {
-                const isActive =
-                  local.accentColor === preset.vars.accentColor &&
-                  local.theme === preset.vars.theme &&
-                  (preset.vars.borderRadius === undefined || local.borderRadius === preset.vars.borderRadius);
+                const isActive = activePresetId === preset.id;
+                const isDark = preset.vars.theme === 'dark';
+                const accent = preset.vars.accentColor ?? '#888';
+                const radius = preset.vars.borderRadius ?? 12;
+                const isMono = preset.vars.fontFamily?.includes('Mono');
+                // Simulated bg/fg tones per preset for the mini-preview
+                const previewBg: Record<string, string> = {
+                  'editorial-dark':  '#222018',
+                  'editorial-light': '#f9f6f0',
+                  'midnight-violet': '#0e0b18',
+                  'ocean-glass':     '#0b1220',
+                  'forest-mono':     '#0a100a',
+                  'rose-dawn':       '#fff8f7',
+                  'amber-tech':      '#100d07',
+                  'sky-clean':       '#f5f8ff',
+                };
+                const previewFg: Record<string, string> = {
+                  'editorial-dark':  '#e8e0d0',
+                  'editorial-light': '#1a1410',
+                  'midnight-violet': '#ede8ff',
+                  'ocean-glass':     '#e0f4ff',
+                  'forest-mono':     '#80ffb0',
+                  'rose-dawn':       '#2a1015',
+                  'amber-tech':      '#f0c060',
+                  'sky-clean':       '#1a2840',
+                };
+                const bg = previewBg[preset.id] ?? (isDark ? '#1a1a1a' : '#f8f8f8');
+                const fg = previewFg[preset.id] ?? (isDark ? '#e8e8e8' : '#1a1a1a');
+                const rule = isDark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.12)';
+
                 return (
                   <button
                     key={preset.id}
                     onClick={() => applyPreset(preset)}
                     className={cn(
-                      "relative text-left p-4 rounded-xl border transition-all duration-200 group",
+                      "relative text-left border transition-all duration-200 overflow-hidden group",
                       isActive
-                        ? "border-primary bg-primary/8 shadow-sm"
-                        : "border-border/40 hover:border-border bg-muted/10 hover:bg-muted/20"
+                        ? "border-primary shadow-md shadow-primary/20"
+                        : "border-border/40 hover:border-border/80"
                     )}
+                    style={{ borderRadius: 10 }}
                   >
-                    {isActive && (
-                      <span className="absolute top-2.5 right-2.5 h-4 w-4 rounded-full bg-primary flex items-center justify-center">
-                        <Check className="h-2.5 w-2.5 text-primary-foreground" />
-                      </span>
-                    )}
-                    <div className="flex items-start gap-3">
-                      <span className="text-2xl leading-none mt-0.5">{preset.emoji}</span>
-                      <div className="min-w-0">
-                        <p className="text-sm font-semibold leading-tight">{preset.name}</p>
-                        <p className="text-[11px] text-muted-foreground/60 mt-0.5 leading-tight">{preset.description}</p>
-                        <div className="flex items-center gap-1.5 mt-2">
-                          <span
-                            className="h-3 w-3 rounded-full border border-white/20 shrink-0"
-                            style={{ background: preset.vars.accentColor }}
-                          />
-                          <span className="text-[10px] text-muted-foreground/50 uppercase tracking-wider font-mono">
-                            {preset.vars.theme} · r{preset.vars.borderRadius ?? '—'}
-                          </span>
+                    {/* Mini UI preview */}
+                    <div
+                      className="relative overflow-hidden"
+                      style={{ background: bg, height: 88, borderBottom: `1px solid ${rule}` }}
+                    >
+                      {/* Fake sidebar strip */}
+                      <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 28, background: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.04)', borderRight: `1px solid ${rule}` }} />
+                      {/* Fake header */}
+                      <div style={{ position: 'absolute', left: 28, right: 0, top: 0, height: 18, background: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.03)', borderBottom: `1px solid ${rule}`, display: 'flex', alignItems: 'center', paddingLeft: 8, gap: 4 }}>
+                        <div style={{ width: 28, height: 5, background: fg, opacity: 0.7, borderRadius: radius / 4 }} />
+                        <div style={{ flex: 1 }} />
+                        <div style={{ width: 14, height: 5, background: accent, opacity: 0.8, borderRadius: radius / 4 }} />
+                      </div>
+                      {/* Fake message bubbles */}
+                      <div style={{ position: 'absolute', left: 38, right: 8, top: 26, display: 'flex', flexDirection: 'column', gap: 5 }}>
+                        <div style={{ alignSelf: 'flex-end', width: '55%', height: 10, background: accent, opacity: 0.85, borderRadius: radius / 3 }} />
+                        <div style={{ alignSelf: 'flex-start', width: '70%', height: 10, background: fg, opacity: 0.18, borderRadius: radius / 3 }} />
+                        <div style={{ alignSelf: 'flex-start', width: '50%', height: 10, background: fg, opacity: 0.12, borderRadius: radius / 3 }} />
+                      </div>
+                      {/* Fake input bar */}
+                      <div style={{ position: 'absolute', left: 32, right: 8, bottom: 8, height: 14, background: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)', border: `1px solid ${rule}`, borderRadius: radius / 3, display: 'flex', alignItems: 'center', paddingRight: 4, gap: 4 }}>
+                        <div style={{ flex: 1, height: 4, background: fg, opacity: 0.08, marginLeft: 6, borderRadius: 2 }} />
+                        <div style={{ width: 14, height: 9, background: accent, opacity: 0.9, borderRadius: radius / 4 }} />
+                      </div>
+                      {/* Active checkmark */}
+                      {isActive && (
+                        <div style={{ position: 'absolute', top: 6, right: 6, width: 16, height: 16, borderRadius: '50%', background: accent, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          <Check style={{ width: 9, height: 9, color: isDark ? '#000' : '#fff' }} />
                         </div>
+                      )}
+                    </div>
+
+                    {/* Label row */}
+                    <div className="px-3 py-2.5 bg-muted/10">
+                      <div className="flex items-center gap-2">
+                        <span className="text-base leading-none">{preset.emoji}</span>
+                        <span className="text-[13px] font-semibold leading-tight flex-1">{preset.name}</span>
+                        {isActive && <span className="text-[9px] font-bold uppercase tracking-wider text-primary">Active</span>}
+                      </div>
+                      <p className="text-[10px] text-muted-foreground/55 mt-1 leading-snug">{preset.description}</p>
+                      {/* Tags */}
+                      <div className="flex items-center gap-1 mt-1.5 flex-wrap">
+                        <span className="text-[9px] px-1.5 py-0.5 rounded border border-border/40 text-muted-foreground/50 font-mono uppercase">
+                          {preset.vars.theme}
+                        </span>
+                        <span className="text-[9px] px-1.5 py-0.5 rounded border border-border/40 text-muted-foreground/50 font-mono uppercase">
+                          r{radius}
+                        </span>
+                        {isMono && (
+                          <span className="text-[9px] px-1.5 py-0.5 rounded border border-border/40 text-muted-foreground/50 font-mono uppercase">
+                            mono
+                          </span>
+                        )}
+                        {(preset.vars.glowIntensity ?? 0) > 0 && (
+                          <span className="text-[9px] px-1.5 py-0.5 rounded border border-border/40 text-muted-foreground/50 font-mono uppercase">
+                            glow
+                          </span>
+                        )}
+                        {(preset.vars.glassBlur ?? 0) > 0 && (
+                          <span className="text-[9px] px-1.5 py-0.5 rounded border border-border/40 text-muted-foreground/50 font-mono uppercase">
+                            glass
+                          </span>
+                        )}
+                        {preset.vars.backgroundPattern && preset.vars.backgroundPattern !== 'none' && (
+                          <span className="text-[9px] px-1.5 py-0.5 rounded border border-border/40 text-muted-foreground/50 font-mono uppercase">
+                            {preset.vars.backgroundPattern}
+                          </span>
+                        )}
                       </div>
                     </div>
                   </button>
@@ -639,11 +726,14 @@ export function SettingsDialog({
 
             <div className="pt-2 border-t border-border/30">
               <p className="text-[11px] text-muted-foreground/40 leading-relaxed">
-                Applying a preset updates your live settings. Fine-tune any value in the <button className="underline text-muted-foreground/60 hover:text-foreground" onClick={() => setSection("appearance")}>Appearance</button> tab. Changes save when you click <strong>Save Changes</strong>.
+                Each preset changes colour, radius, font, glow & density in one click. Fine-tune in{' '}
+                <button className="underline text-muted-foreground/60 hover:text-foreground" onClick={() => setSection("appearance")}>Appearance</button>.
+                {' '}All changes save when you click <strong>Save Changes</strong>.
               </p>
             </div>
           </div>
         );
+      }
 
       case "appearance":
         return (
@@ -2725,26 +2815,62 @@ export function SettingsDialog({
               </div>
             </div>
 
-            {/* Location */}
+            {/* Location — custom combobox */}
             <div className="space-y-2">
               <SLabel>Your Location</SLabel>
-              <p className="text-xs text-muted-foreground/60 -mt-1 mb-2">Used for live weather. City name (e.g. "Mumbai") or leave blank for auto-detect.</p>
-              <div className="relative group/city">
+              <p className="text-xs text-muted-foreground/60 -mt-1 mb-2">Used for live weather. Type a city name or leave blank for auto-detect.</p>
+              <div className="relative" ref={cityRef}>
                 <Input
                   placeholder="e.g. London, Mumbai, New York"
                   value={(local as any).dashboardCity ?? ''}
-                  onChange={(e) => update("dashboardCity" as any, e.target.value)}
-                  className="text-sm"
-                  list="city-suggestions"
+                  autoComplete="off"
+                  onFocus={() => setCityOpen(true)}
+                  onChange={(e) => {
+                    update("dashboardCity" as any, e.target.value);
+                    setCityOpen(true);
+                  }}
+                  onBlur={() => setTimeout(() => setCityOpen(false), 150)}
+                  className="text-sm pr-8"
                 />
-                <datalist id="city-suggestions">
-                  {CITY_SUGGESTIONS.map(city => (
-                    <option key={city} value={city} />
-                  ))}
-                </datalist>
-                <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1.5 opacity-0 group-focus-within/city:opacity-100 transition-opacity pointer-events-none">
-                  <span className="text-[10px] font-mono text-primary/40 uppercase tracking-tighter">Suggestions enabled</span>
-                </div>
+                {/* chevron */}
+                <ChevronRight
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground/40 rotate-90 pointer-events-none"
+                />
+                {/* dropdown */}
+                {cityOpen && (() => {
+                  const q = ((local as any).dashboardCity ?? '').toLowerCase();
+                  const matches = CITY_SUGGESTIONS.filter(c =>
+                    q.length === 0 || c.toLowerCase().includes(q)
+                  ).slice(0, 8);
+                  if (matches.length === 0) return null;
+                  return (
+                    <div className="absolute z-50 top-full left-0 right-0 mt-1 border border-border/60 bg-popover shadow-xl overflow-hidden"
+                      style={{ borderRadius: 'var(--radius)' }}>
+                      {matches.map((city) => (
+                        <button
+                          key={city}
+                          type="button"
+                          onMouseDown={() => {
+                            update("dashboardCity" as any, city);
+                            setCityOpen(false);
+                          }}
+                          className={cn(
+                            "w-full text-left px-3 py-2 text-sm flex items-center gap-2 transition-colors",
+                            (local as any).dashboardCity === city
+                              ? "bg-primary/10 text-primary"
+                              : "hover:bg-muted/60 text-foreground"
+                          )}
+                        >
+                          <span className="text-base leading-none">🌍</span>
+                          <span className="flex-1">{city}</span>
+                          {(local as any).dashboardCity === city && (
+                            <Check className="h-3 w-3 text-primary" />
+                          )}
+                        </button>
+                      ))}
+                    </div>
+                  );
+                })()}
               </div>
             </div>
 

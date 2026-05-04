@@ -63,6 +63,7 @@ export interface Settings {
   dashboardCity: string
   dashboardTopics: string[]
   dashboardSubTopics: string[]
+  themePreset: string
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -108,6 +109,7 @@ export const DEFAULT_SETTINGS: Settings = {
   dashboardCity: '',
   dashboardTopics: ['world', 'tech', 'weather'],
   dashboardSubTopics: [],
+  themePreset: 'editorial-dark',
 }
 
 // ── Dashboard topic registry ──────────────────────────────────────────────────
@@ -313,58 +315,106 @@ export const PRESET_THEMES: ThemePreset[] = [
   {
     id: 'editorial-dark',
     name: 'Editorial Dark',
-    description: 'Warm paper tones, sharp borders, newspaper feel',
+    description: 'Warm paper, sharp borders, newspaper aesthetic',
     emoji: '📰',
-    vars: { theme: 'dark', accentColor: '#e07a40', fontFamily: 'Inter', glowIntensity: 0, glassBlur: 0, backgroundPattern: 'none' },
+    vars: {
+      theme: 'dark', accentColor: '#e07a40', fontFamily: 'Inter',
+      borderRadius: 0, glowIntensity: 0, glassBlur: 0, glassOpacity: 100,
+      backgroundPattern: 'none', gridOpacity: 0, noiseOpacity: 0,
+      borderWidth: 1, fontWeight: 400, uiDensity: 'comfort',
+      letterSpacing: 0.01, lineHeight: 165,
+    },
   },
   {
     id: 'editorial-light',
     name: 'Editorial Light',
     description: 'Clean paper, high contrast, minimal chrome',
     emoji: '🗞️',
-    vars: { theme: 'light', accentColor: '#e07a40', fontFamily: 'Inter', glowIntensity: 0, glassBlur: 0, backgroundPattern: 'none' },
+    vars: {
+      theme: 'light', accentColor: '#e07a40', fontFamily: 'Inter',
+      borderRadius: 0, glowIntensity: 0, glassBlur: 0, glassOpacity: 100,
+      backgroundPattern: 'none', gridOpacity: 0, noiseOpacity: 0,
+      borderWidth: 1, fontWeight: 400, uiDensity: 'comfort',
+      letterSpacing: 0.005, lineHeight: 170,
+    },
   },
   {
     id: 'midnight-violet',
     name: 'Midnight Violet',
-    description: 'Deep dark with vivid violet glow',
+    description: 'Deep dark with vivid violet glow effects',
     emoji: '🌌',
-    vars: { theme: 'dark', accentColor: '#8b5cf6', glowIntensity: 80, glassBlur: 12, glowRadius: 24, backgroundPattern: 'none' },
+    vars: {
+      theme: 'dark', accentColor: '#8b5cf6', fontFamily: 'Inter',
+      borderRadius: 14, glowIntensity: 90, glassBlur: 14, glassOpacity: 30,
+      backgroundPattern: 'none', gridOpacity: 0, noiseOpacity: 8,
+      borderWidth: 1, glowRadius: 28, fontWeight: 300, uiDensity: 'comfort',
+      letterSpacing: -0.01, lineHeight: 160,
+    },
   },
   {
     id: 'ocean-glass',
     name: 'Ocean Glass',
-    description: 'Frosted glass with cyan ocean accent',
+    description: 'Frosted glass surfaces, cyan ocean palette',
     emoji: '🌊',
-    vars: { theme: 'dark', accentColor: '#06b6d4', glowIntensity: 60, glassBlur: 16, glassOpacity: 25, backgroundPattern: 'none' },
+    vars: {
+      theme: 'dark', accentColor: '#06b6d4', fontFamily: 'Inter',
+      borderRadius: 18, glowIntensity: 60, glassBlur: 20, glassOpacity: 20,
+      backgroundPattern: 'none', gridOpacity: 0, noiseOpacity: 5,
+      borderWidth: 1, glowRadius: 20, fontWeight: 300, uiDensity: 'comfort',
+      letterSpacing: -0.005, lineHeight: 165,
+    },
   },
   {
     id: 'forest-mono',
     name: 'Forest Mono',
-    description: 'Earthy greens, monospaced, terminal feel',
+    description: 'Monospaced, earthy greens, terminal DNA',
     emoji: '🌿',
-    vars: { theme: 'dark', accentColor: '#10b981', fontFamily: "'JetBrains Mono'", glowIntensity: 40, glassBlur: 0, backgroundPattern: 'grid', gridOpacity: 15 },
+    vars: {
+      theme: 'dark', accentColor: '#10b981', fontFamily: 'JetBrains Mono',
+      borderRadius: 0, glowIntensity: 30, glassBlur: 0, glassOpacity: 100,
+      backgroundPattern: 'grid', gridOpacity: 12, noiseOpacity: 0,
+      borderWidth: 1, fontWeight: 500, uiDensity: 'compact',
+      letterSpacing: 0.025, lineHeight: 170,
+    },
   },
   {
     id: 'rose-dawn',
     name: 'Rose Dawn',
-    description: 'Soft light mode with warm rose accent',
+    description: 'Soft light with warm rose, gentle curves',
     emoji: '🌸',
-    vars: { theme: 'light', accentColor: '#f43f5e', glowIntensity: 0, glassBlur: 0, backgroundPattern: 'none' },
+    vars: {
+      theme: 'light', accentColor: '#f43f5e', fontFamily: 'Inter',
+      borderRadius: 20, glowIntensity: 0, glassBlur: 0, glassOpacity: 100,
+      backgroundPattern: 'none', gridOpacity: 0, noiseOpacity: 0,
+      borderWidth: 1, fontWeight: 400, uiDensity: 'spacious',
+      letterSpacing: 0, lineHeight: 175,
+    },
   },
   {
     id: 'amber-tech',
     name: 'Amber Tech',
-    description: 'Amber on dark, retro-terminal aesthetic',
+    description: 'Retro terminal amber on dark, dot grid',
     emoji: '🟡',
-    vars: { theme: 'dark', accentColor: '#f59e0b', fontFamily: "'JetBrains Mono'", glowIntensity: 50, glassBlur: 0, backgroundPattern: 'dots', gridOpacity: 20 },
+    vars: {
+      theme: 'dark', accentColor: '#f59e0b', fontFamily: 'JetBrains Mono',
+      borderRadius: 0, glowIntensity: 55, glassBlur: 0, glassOpacity: 100,
+      backgroundPattern: 'dots', gridOpacity: 18, noiseOpacity: 0,
+      borderWidth: 1, fontWeight: 500, uiDensity: 'compact',
+      letterSpacing: 0.04, lineHeight: 160,
+    },
   },
   {
     id: 'sky-clean',
     name: 'Sky Clean',
-    description: 'Light, airy, blue-sky productivity',
+    description: 'Light, airy, blue-sky focused productivity',
     emoji: '☁️',
-    vars: { theme: 'light', accentColor: '#3b82f6', glowIntensity: 0, glassBlur: 0, backgroundPattern: 'none' },
+    vars: {
+      theme: 'light', accentColor: '#3b82f6', fontFamily: 'Inter',
+      borderRadius: 14, glowIntensity: 0, glassBlur: 0, glassOpacity: 100,
+      backgroundPattern: 'none', gridOpacity: 0, noiseOpacity: 0,
+      borderWidth: 1, fontWeight: 400, uiDensity: 'comfort',
+      letterSpacing: -0.005, lineHeight: 165,
+    },
   },
 ]
 

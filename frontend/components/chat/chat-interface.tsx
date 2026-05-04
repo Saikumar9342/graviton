@@ -105,13 +105,24 @@ export function ChatInterface() {
     const root = document.documentElement
     const s = settings
 
+    const fontMap: Record<string, string> = {
+      'Inter': 'var(--font-inter), system-ui, sans-serif',
+      'inter': 'var(--font-inter), system-ui, sans-serif',
+      'JetBrains Mono': 'var(--font-jetbrains-mono), ui-monospace, monospace',
+      "'JetBrains Mono'": 'var(--font-jetbrains-mono), ui-monospace, monospace',
+      'Fraunces': 'var(--font-fraunces), Georgia, serif',
+      'System': 'system-ui, -apple-system, sans-serif',
+    }
+
     // CSS variables
     root.style.setProperty('--primary', s.accentColor)
     root.style.setProperty('--glow-primary', `${s.accentColor}4d`)
+
     root.style.setProperty('--radius', `${s.borderRadius}px`)
-    root.style.setProperty('--font-sans', s.fontFamily)
-    root.style.setProperty('--font-family', s.fontFamily)
-    document.body.style.fontFamily = s.fontFamily
+    const resolvedFont = fontMap[s.fontFamily] ?? s.fontFamily
+    root.style.setProperty('--font-sans', resolvedFont)
+    root.style.setProperty('--font-family', resolvedFont)
+    document.body.style.fontFamily = resolvedFont
     root.style.setProperty('--glass-opacity', String(s.glassOpacity / 100))
     root.style.setProperty('--glow-intensity', String(s.glowIntensity / 100))
     root.style.setProperty('--glass-blur', `${s.glassBlur}px`)
@@ -145,6 +156,7 @@ export function ChatInterface() {
     root.setAttribute('data-density', s.uiDensity)
     root.setAttribute('data-pattern', s.backgroundPattern)
     root.setAttribute('data-animations', s.animationsEnabled ? 'true' : 'false')
+    if (s.themePreset) root.setAttribute('data-theme-preset', s.themePreset)
   }, [
     settings.accentColor, settings.fontSize, settings.borderRadius, settings.fontFamily,
     settings.glassOpacity, settings.glowIntensity, settings.glassBlur, settings.borderWidth,
@@ -154,7 +166,7 @@ export function ChatInterface() {
     settings.backgroundOpacity, settings.fontWeight, settings.glassTintColor, settings.glassSaturation,
     settings.uiDensity, settings.glowSpread, settings.borderStyle, settings.gridOpacity,
     settings.backgroundPattern, settings.contentWidth, settings.sidebarPosition, settings.accentMode,
-    settings.animationsEnabled, mounted,
+    settings.animationsEnabled, settings.themePreset, mounted,
   ])
 
   // Auto-scroll

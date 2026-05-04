@@ -348,24 +348,22 @@ function ChatRow({
   return (
     <div
       className={cn(
-        'group/row flex items-center gap-1 mx-1 pl-3 pr-1.5 py-1.5 rounded-lg cursor-pointer select-none transition-colors duration-100',
+        'group/row flex items-center gap-1 mx-1 pl-3 pr-1 py-1.5 rounded-lg cursor-pointer select-none transition-colors duration-100',
         isActive ? 'bg-muted/50' : 'hover:bg-muted/30',
       )}
     >
-      {/* Active stripe removed as per user request */}
-
-      {/* Title */}
+      {/* Title — always truncated, click to select */}
       <span
         role="button"
         tabIndex={0}
         onClick={onSelect}
         onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && onSelect()}
         className={cn(
-          'flex-1 min-w-0 text-[13px] leading-snug truncate flex items-center gap-2',
+          'flex-1 min-w-0 text-[13px] leading-snug flex items-center gap-1.5 overflow-hidden',
           isActive ? 'font-medium text-foreground' : 'font-normal text-foreground/80',
         )}
       >
-        <span className="truncate flex-1">{chat.title}</span>
+        <span className="truncate min-w-0">{chat.title}</span>
         {isStreaming && (
           <span className="flex gap-0.5 shrink-0">
             <span className="h-1 w-1 rounded-full bg-primary animate-pulse" />
@@ -374,7 +372,7 @@ function ChatRow({
         )}
       </span>
 
-      {/* ⋮ button + dropdown */}
+      {/* ⋮ button — always visible */}
       <div className="shrink-0">
         <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
           <DropdownMenuTrigger asChild>
@@ -619,7 +617,7 @@ export function ChatSidebar({
         className={cn(
           'app-sidebar fixed inset-y-0 left-0 z-50 flex flex-col transition-all duration-300 md:relative',
           isOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0',
-          isCollapsed ? 'w-[56px]' : 'w-[var(--sidebar-width)]',
+          isCollapsed && 'collapsed',
         )}
         style={{
           background: 'var(--ed-paper-2)',

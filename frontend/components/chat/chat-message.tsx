@@ -89,7 +89,7 @@ export function ChatMessage({
     )}>
       {isUser ? (
         /* ── User message ─────────────────────────────────────── */
-        <div className="flex justify-end gap-3 max-w-3xl mx-auto">
+        <div className="flex justify-end gap-3 mx-auto w-full" style={{ maxWidth: 'var(--chat-max-width, 48rem)' }}>
           <div className="max-w-[80%] space-y-1.5">
             {isEditing ? (
               <div className="space-y-2 animate-in zoom-in-95 duration-200">
@@ -140,7 +140,7 @@ export function ChatMessage({
         </div>
       ) : (
         /* ── Assistant message ────────────────────────────────── */
-        <div className="flex gap-3 max-w-3xl mx-auto">
+        <div className="flex gap-3 mx-auto w-full" style={{ maxWidth: 'var(--chat-max-width, 48rem)' }}>
           {/* Graviton avatar */}
         
 
