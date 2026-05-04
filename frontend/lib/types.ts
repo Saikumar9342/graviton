@@ -315,56 +315,56 @@ export const PRESET_THEMES: ThemePreset[] = [
     name: 'Editorial Dark',
     description: 'Warm paper tones, sharp borders, newspaper feel',
     emoji: '📰',
-    vars: { theme: 'dark', accentColor: '#e07a40', borderRadius: 4, fontFamily: 'Inter', glowIntensity: 0, glassBlur: 0, backgroundPattern: 'none' },
+    vars: { theme: 'dark', accentColor: '#e07a40', fontFamily: 'Inter', glowIntensity: 0, glassBlur: 0, backgroundPattern: 'none' },
   },
   {
     id: 'editorial-light',
     name: 'Editorial Light',
     description: 'Clean paper, high contrast, minimal chrome',
     emoji: '🗞️',
-    vars: { theme: 'light', accentColor: '#e07a40', borderRadius: 4, fontFamily: 'Inter', glowIntensity: 0, glassBlur: 0, backgroundPattern: 'none' },
+    vars: { theme: 'light', accentColor: '#e07a40', fontFamily: 'Inter', glowIntensity: 0, glassBlur: 0, backgroundPattern: 'none' },
   },
   {
     id: 'midnight-violet',
     name: 'Midnight Violet',
     description: 'Deep dark with vivid violet glow',
     emoji: '🌌',
-    vars: { theme: 'dark', accentColor: '#8b5cf6', borderRadius: 12, glowIntensity: 80, glassBlur: 12, glowRadius: 24, backgroundPattern: 'none' },
+    vars: { theme: 'dark', accentColor: '#8b5cf6', glowIntensity: 80, glassBlur: 12, glowRadius: 24, backgroundPattern: 'none' },
   },
   {
     id: 'ocean-glass',
     name: 'Ocean Glass',
     description: 'Frosted glass with cyan ocean accent',
     emoji: '🌊',
-    vars: { theme: 'dark', accentColor: '#06b6d4', borderRadius: 16, glowIntensity: 60, glassBlur: 16, glassOpacity: 25, backgroundPattern: 'none' },
+    vars: { theme: 'dark', accentColor: '#06b6d4', glowIntensity: 60, glassBlur: 16, glassOpacity: 25, backgroundPattern: 'none' },
   },
   {
     id: 'forest-mono',
     name: 'Forest Mono',
     description: 'Earthy greens, monospaced, terminal feel',
     emoji: '🌿',
-    vars: { theme: 'dark', accentColor: '#10b981', borderRadius: 2, fontFamily: "'JetBrains Mono'", glowIntensity: 40, glassBlur: 0, backgroundPattern: 'grid', gridOpacity: 15 },
+    vars: { theme: 'dark', accentColor: '#10b981', fontFamily: "'JetBrains Mono'", glowIntensity: 40, glassBlur: 0, backgroundPattern: 'grid', gridOpacity: 15 },
   },
   {
     id: 'rose-dawn',
     name: 'Rose Dawn',
     description: 'Soft light mode with warm rose accent',
     emoji: '🌸',
-    vars: { theme: 'light', accentColor: '#f43f5e', borderRadius: 20, glowIntensity: 0, glassBlur: 0, backgroundPattern: 'none' },
+    vars: { theme: 'light', accentColor: '#f43f5e', glowIntensity: 0, glassBlur: 0, backgroundPattern: 'none' },
   },
   {
     id: 'amber-tech',
     name: 'Amber Tech',
     description: 'Amber on dark, retro-terminal aesthetic',
     emoji: '🟡',
-    vars: { theme: 'dark', accentColor: '#f59e0b', borderRadius: 6, fontFamily: "'JetBrains Mono'", glowIntensity: 50, glassBlur: 0, backgroundPattern: 'dots', gridOpacity: 20 },
+    vars: { theme: 'dark', accentColor: '#f59e0b', fontFamily: "'JetBrains Mono'", glowIntensity: 50, glassBlur: 0, backgroundPattern: 'dots', gridOpacity: 20 },
   },
   {
     id: 'sky-clean',
     name: 'Sky Clean',
     description: 'Light, airy, blue-sky productivity',
     emoji: '☁️',
-    vars: { theme: 'light', accentColor: '#3b82f6', borderRadius: 14, glowIntensity: 0, glassBlur: 0, backgroundPattern: 'none' },
+    vars: { theme: 'light', accentColor: '#3b82f6', glowIntensity: 0, glassBlur: 0, backgroundPattern: 'none' },
   },
 ]
 
@@ -374,4 +374,11 @@ export const FONT_FAMILIES = [
   { name: 'Outfit', value: "'Outfit'" },
   { name: 'Roboto', value: "'Roboto'" },
   { name: 'System UI', value: 'system-ui' },
+]
+
+export const CITY_SUGGESTIONS = [
+  'London', 'New York', 'Mumbai', 'Tokyo', 'Paris', 'Berlin', 'Sydney', 'Singapore', 
+  'Dubai', 'Toronto', 'San Francisco', 'Chicago', 'Bangalore', 'Delhi', 'Hyderabad',
+  'Seoul', 'Hong Kong', 'Amsterdam', 'Rome', 'Madrid', 'Los Angeles', 'Seattle',
+  'Melbourne', 'Vancouver', 'Austin', 'Boston', 'Stockholm', 'Oslo', 'Copenhagen'
 ]

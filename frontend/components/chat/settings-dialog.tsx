@@ -27,6 +27,7 @@ import {
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { useTheme } from "@/components/theme-provider";
+import { useAppearancePreview } from "@/hooks/use-appearance-preview";
 import {
   Dialog,
   DialogContent,
@@ -76,9 +77,13 @@ import {
   MODEL_CATEGORIES,
   PRESET_THEMES,
   TOPIC_REGISTRY,
+  CITY_SUGGESTIONS,
 } from "@/lib/types";
 import { useModelsStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
+import { AppearanceSettings } from "./settings/appearance-settings";
+import { ThemesSettings } from "./settings/themes-settings";
+import { SLabel, Row } from "./settings/shared";
 
 export interface SessionStats {
   model: string;
@@ -96,44 +101,7 @@ interface SettingsDialogProps {
   children?: React.ReactNode;
 }
 
-function SLabel({
-  children,
-  className,
-}: {
-  children: React.ReactNode;
-  className?: string;
-}) {
-  return (
-    <Label
-      className={cn(
-        "text-[11px] font-bold text-muted-foreground/50 uppercase tracking-widest mb-3 block",
-        className,
-      )}
-    >
-      {children}
-    </Label>
-  );
-}
 
-function Row({
-  title,
-  desc,
-  children,
-}: {
-  title: string;
-  desc?: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="flex items-center justify-between py-1">
-      <div className="space-y-0.5">
-        <p className="text-sm font-medium leading-none">{title}</p>
-        {desc && <p className="text-xs text-muted-foreground/60">{desc}</p>}
-      </div>
-      {children}
-    </div>
-  );
-}
 
 function PinGate({
   authenticated,
@@ -304,6 +272,7 @@ export function SettingsDialog({
   const [section, setSection] = useState<Section>("themes");
   const [local, setLocal] = useState<Settings>(settings);
   const { theme, setTheme } = useTheme();
+  const { updatePreview, resetPreview } = useAppearancePreview(local, setTheme);
   const isMobile = useIsMobile();
 
   // Admin / Models State
@@ -416,127 +385,7 @@ export function SettingsDialog({
   const update = <K extends keyof Settings>(key: K, value: Settings[K]) => {
     const next = { ...local, [key]: value };
     setLocal(next);
-
-    // Real-time preview for visual settings
-    const root = document.documentElement;
-    if (key === "accentColor") {
-      root.style.setProperty("--primary", value as string);
-      root.style.setProperty("--glow-primary", `${value}4d`);
-      root.setAttribute("data-accent", value as string);
-    }
-    if (key === "borderRadius") {
-      root.style.setProperty("--radius", `${value}px`);
-    }
-    if (key === "fontFamily") {
-      root.style.setProperty("--font-sans", value as string);
-      root.style.setProperty("--font-family", value as string);
-      document.body.style.fontFamily = value as string;
-    }
-    if (key === "theme") {
-      setTheme(value as "light" | "dark" | "system");
-    }
-    if (key === "contrast") {
-      root.style.setProperty("--contrast", `${(value as number) / 100}`);
-    }
-    if (key === "sidebarPosition") {
-      root.setAttribute("data-sidebar", value as string);
-    }
-    if (key === "contentWidth") {
-      root.setAttribute("data-content", value as string);
-    }
-    if (key === "accentMode") {
-      root.setAttribute("data-accent-mode", value as string);
-    }
-    if (key === "lineHeight") {
-      root.style.setProperty("--line-height", `${(value as number) / 100}`);
-    }
-    if (key === "letterSpacing") {
-      root.style.setProperty("--letter-spacing", `${value}em`);
-    }
-    if (key === "backgroundOpacity") {
-      root.style.setProperty("--bg-opacity", `${(value as number) / 100}`);
-    }
-    if (key === "glassOpacity") {
-      root.style.setProperty(
-        "--glass-opacity",
-        String((value as number) / 100),
-      );
-    }
-    if (key === "glassBlur") {
-      root.style.setProperty("--glass-blur", `${value}px`);
-    }
-    if (key === "glowIntensity") {
-      root.style.setProperty(
-        "--glow-intensity",
-        String((value as number) / 100),
-      );
-    }
-    if (key === "glowRadius") {
-      root.style.setProperty("--glow-radius", `${value}px`);
-    }
-    if (key === "noiseOpacity") {
-      root.style.setProperty(
-        "--noise-opacity",
-        String((value as number) / 100),
-      );
-    }
-    if (key === "borderWidth") {
-      root.style.setProperty("--border-width", `${value}px`);
-    }
-    if (key === "sidebarOpacity") {
-      root.style.setProperty(
-        "--sidebar-opacity",
-        String((value as number) / 100),
-      );
-    }
-    if (key === "sidebarBlur") {
-      root.style.setProperty("--sidebar-blur", `${value}px`);
-    }
-    if (key === "sidebarWidth") {
-      root.style.setProperty("--sidebar-width", `${value}px`);
-    }
-    if (key === "sidebarPadding") {
-      root.style.setProperty("--sidebar-padding", `${value}px`);
-    }
-    if (key === "chatMaxWidth") {
-      root.style.setProperty("--chat-max-width", `${value}px`);
-    }
-    if (key === "messageSpacing") {
-      root.style.setProperty("--message-spacing", `${value}px`);
-    }
-    if (key === "accentSaturation") {
-      root.style.setProperty("--accent-saturation", `${value}%`);
-    }
-    if (key === "fontSize") {
-      root.setAttribute("data-font-size", value as string);
-    }
-    if (key === "fontWeight") {
-      root.style.setProperty("--font-weight", String(value));
-    }
-    if (key === "animationsEnabled") {
-      root.setAttribute("data-animations", value ? "true" : "false");
-    }
-    if (key === "glassTintColor") {
-      root.style.setProperty("--glass-tint", value as string);
-    }
-    if (key === "glassSaturation") {
-      root.style.setProperty("--glass-saturation", `${value}%`);
-    }
-    if (key === "uiDensity") {
-      root.setAttribute("data-density", value as string);
-    }
-    if (key === "glowSpread") {
-      root.style.setProperty("--glow-spread", `${value}px`);
-    }
-    if (key === "borderStyle") {
-      root.style.setProperty("--border-style", value as string);
-    }
-    if (key === "gridOpacity") {
-      root.style.setProperty("--grid-opacity", String((value as number) / 100));
-    }
-    if (key === "backgroundPattern") {
-      root.setAttribute("data-pattern", value as string);
-    }
+    updatePreview(key, value);
   };
 
   const handleSave = () => {
@@ -547,73 +396,7 @@ export function SettingsDialog({
   const handleClose = () => {
     setLocal(settings);
     setOpen(false);
-    // Reset preview
-    const root = document.documentElement;
-    root.setAttribute("data-accent", settings.accentColor);
-    root.setAttribute("data-font-size", settings.fontSize);
-    root.style.setProperty("--primary", settings.accentColor);
-    root.style.setProperty("--glow-primary", `${settings.accentColor}4d`);
-    root.style.setProperty("--radius", `${settings.borderRadius}px`);
-    root.style.setProperty("--font-sans", settings.fontFamily);
-    root.style.setProperty("--font-family", settings.fontFamily);
-    document.body.style.fontFamily = settings.fontFamily;
-    root.style.setProperty("--contrast", `${settings.contrast / 100}`);
-    root.setAttribute("data-sidebar", settings.sidebarPosition);
-    root.setAttribute("data-content", settings.contentWidth);
-    root.setAttribute("data-accent-mode", settings.accentMode);
-    root.style.setProperty("--line-height", `${settings.lineHeight / 100}`);
-    root.style.setProperty("--letter-spacing", `${settings.letterSpacing}em`);
-    root.style.setProperty(
-      "--bg-opacity",
-      `${settings.backgroundOpacity / 100}`,
-    );
-    root.style.setProperty(
-      "--glass-opacity",
-      String(settings.glassOpacity / 100),
-    );
-    root.style.setProperty("--glass-blur", `${settings.glassBlur}px`);
-    root.style.setProperty(
-      "--glow-intensity",
-      String(settings.glowIntensity / 100),
-    );
-    root.style.setProperty("--glow-radius", `${settings.glowRadius}px`);
-    root.style.setProperty(
-      "--noise-opacity",
-      String(settings.noiseOpacity / 100),
-    );
-    root.style.setProperty("--border-width", `${settings.borderWidth}px`);
-    root.style.setProperty(
-      "--sidebar-opacity",
-      String(settings.sidebarOpacity / 100),
-    );
-    root.style.setProperty("--sidebar-blur", `${settings.sidebarBlur}px`);
-    root.style.setProperty("--sidebar-width", `${settings.sidebarWidth}px`);
-    root.style.setProperty("--sidebar-padding", `${settings.sidebarPadding}px`);
-    root.style.setProperty("--chat-max-width", `${settings.chatMaxWidth}px`);
-    root.style.setProperty("--message-spacing", `${settings.messageSpacing}px`);
-    root.style.setProperty(
-      "--accent-saturation",
-      `${settings.accentSaturation}%`,
-    );
-    root.style.setProperty("--font-weight", String(settings.fontWeight));
-    root.setAttribute(
-      "data-animations",
-      settings.animationsEnabled ? "true" : "false",
-    );
-    root.style.setProperty("--glass-tint", settings.glassTintColor);
-    root.style.setProperty(
-      "--glass-saturation",
-      `${settings.glassSaturation}%`,
-    );
-    root.setAttribute("data-density", settings.uiDensity);
-    root.style.setProperty("--glow-spread", `${settings.glowSpread}px`);
-    root.style.setProperty("--border-style", settings.borderStyle);
-    root.style.setProperty(
-      "--grid-opacity",
-      String(settings.gridOpacity / 100),
-    );
-    root.setAttribute("data-pattern", settings.backgroundPattern);
-    setTheme(settings.theme);
+    resetPreview(settings);
   };
 
   const handleTheme = (t: "light" | "dark" | "system") => {
@@ -791,36 +574,9 @@ export function SettingsDialog({
   const applyPreset = (preset: typeof PRESET_THEMES[number]) => {
     const next = { ...local, ...preset.vars } as Settings;
     setLocal(next);
-    const root = document.documentElement;
-    if (preset.vars.theme) {
-      setTheme(preset.vars.theme as "light" | "dark" | "system");
-    }
-    if (preset.vars.accentColor) {
-      root.style.setProperty("--primary", preset.vars.accentColor);
-      root.setAttribute("data-accent", preset.vars.accentColor);
-    }
-    if (preset.vars.borderRadius !== undefined) {
-      root.style.setProperty("--radius", `${preset.vars.borderRadius}px`);
-    }
-    if (preset.vars.fontFamily) {
-      root.style.setProperty("--font-sans", preset.vars.fontFamily);
-      document.body.style.fontFamily = preset.vars.fontFamily;
-    }
-    if (preset.vars.glowIntensity !== undefined) {
-      root.style.setProperty("--glow-intensity", String(preset.vars.glowIntensity / 100));
-    }
-    if (preset.vars.glassBlur !== undefined) {
-      root.style.setProperty("--glass-blur", `${preset.vars.glassBlur}px`);
-    }
-    if (preset.vars.glowRadius !== undefined) {
-      root.style.setProperty("--glow-radius", `${preset.vars.glowRadius}px`);
-    }
-    if (preset.vars.backgroundPattern) {
-      root.setAttribute("data-pattern", preset.vars.backgroundPattern);
-    }
-    if (preset.vars.gridOpacity !== undefined) {
-      root.style.setProperty("--grid-opacity", String(preset.vars.gridOpacity / 100));
-    }
+    Object.entries(preset.vars).forEach(([key, value]) => {
+      updatePreview(key as keyof Settings, value);
+    });
   };
 
   const renderContent = () => {
@@ -2958,7 +2714,7 @@ export function SettingsDialog({
         };
 
         return (
-          <div className="space-y-6 max-h-[520px] overflow-y-auto pr-2 scrollbar-none pb-4">
+          <div className="space-y-6 max-h-[520px] overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-primary/20 pb-4">
             <div className="flex items-center gap-3">
               <div className="h-8 w-8 rounded-xl bg-primary/10 flex items-center justify-center text-primary border border-primary/20">
                 <Layout className="h-4 w-4" />
@@ -2973,12 +2729,23 @@ export function SettingsDialog({
             <div className="space-y-2">
               <SLabel>Your Location</SLabel>
               <p className="text-xs text-muted-foreground/60 -mt-1 mb-2">Used for live weather. City name (e.g. "Mumbai") or leave blank for auto-detect.</p>
-              <Input
-                placeholder="e.g. London, Mumbai, New York"
-                value={(local as any).dashboardCity ?? ''}
-                onChange={(e) => update("dashboardCity" as any, e.target.value)}
-                className="text-sm"
-              />
+              <div className="relative group/city">
+                <Input
+                  placeholder="e.g. London, Mumbai, New York"
+                  value={(local as any).dashboardCity ?? ''}
+                  onChange={(e) => update("dashboardCity" as any, e.target.value)}
+                  className="text-sm"
+                  list="city-suggestions"
+                />
+                <datalist id="city-suggestions">
+                  {CITY_SUGGESTIONS.map(city => (
+                    <option key={city} value={city} />
+                  ))}
+                </datalist>
+                <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1.5 opacity-0 group-focus-within/city:opacity-100 transition-opacity pointer-events-none">
+                  <span className="text-[10px] font-mono text-primary/40 uppercase tracking-tighter">Suggestions enabled</span>
+                </div>
+              </div>
             </div>
 
             {/* Hierarchical topic + sub-topic picker */}
