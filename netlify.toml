@@ -11,6 +11,6 @@
 
 [[redirects]]
   from = "/api/*"
-  to = "https://graviton-backend.onrender.com/api/:splat"
+  to = "https://graviton-backend-6nk8.onrender.com/api/:splat"
   status = 200
   force = true
