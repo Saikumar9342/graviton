@@ -3,6 +3,7 @@ services:
     name: graviton-backend
     runtime: python
     rootDir: backend
+    branch: phase1_V1.0
     buildCommand: pip install -r requirements.txt
     startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
     plan: free
