@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { Check, Copy, Pencil, ThumbsUp, ThumbsDown, User } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { MarkdownRenderer } from './markdown-renderer'
+import { fetchWithRetry } from '@/lib/api'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
@@ -181,9 +182,7 @@ export function ChatMessage({
                 const src = imgMatch[1]
                 const handleDownload = async () => {
                   try {
-                    const blob = src.startsWith('data:')
-                      ? await (await fetch(src)).blob()
-                      : await (await fetch(src)).blob()
+                    const blob = await (await fetchWithRetry(src)).blob()
                     const url = URL.createObjectURL(blob)
                     const a = document.createElement('a')
                     a.href = url

@@ -2,10 +2,76 @@ import { Chat, ChatMessage } from './types'
 
 const API_BASE = '/api'
 
+export async function fetchWithRetry(url: string, options: RequestInit = {}, retries = 7, backoff = 1000): Promise<Response> {
+  const controller = new AbortController();
+  // Set a shorter timeout for internal API calls to prevent the hosting platform (Netlify/Vercel) 
+  // from killing the entire function before we can retry.
+  const timeoutId = setTimeout(() => controller.abort(), 8500); 
+
+  try {
+    const response = await fetch(url, { 
+      ...options, 
+      signal: controller.signal,
+      // Ensure we don't cache bad responses
+      cache: 'no-store' 
+    });
+    clearTimeout(timeoutId);
+    
+    let isUnknownError = false;
+    let bodyText = '';
+    
+    // Check for Netlify's/Render's generic "Unknown error" or other transient patterns
+    const contentType = response.headers.get('content-type');
+    if (!response.ok || contentType?.includes('application/json') || contentType?.includes('text/html')) {
+      try {
+        const cloned = response.clone();
+        bodyText = await cloned.text();
+        const lowerBody = bodyText.toLowerCase();
+        isUnknownError = 
+          lowerBody.includes('an unknown error has occurred') || 
+          lowerBody.includes('errortype') ||
+          lowerBody.includes('errormessage') ||
+          lowerBody.includes('internal server error') ||
+          lowerBody.includes('bad gateway') ||
+          lowerBody.includes('service unavailable') ||
+          lowerBody.includes('upstream connect error') ||
+          lowerBody.includes('cloudflare') ||
+          lowerBody.includes('busy') ||
+          (response.status === 200 && lowerBody.includes('"error":') && lowerBody.includes('detail'));
+      } catch (e) { /* ignore clone/text errors */ }
+    }
+
+    if ((!response.ok || isUnknownError) && retries > 0) {
+      // 404 is often transient on Render during deployments
+      const isTransient = response.status >= 500 || response.status === 404 || isUnknownError;
+      
+      if (isTransient) {
+        const wait = backoff + Math.random() * 500; // Add jitter
+        console.warn(`[API] Retrying ${url} due to ${isUnknownError ? 'Transient Error Body' : 'status ' + response.status}. Wait: ${Math.round(wait)}ms. Retries left: ${retries}`)
+        await new Promise(resolve => setTimeout(resolve, wait))
+        return fetchWithRetry(url, options, retries - 1, backoff * 1.5)
+      }
+    }
+    
+    return response
+  } catch (err: any) {
+    clearTimeout(timeoutId);
+    const isTimeout = err.name === 'AbortError';
+    
+    if (retries > 0) {
+      const wait = isTimeout ? 500 : backoff + Math.random() * 500;
+      console.warn(`[API] Retrying ${url} due to ${isTimeout ? 'Timeout' : 'Network Error'}: ${err}. Wait: ${Math.round(wait)}ms. Retries left: ${retries}`)
+      await new Promise(resolve => setTimeout(resolve, wait))
+      return fetchWithRetry(url, options, retries - 1, backoff * 1.5)
+    }
+    throw err
+  }
+}
+
 // ── Chats ────────────────────────────────────────────────────────────────────
 
 export async function fetchChats(): Promise<Chat[]> {
-  const response = await fetch(`${API_BASE}/chats`)
+  const response = await fetchWithRetry(`${API_BASE}/chats`)
   if (!response.ok) throw new Error('Failed to fetch chats')
   const data = await response.json()
   return data.map((chat: any) => ({
@@ -18,7 +84,7 @@ export async function fetchChats(): Promise<Chat[]> {
 }
 
 export async function createChat(title: string): Promise<Chat> {
-  const response = await fetch(`${API_BASE}/chats`, {
+  const response = await fetchWithRetry(`${API_BASE}/chats`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ title }),
@@ -35,7 +101,7 @@ export async function createChat(title: string): Promise<Chat> {
 }
 
 export async function renameChat(id: string, title: string): Promise<void> {
-  const response = await fetch(`${API_BASE}/chats/${id}`, {
+  const response = await fetchWithRetry(`${API_BASE}/chats/${id}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ title }),
@@ -44,7 +110,7 @@ export async function renameChat(id: string, title: string): Promise<void> {
 }
 
 export async function generateChatTitle(id: string, model?: string): Promise<string> {
-  const response = await fetch(`${API_BASE}/chats/${id}/generate-title`, {
+  const response = await fetchWithRetry(`${API_BASE}/chats/${id}/generate-title`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ model }),
@@ -55,12 +121,12 @@ export async function generateChatTitle(id: string, model?: string): Promise<str
 }
 
 export async function deleteChat(id: string): Promise<void> {
-  const response = await fetch(`${API_BASE}/chats/${id}`, { method: 'DELETE' })
+  const response = await fetchWithRetry(`${API_BASE}/chats/${id}`, { method: 'DELETE' })
   if (!response.ok) throw new Error('Failed to delete chat')
 }
 
 export async function fetchMessages(chatId: string): Promise<ChatMessage[]> {
-  const response = await fetch(`${API_BASE}/chats/${chatId}/messages`)
+  const response = await fetchWithRetry(`${API_BASE}/chats/${chatId}/messages`)
   if (!response.ok) throw new Error('Failed to fetch messages')
   const data = await response.json()
   return data.map((msg: any) => ({
@@ -85,7 +151,7 @@ export interface ModelInfo {
 
 export async function fetchModels(): Promise<ModelInfo[]> {
   try {
-    const response = await fetch(`${API_BASE}/models`)
+    const response = await fetchWithRetry(`${API_BASE}/models`)
     if (!response.ok) return []
     const data = await response.json()
     const names: string[] = data.models || []
@@ -99,7 +165,7 @@ export async function pullModel(
   name: string,
   onProgress: (status: string) => void
 ): Promise<void> {
-  const response = await fetch(`${API_BASE}/models/pull`, {
+  const response = await fetchWithRetry(`${API_BASE}/models/pull`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ model: name }),
@@ -131,7 +197,7 @@ export async function pullModel(
 }
 
 export async function deleteModel(name: string): Promise<void> {
-  const response = await fetch(`${API_BASE}/models/${encodeURIComponent(name)}`, {
+  const response = await fetchWithRetry(`${API_BASE}/models/${encodeURIComponent(name)}`, {
     method: 'DELETE',
   })
   if (!response.ok) throw new Error('Failed to delete model')
@@ -148,7 +214,7 @@ export interface UploadedFile {
 export async function uploadFile(file: File): Promise<UploadedFile> {
   const formData = new FormData()
   formData.append('file', file)
-  const response = await fetch('/api/upload', { method: 'POST', body: formData })
+  const response = await fetchWithRetry('/api/upload', { method: 'POST', body: formData })
   if (!response.ok) {
     const data = await response.json().catch(() => ({}))
     throw new Error(data.detail || data.error || 'Upload failed')
@@ -159,14 +225,14 @@ export async function uploadFile(file: File): Promise<UploadedFile> {
 // ── Settings ─────────────────────────────────────────────────────────────────
 
 export async function fetchSettings(): Promise<Record<string, unknown>> {
-  const res = await fetch(`${API_BASE}/settings`)
+  const res = await fetchWithRetry(`${API_BASE}/settings`)
   if (!res.ok) throw new Error('Failed to fetch settings')
   const { data } = await res.json()
   return data
 }
 
 export async function saveSettingsToDb(data: Record<string, unknown>): Promise<void> {
-  const res = await fetch(`${API_BASE}/settings`, {
+  const res = await fetchWithRetry(`${API_BASE}/settings`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ data }),
@@ -199,13 +265,13 @@ export interface CreateModelPayload {
 }
 
 export async function fetchRegisteredModels(): Promise<RegisteredModel[]> {
-  const res = await fetch(`${API_BASE}/registered-models`)
+  const res = await fetchWithRetry(`${API_BASE}/registered-models`)
   if (!res.ok) throw new Error('Failed to fetch registered models')
   return res.json()
 }
 
 export async function createRegisteredModel(payload: CreateModelPayload): Promise<RegisteredModel> {
-  const res = await fetch(`${API_BASE}/registered-models`, {
+  const res = await fetchWithRetry(`${API_BASE}/registered-models`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
@@ -226,7 +292,7 @@ export async function updateRegisteredModel(
     api_key?: string 
   }
 ): Promise<RegisteredModel> {
-  const res = await fetch(`${API_BASE}/registered-models/${id}`, {
+  const res = await fetchWithRetry(`${API_BASE}/registered-models/${id}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
@@ -236,12 +302,12 @@ export async function updateRegisteredModel(
 }
 
 export async function deleteRegisteredModel(id: string): Promise<void> {
-  const res = await fetch(`${API_BASE}/registered-models/${id}`, { method: 'DELETE' })
+  const res = await fetchWithRetry(`${API_BASE}/registered-models/${id}`, { method: 'DELETE' })
   if (!res.ok) throw new Error('Failed to delete model')
 }
 
 export async function syncRegisteredModels(): Promise<{ synced: number; added: string[] }> {
-  const res = await fetch(`${API_BASE}/registered-models/sync`, { method: 'POST' })
+  const res = await fetchWithRetry(`${API_BASE}/registered-models/sync`, { method: 'POST' })
   if (!res.ok) throw new Error('Failed to sync models')
   return res.json()
 }
@@ -255,13 +321,13 @@ export interface AdminStatus {
 }
 
 export async function getAdminStatus(): Promise<AdminStatus> {
-  const response = await fetch(`${API_BASE}/admin/status`)
+  const response = await fetchWithRetry(`${API_BASE}/admin/status`)
   if (!response.ok) throw new Error('Failed to get admin status')
   return response.json()
 }
 
 export async function testDbConnection(url: string): Promise<{ status: string; message: string }> {
-  const response = await fetch(`${API_BASE}/admin/db-test`, {
+  const response = await fetchWithRetry(`${API_BASE}/admin/db-test`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ url }),
@@ -272,7 +338,7 @@ export async function testDbConnection(url: string): Promise<{ status: string; m
 }
 
 export async function fetchGlobalUsage(): Promise<{ prompt_tokens: number; completion_tokens: number; total_tokens: number }> {
-  const response = await fetch(`${API_BASE}/admin/usage`)
+  const response = await fetchWithRetry(`${API_BASE}/admin/usage`)
   if (!response.ok) throw new Error('Failed to fetch usage')
   return response.json()
 }
@@ -296,7 +362,7 @@ export interface ModelUsage {
 }
 
 export async function fetchModelUsage(): Promise<ModelUsage[]> {
-  const response = await fetch(`${API_BASE}/admin/model-usage`)
+  const response = await fetchWithRetry(`${API_BASE}/admin/model-usage`)
   if (!response.ok) throw new Error('Failed to fetch model usage')
   return response.json()
 }
@@ -305,7 +371,7 @@ export async function fetchModelUsage(): Promise<ModelUsage[]> {
 
 export const imageApi = {
   generate: async (prompt: string): Promise<string> => {
-    const res = await fetch(`${API_BASE}/image/generate`, {
+    const res = await fetchWithRetry(`${API_BASE}/image/generate`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ prompt }),
@@ -315,7 +381,7 @@ export const imageApi = {
     return data.image
   },
   analyze: async (image_b64: string, question: string = "Describe this image"): Promise<string> => {
-    const res = await fetch(`${API_BASE}/image/analyze`, {
+    const res = await fetchWithRetry(`${API_BASE}/image/analyze`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ image_b64, question }),

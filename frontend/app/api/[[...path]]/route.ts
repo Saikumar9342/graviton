@@ -1,6 +1,8 @@
+import { fetchWithRetry } from '@/lib/api'
 import { NextRequest, NextResponse } from 'next/server'
 
-const BASE_URL = (process.env.BACKEND_URL || 'http://localhost:8000').replace(/\/$/, '')
+const BASE_URL = (process.env.BACKEND_URL || 'https://graviton-backend-6nk8.onrender.com').replace(/\/$/, '')
+
 
 type RouteParams = { params: Promise<{ path?: string[] }> }
 
@@ -23,7 +25,7 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
       }
     })
 
-    const response = await fetch(url, { method: 'GET', headers, cache: 'no-store' })
+    const response = await fetchWithRetry(url, { method: 'GET', headers, cache: 'no-store' })
     
     const resHeaders = new Headers()
     response.headers.forEach((v, k) => {
@@ -60,7 +62,7 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
       }
     })
 
-    const response = await fetch(url, {
+    const response = await fetchWithRetry(url, {
       method: 'POST',
       headers,
       body,
@@ -101,7 +103,7 @@ export async function DELETE(req: NextRequest, { params }: RouteParams) {
       }
     })
 
-    const response = await fetch(url, { method: 'DELETE', headers, cache: 'no-store' })
+    const response = await fetchWithRetry(url, { method: 'DELETE', headers, cache: 'no-store' })
     
     const resHeaders = new Headers()
     response.headers.forEach((v, k) => {
@@ -138,7 +140,7 @@ export async function PUT(req: NextRequest, { params }: RouteParams) {
       }
     })
 
-    const response = await fetch(url, {
+    const response = await fetchWithRetry(url, {
       method: 'PUT',
       headers,
       body,

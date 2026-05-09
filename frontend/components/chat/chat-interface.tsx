@@ -18,7 +18,8 @@ import {
   createChat, 
   deleteChat as apiDeleteChat, 
   renameChat,
-  generateChatTitle
+  generateChatTitle,
+  fetchWithRetry
 } from '@/lib/api'
 import { Chat, Settings, MODE_SYSTEM_PROMPTS } from '@/lib/types'
 import { useSettingsStore, useModelsStore } from '@/lib/store'
@@ -323,7 +324,7 @@ export function ChatInterface() {
 
   async function startImageGen(allMessages: Message[], assistantId: string, chatId: string) {
     try {
-      const res = await fetch('/api/chat/image', {
+      const res = await fetchWithRetry('/api/chat/image', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ messages: allMessages, model: settings.model, chatId }),
@@ -360,7 +361,7 @@ setMessages((prev) => prev.map((m) => m.id === assistantId ? { ...m, content: da
     setActiveStreamingIds(prev => new Set(prev).add(chatId))
 
     try {
-      const res = await fetch('/api/chat', {
+      const res = await fetchWithRetry('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

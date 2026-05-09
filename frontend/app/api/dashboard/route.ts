@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { fetchWithRetry } from '@/lib/api'
 import { TOPIC_REGISTRY } from '@/lib/types'
 
 // Build a flat feed map from the registry: both category IDs and sub-topic IDs → RSS URL
@@ -52,7 +53,7 @@ function parseRSS(xml: string, limit = 8) {
 
 async function fetchFeed(url: string, limit = 8) {
   try {
-    const res = await fetch(url, {
+    const res = await fetchWithRetry(url, {
       headers: { 'User-Agent': 'Graviton/1.0' },
       next: { revalidate: 300 },
     })
@@ -79,7 +80,7 @@ async function fetchMultiFeeds(urls: string[], perFeed = 5) {
 async function fetchWeather(city = 'auto') {
   try {
     const url = `https://wttr.in/${encodeURIComponent(city)}?format=j1`
-    const res = await fetch(url, { next: { revalidate: 1800 } })
+    const res = await fetchWithRetry(url, { next: { revalidate: 1800 } })
     if (!res.ok) return null
     const data = await res.json()
     const current = data.current_condition?.[0]

@@ -7,6 +7,7 @@ import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
 import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism'
 import { Check, Copy, Download } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { fetchWithRetry } from '@/lib/api'
 
 interface MarkdownRendererProps {
   content: string
@@ -242,7 +243,7 @@ export function MarkdownRenderer({ content, isStreaming, onSelectOption }: Markd
             if (!src) return null
             const isGenerated = alt === 'Generated Image'
             const handleDownload = async () => {
-              const res = await fetch(src as string)
+              const res = await fetchWithRetry(src as string)
               const blob = await res.blob()
               const url = URL.createObjectURL(blob)
               const a = document.createElement('a')
