@@ -8,9 +8,4 @@
   package = "@netlify/plugin-nextjs"
 
 # Standard build settings
-
-[[redirects]]
-  from = "/api/*"
-  to = "https://graviton-backend-6nk8.onrender.com/api/:splat"
-  status = 200
-  force = true
+# Redirects are now handled via frontend/public/_redirects for better compatibility with Next.js plugin
