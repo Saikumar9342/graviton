@@ -1,0 +1,22 @@
+services:
+  - type: web
+    name: graviton-backend
+    runtime: python
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+    plan: free
+    envVars:
+      - key: OLLAMA_URL
+        value: http://localhost:11434/api
+      - key: FRONTEND_URL
+        value: https://your-frontend-url.vercel.app   # update this
+      - key: DATABASE_URL
+        fromDatabase:
+          name: graviton-db
+          property: connectionString
+
+databases:
+  - name: graviton-db
+    plan: free
+    databaseName: ai_chatbot
