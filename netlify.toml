@@ -1,0 +1,11 @@
+[build]
+  base = "frontend"
+  command = "npm run build"
+  publish = ".next"
+
+# This plugin is essential for Next.js to work on Netlify
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
+
+[build.environment]
+  NEXT_USE_NETLIFY_EDGE = "true"
