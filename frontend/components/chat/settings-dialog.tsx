@@ -2815,6 +2815,26 @@ export function SettingsDialog({
               </div>
             </div>
 
+            {/* Show/hide dashboard toggle */}
+            <div className="flex items-center justify-between p-3 rounded-xl border border-border/40 bg-muted/20">
+              <div>
+                <p className="text-sm font-medium">Show Dashboard</p>
+                <p className="text-xs text-muted-foreground/60">Display the Daily Brief when no chat is open</p>
+              </div>
+              <button
+                onClick={() => update("showDashboard" as any, !local.showDashboard)}
+                className={cn(
+                  'relative h-6 w-11 rounded-full transition-colors duration-200 shrink-0',
+                  local.showDashboard ? 'bg-primary' : 'bg-muted-foreground/20'
+                )}
+              >
+                <span className={cn(
+                  'absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform duration-200',
+                  local.showDashboard ? 'translate-x-5' : 'translate-x-0'
+                )} />
+              </button>
+            </div>
+
             {/* Location — custom combobox */}
             <div className="space-y-2">
               <SLabel>Your Location</SLabel>

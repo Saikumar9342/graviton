@@ -685,7 +685,7 @@ setMessages((prev) => prev.map((m) => m.id === assistantId ? { ...m, content: da
                   <Skeleton className="h-12 w-48 rounded-[20px] rounded-tr-none" />
                 </div>
               </div>
-            ) : messages.length === 0 ? (
+            ) : messages.length === 0 && settings.showDashboard !== false ? (
               <EmptyState onSuggestionClick={(text) => handleSend(text)} />
             ) : (
               <div 

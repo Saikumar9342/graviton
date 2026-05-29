@@ -64,6 +64,7 @@ export interface Settings {
   dashboardTopics: string[]
   dashboardSubTopics: string[]
   themePreset: string
+  showDashboard: boolean
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -110,6 +111,7 @@ export const DEFAULT_SETTINGS: Settings = {
   dashboardTopics: ['world', 'tech', 'weather'],
   dashboardSubTopics: [],
   themePreset: 'editorial-dark',
+  showDashboard: true,
 }
 
 // ── Dashboard topic registry ──────────────────────────────────────────────────
