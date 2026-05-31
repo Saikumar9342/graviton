@@ -68,7 +68,7 @@ export interface Settings {
 }
 
 export const DEFAULT_SETTINGS: Settings = {
-  model: 'llama3:latest',
+  model: 'llama-3.3-70b-versatile',
   theme: 'dark',
   accentColor: '#8b5cf6',
   bubbleStyle: 'modern',
