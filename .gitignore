@@ -1,14 +1,26 @@
 # Next.js
 .next/
 node_modules/
+out/
 
 # Python
 __pycache__/
 *.py[cod]
+*.pyc
 *$py.class
 venv/
 .venv/
 .env
+
+# Build artifacts
+BUILD_ID
+*.nft.json
+build-manifest.json
+export-marker.json
+fallback-build-manifest.json
+images-manifest.json
+app-path-routes-manifest.json
+next-minimal-server.js.nft.json
 
 # DB
 *.sqlite3
@@ -17,5 +29,11 @@ venv/
 .DS_Store
 Thumbs.db
 
+# Logs
+*.log
+
 # Secrets
 docs/api.md
+
+# HF deploy branch artifacts
+README.md
